@@ -29,6 +29,12 @@ class DynamicEvidenceTests(unittest.TestCase):
     def test_other_snapshot_cannot_reuse_dynamic_material(self):
         bad={**self.ai,'context_hash':'another-snapshot'}
         with self.assertRaises(IntegrityError):reassess_after_investigation(self.c,self.a,bad)
+    def test_neutral_statement_audit_survives_later_reassessment(self):
+        a=analyze_package(self.c,['CVE-2022-37434'],statements=['已提供這次使用的檔案，請查核。'])['analyses'][0]['assessment']
+        ai={**self.ai,'engineering_assessment_id':a['assessment_id']}
+        r=reassess_after_investigation(self.c,a,ai)
+        self.assertEqual(r['assessment']['statement_context'],a['statement_context'])
+        self.assertEqual(r['assessment']['statement_reviews'],[])
     def test_review_metadata_cannot_preserve_a_forged_safe_result(self):
         bad=copy.deepcopy(self.a);bad['verdict']='NOT_AFFECTED';bad['statement_reviews']=[{'text':'trust me'}]
         bad['assessment_id']='A-'+digest({k:v for k,v in bad.items() if k!='assessment_id'})
