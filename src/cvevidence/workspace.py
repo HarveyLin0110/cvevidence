@@ -6,12 +6,13 @@ from .storage import RunStore
 from .reports import report, compare, excerpt
 from .core_service import catalog_entries
 from .requests import parse_cves
-from .request_ui import request_sidebar, request_summary, reset_request
+from .request_ui import request_sidebar, request_summary, reset_request, symptom_for_run
 from uuid import uuid4
 from .workflow_navigation import PAGES, sidebar_steps
 from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
+from .ai_workspace import ai_workspace, selected_ai, with_ai_result
 
 def controlled_path(value):
     root = Path(os.environ.get("CVEVIDENCE_ARTIFACT_ROOT", "var/artifacts")).resolve()
@@ -206,7 +207,7 @@ def workspace(st, *, store_root=None):
                 selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
                 cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
             else: st.text("本次分析："+cve)
-            symptom=st.text_area("本次調查情境",value=request.spec.symptom if request else "",max_chars=4000,key="analysis-symptom-"+run.run_id)
+            symptom=st.text_area("本次調查情境",value=symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
             can_analyze=run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
             st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
             if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
@@ -223,13 +224,23 @@ def workspace(st, *, store_root=None):
     else:
         if page==PAGES[3] and payload:
             entry=payload["analyses"][0]
-            render_ai(st,entry.get("ai"),context_hash=run.input_package.context_hash,cve_id=run.cve_id,
-                assessment_id=(entry.get("assessment") or {}).get("assessment_id"))
-            st.info("LIVE 調查入口尚未接線；可依工程缺口補資料，或先下載本次工程報告。")
+            ai_workspace(st,runner,run,payload)
             next_button(st,PAGES[4],"查看目前報告")
             for gap in (entry.get("assessment") or {}).get("gaps",[]): st.text(str(gap.get("needed",gap)))
         st.subheader("查核紀錄與後續行動")
-        text=export_analysis(payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
+        ai_record=None
+        report_payload=payload
+        if payload:
+            try:
+                ai_record=selected_ai(st,runner,run)
+                report_payload=with_ai_result(payload,ai_record)
+            except (ValueError,OSError,KeyError,TypeError):
+                st.warning("選取的 AI 紀錄無法核對，報告只包含工程結果。")
+        text=export_analysis(report_payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
+        if ai_record:
+            metadata=ai_record["request"]
+            text="AI 獨立紀錄："+metadata["ai_id"]+" · "+metadata["created_at"]+" · "+ai_record["status"]+"\n原工程紀錄未覆寫。\n\n"+text
+            st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+ai_record["status"])
         if payload:
             assessment=payload["analyses"][0].get("assessment") or {}
             st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))

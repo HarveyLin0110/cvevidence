@@ -1,0 +1,103 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "ai_id": {
+      "title": "Ai Id",
+      "type": "string"
+    },
+    "parent_run_id": {
+      "title": "Parent Run Id",
+      "type": "string"
+    },
+    "engineering_payload_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Engineering Payload Sha256",
+      "type": "string"
+    },
+    "context_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Context Hash",
+      "type": "string"
+    },
+    "cve_id": {
+      "pattern": "^CVE-\\d{4}-\\d{4,}$",
+      "title": "Cve Id",
+      "type": "string"
+    },
+    "assessment_id": {
+      "minLength": 1,
+      "title": "Assessment Id",
+      "type": "string"
+    },
+    "requested_mode": {
+      "const": "LIVE",
+      "default": "LIVE",
+      "title": "Requested Mode",
+      "type": "string"
+    },
+    "consent": {
+      "title": "Consent",
+      "type": "boolean"
+    },
+    "context_text_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Context Text Sha256",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "reasoning_effort": {
+      "anyOf": [
+        {
+          "maxLength": 30,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reasoning Effort"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "timeout_seconds": {
+      "exclusiveMinimum": 0,
+      "maximum": 300,
+      "title": "Timeout Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "ai_id",
+    "parent_run_id",
+    "engineering_payload_sha256",
+    "context_hash",
+    "cve_id",
+    "assessment_id",
+    "consent",
+    "context_text_sha256",
+    "created_at",
+    "timeout_seconds"
+  ],
+  "title": "AIRequest",
+  "type": "object"
+}

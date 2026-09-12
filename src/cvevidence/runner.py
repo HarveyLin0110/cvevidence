@@ -9,6 +9,22 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def investigate_ai(self, parent_run_id, **kwargs):
+        from .ai_service import AIService
+        return AIService(self.store).start(parent_run_id, **kwargs)
+
+    def read_ai(self, ai_id):
+        from .ai_store import AIStore
+        return AIStore(self.store).read(ai_id)
+
+    def ai_history(self, parent_run_id):
+        from .ai_store import AIStore
+        return AIStore(self.store).history(parent_run_id)
+
+    def ai_configuration(self):
+        from .ai_service import operator_config
+        return operator_config()[1]
+
     def analyze_offline(self, parent_run_id, *, cve_id=None, symptom="", timeout=120):
         from .core_service import CoreService
         return CoreService(self.store).analyze_offline(parent_run_id,
