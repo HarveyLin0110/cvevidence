@@ -20,3 +20,10 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - 6 種今日新写契約、JSON schema 與 9 個契約測試。
 - 乾淨分支 python -m pytest -q：9 passed；沒有執行或複製舊測試。
 - M0 dd54b81。契約仍為 proposal，需 Horace 確認語意。
+
+## M2 已完成
+- 今日 Runner／隔離 worker／CLI／原子不可變保存已完成。
+- 預設 CORE_UNAVAILABLE；只接受操作者配置的核心模組，使用者輸入不能指定模組。
+- 未複製舊匯入器，測試使用今天編寫的 TEST_ONLY adapter；不是實際 ZIP／ROM 驗收。
+- python -m pytest -q：18 passed。CLI／Runner 一致、timeout、保存失敗、不覆寫與範圍錯誤測試通過。
+- M1 commit：360f6c9。
