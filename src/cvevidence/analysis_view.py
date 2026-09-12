@@ -52,62 +52,115 @@ def select_analysis(payload, *, context_hash, cve_id):
     return entry
 
 
-def render_engineering(st, entry):
+def render_engineering(st, entry, *, package=None):
     st.subheader("工程分析結果")
-    st.text("CVE：" + text(entry.get("cve_id")))
-    st.text("執行狀態：" + text(entry.get("status")))
+    st.caption("CVE：" + text(entry.get("cve_id")) + " · 執行狀態：" + text(entry.get("status")))
     assessment = entry.get("assessment")
     if not isinstance(assessment, dict):
         st.info("尚未產生工程判定；未知 CVE 或未完成分析不能視為安全。")
         return
-    st.text(VERDICTS.get(assessment.get("verdict"), "未提供有效工程判定"))
-    st.text(text(assessment.get("reason")))
-    st.text("分析範圍：" + text(assessment.get("scope")))
-    st.caption("工程初判仍需人工覆核；不代表已證明異常原因、實際部署暴露或來源認證。")
-    query_rows = rows(entry.get("queries"))
-    for qid, label in QUERIES.items():
-        matches = [q for q in query_rows if q.get("query_id") == qid]
-        query = matches[0] if len(matches) == 1 else {}
-        with st.expander(qid + " · " + label, expanded=False):
-            st.text("狀態：" + text(query.get("status")))
-            if len(matches) > 1:
-                st.warning("重複的查核結果，需重新核對；未選取其中任何一筆。")
-            if query.get("missing"):
-                st.text("需補齊的資料")
-                lines(st, query["missing"])
-            if query.get("conflicts"):
-                st.text("需覆核的矛盾")
-                lines(st, query["conflicts"])
-            lines(st, query.get("evidence_ids"))
-    st.subheader("條件與證據")
+    if package:
+        with st.expander("本次建置與輸入材料", expanded=True):
+            left, right = st.columns(2)
+            with left:
+                st.caption("產品 / Release")
+                st.text(text(package.get("product_id")) + " / " + text(package.get("release_id")))
+                st.caption("查核目標")
+                st.text(text(entry.get("cve_id")))
+            with right:
+                st.caption("資料包 / Build")
+                st.text(text(package.get("package_id")) + " / " + text(package.get("build_id")))
+                st.caption("輸入材料")
+                st.text(str(len(rows(package.get("sources")))) + " 個已收件來源；來源數不等於有效證據數。")
+    verdict = assessment.get("verdict")
+    with st.container(border=True):
+        st.text(VERDICTS.get(verdict, "未提供有效工程判定"))
+        st.text(text(assessment.get("reason")))
+        st.caption("工程初判須覆核；不代表異常已歸因，也不是部署安全認證。")
     conditions = rows(assessment.get("conditions"))
-    if not conditions:
-        st.info("未提供條件明細。")
-    else:
-        st.dataframe([{"條件": text(c.get("title")), "狀態": text(c.get("state"))} for c in conditions],hide_index=True)
+    metrics = st.columns(3)
+    metrics[0].metric("有證據支持的條件", sum(c.get("state") == "SUPPORTED" for c in conditions))
+    metrics[1].metric("有證據阻斷的條件", sum(c.get("state") == "BLOCKED" for c in conditions))
+    metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
+    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "五項工程查核", "證據與引用", "待補資料與覆核"])
+    with overview:
+        st.subheader("下一步可以做什麼")
+        if assessment.get("gaps") or assessment.get("statement_reviews") or assessment.get("conflicts"):
+            st.info("先看「待補資料與覆核」，再從側邊第 04 步提供同 build 材料；補件後回第 03 步重新分析。")
+        else:
+            st.info("先核對本次成品範圍與關鍵證據，再從側邊第 05 步下載報告供工程師覆核。")
+        lines(st, assessment.get("next_steps"))
+        st.subheader("適用範圍")
+        st.text(text(assessment.get("scope")))
+        st.subheader("條件摘要")
+        states = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}
+        if conditions:
+            st.dataframe([{"條件": text(c.get("title")),
+                           "狀態": states.get(c.get("state"), "未提供"),
+                           "說明": text(c.get("explanation"))} for c in conditions],
+                         hide_index=True, use_container_width=True)
+        else:
+            st.info("未提供條件明細。")
+    with queries_tab:
+        st.caption("每項查核顯示當次保存的狀態；查核完成不代表產品不受影響。")
+        query_rows = rows(entry.get("queries"))
+        evidence_by_id = {e.get("evidence_id"): e for e in rows(entry.get("evidence"))}
+        status_names = {"COMPLETED": "已完成", "COMPLETED_WITH_GAPS": "已執行・有缺件", "CONFLICT": "有矛盾待覆核"}
+        for qid, label in QUERIES.items():
+            matches = [q for q in query_rows if q.get("query_id") == qid]
+            query = matches[0] if len(matches) == 1 else {}
+            status = status_names.get(query.get("status"), text(query.get("status")))
+            with st.expander(qid + " · " + label + " ｜ " + status):
+                st.text("狀態：" + text(query.get("status")))
+                if len(matches) > 1:
+                    st.warning("重複的查核結果，需重新核對；未選取其中任何一筆。")
+                if query.get("missing"):
+                    st.text("需補齊的資料")
+                    lines(st, query["missing"])
+                if query.get("conflicts"):
+                    st.text("需覆核的矛盾")
+                    lines(st, query["conflicts"])
+                st.text("查核發現")
+                for eid in query.get("evidence_ids", []):
+                    evidence = evidence_by_id.get(eid)
+                    if evidence:
+                        st.text(text(evidence.get("reason")))
+                        for witness in rows(evidence.get("witnesses")):
+                            st.caption("來源：" + text(witness.get("path")))
+                with st.expander("追溯識別碼與查核原始資料"):
+                    st.json(query)
+    with evidence_tab:
+        st.caption("以下為保存的工程證據；如需重新核對原文，可使用本頁下方的來源檢視。")
         with st.expander("條件明細與引用"):
             for condition in conditions:
                 st.text(text(condition.get("title")) + " · " + text(condition.get("state")))
                 st.text(text(condition.get("explanation")))
                 lines(st, condition.get("evidence_ids"))
-    with st.expander("證據原值與來源"):
-        st.caption("以下為保存結果的內容；引用原文需由同 run/context 的來源工具重新核對。")
-        for evidence in rows(entry.get("evidence")):
-            st.text(text(evidence.get("evidence_id")))
-            st.code(text(evidence.get("value")), language=None)
-            st.text(text(evidence.get("reason")))
-            for witness in rows(evidence.get("witnesses")):
-                st.text(text(witness.get("source_id")) + " · " + text(witness.get("path")))
-                st.text("SHA256：" + text(witness.get("sha256")))
-    for field, title in (("conflicts", "矛盾待覆核"), ("statement_reviews", "人工說明待覆核"),
-                         ("gaps", "缺少資料"), ("next_steps", "建議下一步")):
-        if assessment.get(field):
-            st.subheader(title)
-            for item in assessment[field]:
-                if field == "gaps" and isinstance(item, dict):
-                    st.text(text(item.get("needed")))
-                    st.caption(text(item.get("query_id")) + (" · 需同 build 資料" if item.get("same_build_required") else ""))
-                else: st.text(text(item))
+        with st.expander("證據原值與來源"):
+            for evidence in rows(entry.get("evidence")):
+                st.text(text(evidence.get("evidence_id")))
+                st.code(text(evidence.get("value")), language=None)
+                st.text(text(evidence.get("reason")))
+                for witness in rows(evidence.get("witnesses")):
+                    st.text(text(witness.get("source_id")) + " · " + text(witness.get("path")))
+                    st.text("SHA256：" + text(witness.get("sha256")))
+    with gaps_tab:
+        any_pending = False
+        for field, title in (("conflicts", "矛盾待覆核"), ("statement_reviews", "人工說明待覆核"),
+                             ("gaps", "缺少資料")):
+            if assessment.get(field):
+                any_pending = True
+                st.subheader(title)
+                for index, item in enumerate(assessment[field], 1):
+                    with st.container(border=True):
+                        if field == "gaps" and isinstance(item, dict):
+                            st.text(str(index) + ". " + text(item.get("needed")))
+                            st.caption(text(item.get("query_id")) + (" · 需同 build 資料" if item.get("same_build_required") else ""))
+                        else:
+                            st.text(text(item))
+        if not any_pending:
+            st.info("本次保存結果沒有列出缺件或矛盾；仍須人工覆核範圍，不能推論其他 CVE 或部署環境安全。")
+        st.caption("補充資料請使用第 04 或 05 步的補件入口；會建立新紀錄，保留這次結果。")
 
 
 def render_ai(st, ai, *, context_hash, cve_id, assessment_id):

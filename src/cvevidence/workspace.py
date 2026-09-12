@@ -75,8 +75,8 @@ def workspace(st, *, store_root=None):
     st.set_page_config(page_title="CVEvidence · 工程查核",layout="wide")
     store=RunStore(store_root if store_root is not None else os.environ.get("CVEVIDENCE_STORE","var/runtime"))
     runner=Runner(store)
-    st.title("CVEvidence · 工程查核")
-    st.caption("從工程包建立證據鏈：Q1–Q5、工程初判、來源查閱與同 build 補件。AI 狀態與工程結果分開呈現。")
+    st.title("CVEvidence · 產品影響工作台")
+    st.caption("確認產品風險，追溯工程證據，補齊下一步需要的資料。")
     st.session_state.setdefault("selected_run",None)
     runs, rejected=store.inspect_history()
     if rejected:
@@ -85,9 +85,10 @@ def workspace(st, *, store_root=None):
             st.json(rejected)
     if runs:
         labels={r.run_id:((r.input_package.package_id if r.input_package else "匯入失敗")+" · "+(r.cve_id or "候選探索")+" · "+r.status+" · "+r.created_at[:19]+" · "+r.run_id[:8]) for r in runs}
-        chosen=st.sidebar.selectbox("保存的查核紀錄",["—"]+list(labels),
+        history_panel=st.sidebar.expander("查核紀錄與歷程")
+        chosen=history_panel.selectbox("保存的查核紀錄",["—"]+list(labels),
             format_func=lambda value: labels.get(value,value),key="history_select")
-        if chosen!="—" and st.sidebar.button("載入查核紀錄"):
+        if chosen!="—" and history_panel.button("載入查核紀錄"):
             st.session_state.selected_run=chosen
     request=request_sidebar(st,runner)
     run=None
@@ -171,7 +172,8 @@ def workspace(st, *, store_root=None):
         st.info("請先匯入工程包，或從側邊載入保存的紀錄。")
         next_button(st,PAGES[0],"返回資料來源")
         return
-    st.caption("Run: "+run.run_id+" · "+run.status)
+    with st.expander("本次查核識別資訊"):
+        st.caption("Run: "+run.run_id+" · "+run.status)
     if run.error:
         st.error(run.error.code+"：本次操作失敗；父 run 與原始資料保留。")
         if page!=PAGES[4]:
@@ -195,7 +197,7 @@ def workspace(st, *, store_root=None):
         next_button(st,PAGES[2],"下一步：調查來源")
     elif page==PAGES[2]:
         if payload:
-            render_engineering(st,payload["analyses"][0])
+            render_engineering(st,payload["analyses"][0],package=payload.get("input"))
             next_button(st,PAGES[3],"下一步：AI 查核與補件")
         else:
             st.subheader("執行工程分析")
@@ -215,8 +217,10 @@ def workspace(st, *, store_root=None):
                     st.session_state.selected_run=child.run_id
                     st.rerun()
                 except (ValueError,OSError,RuntimeError): st.error("工程分析未完成，請確認 CVE 與收件狀態。")
-        source_viewer(st,runner,run)
-        next_button(st,PAGES[4],"下一步：查核紀錄與補件")
+        with st.expander("證據瀏覽器：搜尋、核對原文與比較來源"):
+            source_viewer(st,runner,run)
+        if not payload:
+            next_button(st,PAGES[4],"下一步：查核紀錄與補件")
     else:
         if page==PAGES[3] and payload:
             entry=payload["analyses"][0]
