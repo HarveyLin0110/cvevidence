@@ -1,6 +1,8 @@
 # 持續 Demo 與正式網站驗收
 日期：2026-09-12。負責：整合端；網站使用目前 Python/Streamlit 產品，同一程式逐里程碑演進。
 
+最新部署：已建立 Tailscale Funnel 測試入口並完成一次真實 Google 登入，詳見 [Tailscale部署紀錄](tailscale-demo.md)。以下「尚未取得」描述保留為原始規劃背景，最新事實以部署紀錄為準；正式驗收仍未完成。
+
 ## 現況與發布邊界
 - 本機整合 8505、Frankie 開發 8506 維持獨立。team_app.py 是新的受邀 Google OIDC 入口。
 - 此次新增登入門檻與依 Google subject 區分的資料儲存位置；不是已完成雲端部署或登入端對端驗收。
