@@ -5,6 +5,9 @@ from .runner import Runner
 from .storage import RunStore
 from .reports import report, compare, excerpt
 from .core_service import catalog_entries
+from .requests import parse_cves
+from .request_ui import request_sidebar, request_summary, reset_request
+from uuid import uuid4
 
 PAGES = ["01 產品與資料來源", "02 資料確認與缺件", "03 分析進度與結果", "04 報告與後續行動"]
 
@@ -84,6 +87,7 @@ def workspace(st):
             format_func=lambda value: labels.get(value,value),key="history_select")
         if chosen!="—" and st.sidebar.button("載入查核紀錄"):
             st.session_state.selected_run=chosen
+    request=request_sidebar(st,runner)
     run=None
     if st.session_state.selected_run:
         try:
@@ -95,7 +99,7 @@ def workspace(st):
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
-        kind=st.radio("資料來源",["產品／版本樣品","上傳工程包","受控路徑"],horizontal=True)
+        kind=st.radio("資料來源",["產品／版本樣品","上傳工程包","受控路徑","先描述情境"],horizontal=True)
         available=[e for e in entries if e["available"] and e["kind"]=="initial"]
         selected=None
         upload=None
@@ -111,28 +115,46 @@ def workspace(st):
                 st.dataframe([{"資料版":e["dataset"],"資料包":e["package_id"],"可用":"已取得" if e["available"] else "等待資料交付"} for e in entries],hide_index=True)
         elif kind=="上傳工程包":
             upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
-        else:
+        elif kind=="受控路徑":
             st.caption("根目錄："+os.environ.get("CVEVIDENCE_ARTIFACT_ROOT","var/artifacts"))
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
-        cve=st.text_input("CVE ID（選填，留白依實際元件探索）",placeholder="CVE-2022-37434")
+        cve=st.text_input("CVE ID（最多 5 個，逗號或空白分隔；可留白）",placeholder="CVE-2022-37434, CVE-2023-38545")
         symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
+        if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
+        signature=(kind,selected["archive"]["sha256"] if selected else None,
+            getattr(upload,"file_id",None),path,cve,symptom,st.session_state.get("follow_parent"))
+        if st.session_state.get("request_signature")!=signature:
+            if st.session_state.get("request_signature") is not None:
+                st.session_state.selected_run=None
+                st.session_state.selected_request=None
+                run=None
+                request=None
+            st.session_state.request_signature=signature
+            st.session_state.request_token=str(uuid4())
+        if st.session_state.get("follow_parent"):
+            st.caption("此提交會接續草稿："+st.session_state.follow_parent)
         if st.button("匯入並建立查核",type="primary",disabled=not ready):
             try:
                 with st.spinner("核對工程包並建立不可變紀錄…"):
-                    kwargs=dict(cve=cve.strip().upper(),symptom=symptom)
+                    kwargs=dict(cves=parse_cves(cve),symptom=symptom,
+                        request_id=st.session_state.request_token,
+                        parent_request_id=st.session_state.get("follow_parent"))
                     if selected:
-                        result=runner.start_file(selected["local_path"],archive_sha256=selected["archive"]["sha256"],
+                        result=runner.submit_request(path=selected["local_path"],archive_sha256=selected["archive"]["sha256"],
                             manifest_sha256=selected["manifest_sha256"],**kwargs)
                     elif upload:
                         upload.seek(0)
-                        result=runner.start_file(stream=upload,**kwargs)
-                    else: result=runner.start_file(controlled_path(path),**kwargs)
-                st.session_state.selected_run=result.run_id
-                run=result
-                if result.error: st.error(result.error.code+"：收件失敗，沒有產生分析判定。")
-                else: st.success("已依 manifest 辨識產品／build、核對檔案並保存。")
-            except (ValueError,OSError): st.error("請檢查 CVE、工程包或受控路徑。")
+                        result=runner.submit_request(stream=upload,**kwargs)
+                    elif kind=="先描述情境": result=runner.submit_request(**kwargs)
+                    else: result=runner.submit_request(path=controlled_path(path),**kwargs)
+                st.session_state.selected_request=result.spec.request_id
+                st.session_state.selected_run=result.runs[0].run_id if result.runs else None
+                st.rerun()
+            except (ValueError,OSError,RuntimeError):
+                st.error("請求未完成。請檢查最多5個合法CVE、工程包與路徑；相同請求若仍執行中或中斷，不會自動重跑。")
+        if request: request_summary(st,request)
+        st.button("建立另一個請求",on_click=reset_request,args=(st,))
         next_button(st,PAGES[1],"下一步：確認資料",disabled=run is None or bool(run.error))
         return
     if run is None:
