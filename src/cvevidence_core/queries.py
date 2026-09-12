@@ -161,7 +161,9 @@ def _curl(b,proof):
 
 def collect_evidence(context,cve_id):
     context.assert_current()
-    if cve_id not in CATALOG:raise UnsupportedError('此 CVE 尚無已審查 profile：'+cve_id)
+    if cve_id not in CATALOG:
+        from .general_triage import collect
+        return collect(context,cve_id)
     b=EvidenceBuilder(context);proof=BuildProof(context)
     for item in proof.missing:b.gap('Q2_BUILD',item)
     for item in proof.conflicts:b.conflict('Q2_BUILD',item)

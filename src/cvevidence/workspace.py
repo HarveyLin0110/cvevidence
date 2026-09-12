@@ -241,7 +241,9 @@ def workspace(st, *, store_root=None):
                         st.warning('資料包與此 CVE 的已審查格式不對應。請回到第一步更換資料包或建立正確 CVE 的請求；暫停執行，避免產生無法深入查核的結果。')
                 else:
                     st.info("先選擇或輸入 CVE，這裡會列出對應的查核項目。")
-            if st.button("執行 Queries 與正式判定",type="primary",disabled=not can_analyze):
+            from cvevidence_core.catalog import CATALOG
+            action_label="開始 CVE 調查與材料盤點" if cve and cve not in CATALOG else "執行 Queries 與正式判定"
+            if st.button(action_label,type="primary",disabled=not can_analyze):
                 try:
                     with st.spinner("核對本次工程資料並執行 Queries…"):
                         child=runner.analyze_offline(run.run_id,cve_id=cve,symptom=symptom)

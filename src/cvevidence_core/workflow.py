@@ -19,21 +19,30 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
     selected=list(dict.fromkeys(x.upper().strip() for x in selected))
     results=[]
     for cve_id in selected:
-        if cve_id not in CATALOG:
-            results.append({'cve_id':cve_id,'status':'UNSUPPORTED_CVE','assessment':None,'ai':None});continue
         event('QUERIES','STARTED',cve_id);collection=collect_evidence(context,cve_id);event('QUERIES','COMPLETED',cve_id)
         event('VERIFY','STARTED',cve_id);verified=verify(context,collection);event('VERIFY','COMPLETED',cve_id)
         notes=[interpret_statement(x,context.context_hash) if isinstance(x,str) else x for x in statements]
         assessment=assess(context,verified,notes);event('ASSESS','COMPLETED',cve_id)
+        public_record=None;query_plan=None
+        if cve_id not in CATALOG:
+            from .public_cve import lookup
+            from .general_triage import plan
+            event('PUBLIC_CVE','STARTED',cve_id)
+            public_record=lookup(cve_id)
+            query_plan=plan(cve_id,context,public_record)
+            event('PUBLIC_CVE',public_record['status'],cve_id)
         event('AI','STARTED',cve_id)
-        ai=investigate(context,verified,assessment,symptom+'\n'+'\n'.join(x.get('text','') for x in notes),mode=mode,env_file=env_file)
+        ai=investigate(context,verified,assessment,symptom+'\n'+'\n'.join(x.get('text','') for x in notes),mode=mode,env_file=env_file,
+                       **({'public_record':public_record} if public_record is not None else {}))
         event('AI',ai['status'],cve_id)
         followup=reassess_after_investigation(context,assessment,ai,notes) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
         results.append({'cve_id':cve_id,'status':'COMPLETED','queries':collection['queries'],'evidence':collection['evidence'],
                         'condition_groups':describe_condition_groups(cve_id),
                         'followup_queries':collection['followup_queries'],'runtime_observation':collection['runtime_observation'],
                         'assessment':assessment,'claim_checks':[check_claim(context,assessment,c) for c in claims if c.get('cve_id')==cve_id],
-                        'ai':ai,'investigation_verification':followup,'summary':summarize(assessment,ai)})
+                         'ai':ai,'investigation_verification':followup,'summary':summarize(assessment,ai)})
+        if public_record is not None:
+            results[-1].update(public_cve_record=public_record,query_plan=query_plan)
     context.assert_current()
     executed=[r for r in results if r.get('assessment')]
     return {'schema_version':'1.0','status':'COMPLETED','context_hash':context.context_hash,'input':context.public(),
@@ -56,7 +65,8 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
             if field in entry:collection[field]=entry[field]
         verified=verify(context,collection)
         if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
-        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file)
+        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file,
+                       **({'public_record':entry['public_cve_record']} if 'public_cve_record' in entry else {}))
         if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
         followup=reassess_after_investigation(context,assessment,ai) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
         results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai,'investigation_verification':followup})

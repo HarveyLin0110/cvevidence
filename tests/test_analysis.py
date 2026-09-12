@@ -48,8 +48,12 @@ class AnalysisTests(unittest.TestCase):
         with patch('cvevidence_core.ai._request',side_effect=AssertionError('network must not run')):
             self.assertEqual(investigate(self.context,self.verified,self.assessment)['status'],'OFFLINE')
     def test_unknown_cve_is_preserved(self):
-        r=analyze_package(self.root,['CVE-2099-99999'])
-        self.assertIsNone(r['analyses'][0]['assessment']);self.assertEqual(r['ai_status'],'NOT_RUN')
+        with patch.dict('os.environ',{'CVEVIDENCE_PUBLIC_CVE_LOOKUP':'0'}):
+            r=analyze_package(self.root,['CVE-2099-99999'])
+        entry=r['analyses'][0]
+        self.assertEqual(entry['assessment']['verdict'],'NEEDS_INVESTIGATION')
+        self.assertEqual(entry['assessment']['cve_condition_verification_status'],'NOT_RUN')
+        self.assertEqual(r['ai_status'],'OFFLINE')
     def test_later_ai_stage_preserves_saved_engineering_on_failure(self):
         from cvevidence_core.workflow import investigate_after_engineering
         r=analyze_package(self.root,['CVE-2022-37434']);before=copy.deepcopy(r)

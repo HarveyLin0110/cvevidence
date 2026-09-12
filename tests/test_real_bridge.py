@@ -37,7 +37,7 @@ def test_real_parser_keeps_sources_separate_and_unknown_cve(tmp_path):
     assert not run.error
     assert run.input_package.product_id=="TEST_ONLY_PRODUCT"
     assert len(run.sources)==2 and not run.evidence and run.assessment is None
-    assert run.candidates["candidates"][0]["status"]=="UNSUPPORTED_CVE"
+    assert run.candidates["candidates"][0]["status"]=="GENERAL_TRIAGE"
 
 def test_file_backed_input_exceeds_legacy_20mib(tmp_path):
     path=archive(tmp_path,large=True)

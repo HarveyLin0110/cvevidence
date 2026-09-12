@@ -40,7 +40,8 @@ def ai_workspace(st, runner, run, engineering):
     st.subheader("追加 AI 調查")
     config = runner.ai_configuration()
     from cvevidence_core.queries import PROFILE_VERSION
-    compatible = not assessment.get("profile_version") or assessment["profile_version"] == PROFILE_VERSION
+    from cvevidence_core.general_triage import PROFILE_VERSION as GENERAL_PROFILE_VERSION
+    compatible = not assessment.get("profile_version") or assessment["profile_version"] in {PROFILE_VERSION,GENERAL_PROFILE_VERSION}
     if not compatible:
         st.warning("此工程紀錄使用舊版規則。請載入其原始收件／補件紀錄重新執行 Queries，再啟動新版 AI；既有工程與 AI 紀錄仍可查閱。")
     st.text("供應者：OpenAI · 模型：" + (config.get("model") or "尚未配置"))
