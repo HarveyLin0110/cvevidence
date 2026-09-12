@@ -132,15 +132,6 @@ def workspace(st, *, store_root=None):
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
         cve=st.text_input("CVE ID（最多 5 個，逗號或空白分隔；可留白）",placeholder="CVE-2022-37434, CVE-2023-38545")
         symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
-        if cve.strip():
-            try:
-                preview_cves = parse_cves(cve)
-            except ValueError:
-                st.info("請輸入合法 CVE ID，最多五個，才能準備對應的 Queries。")
-            else:
-                with st.expander("依 CVE 預覽查核計畫",expanded=True):
-                    for preview_cve in preview_cves:
-                        render_preparation(st,preview_cve,selected.get('format') if selected else None)
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
         signature=(kind,selected["archive"]["sha256"] if selected else None,

@@ -20,21 +20,20 @@ def test_cve_specific_plan_uses_core_ids_and_never_claims_execution():
     assert mismatch['status']=='FORMAT_GAP'
     assert [q['query_id'] for q in mismatch['queries'] if q['status']=='PLANNED']==['Q2_BUILD']
 
-def test_input_switches_query_preview_without_creating_runs(tmp_path,monkeypatch):
+def test_input_keeps_query_plan_in_analysis_step(tmp_path,monkeypatch):
     monkeypatch.setenv('CVEVIDENCE_STORE',str(tmp_path/'store'))
     root=Path(__file__).resolve().parents[1]
     app=AppTest.from_file(str(root/'runner_app.py')).run()
     field=next(t for t in app.text_input if t.label.startswith('CVE ID'))
     field.set_value('CVE-2014-0160').run()
     assert not app.exception
-    assert any('OPENSSL_NO_HEARTBEATS' in t.value for t in app.text)
+    assert not any('OPENSSL_NO_HEARTBEATS' in t.value for t in app.text)
     field.set_value('CVE-2022-37434').run()
-    assert any('EXTRA' in t.value for t in app.text)
+    assert not any('EXTRA' in t.value for t in app.text)
     assert not any('OPENSSL_NO_HEARTBEATS' in t.value for t in app.text)
     field.set_value('CVE-2099-9999').run()
-    assert any('尚無已審查' in t.value for t in app.text)
-    assert any(e.label.startswith('Q1_COMPONENT') for e in app.expander)
-    assert any('只送出 CVE ID' in t.value for t in app.caption)
+    assert not any(e.label.startswith('Q1_COMPONENT') or '預覽查核計畫' in e.label for e in app.expander)
+    assert not any('準備執行的 Queries' in h.value for h in app.subheader)
     assert not list((tmp_path/'store'/'runs').glob('*.json'))
 
 def test_openssl_explanation_does_not_promote_unknown_or_legacy():
@@ -59,6 +58,8 @@ def test_wrong_package_format_cannot_execute_deep_analysis(tmp_path,monkeypatch)
     app.session_state.step='03 分析進度與結果'
     app.run(timeout=30)
     assert not app.exception
+    assert any('準備執行的 Queries' in h.value for h in app.subheader)
+    assert any(e.label.startswith('Q1_COMPONENT') for e in app.expander)
     assert next(b for b in app.button if b.label=='執行 Queries 與正式判定').disabled
     assert any('資料包與此 CVE' in w.value for w in app.warning)
     assert len(runner.store.list_runs())==1
