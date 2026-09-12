@@ -1,4 +1,4 @@
-# Demo 輸入檔：今天重建、可直接交给前端
+# Demo 輸入檔：今天重建、可直接交給前端
 
 此資料夾就是隊友與展示時選檔的共同位置，隨 Git 一起取得。12 個壓縮包全部來自 2026-09-12 新製作的 builder 與官方重新下載的 OSS；未沿用舊 Demo 的程式、成品或驗收結果。
 
@@ -30,13 +30,13 @@
 
 - ROM：`掃描報告說產品包含 OpenSSL 1.0.1f。我想確認 CVE-2014-0160 是否適用這個韌體，目前只有 ROM 和部分 SDK。`
 - CMake：`客戶匯入更新檔失敗，log 顯示 gzip stream ended before trailer。請先查可能原因，再確認相關 CVE 是否適用這個產品。`
-- curl：`更新下載會經過 SOCKS5 proxy。我想确认 CVE-2023-38545 是否適用，現場偶爾會有握手延遲。`
+- curl：`更新下載會經過 SOCKS5 proxy。我想確認 CVE-2023-38545 是否適用，現場偶爾會有握手延遲。`
 
 正常截短 gzip 的錯誤是檔案不完整的線索，不能說已重現 CVE；curl 正常下載也未執行溢位。畫面需分開顯示「漏洞工程適用性」與「異常原因尚未確定」。
 
 ## 取得與核對
 
-切到含此資料夾的 `codex/horace-fresh-core` 分支，或將 Draft PR #2 合入整合分支後，直接使用這些檔案。
+輸入包已隨 [PR #2](https://github.com/HarveyLin0110/cvevidence/pull/2) 合入 `main`。隊友更新自己的整合分支後，即可從 repo 的 `demo-inputs/` 選檔。完整工程分析與 AI 核心另由 [PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9) 交件；輸入包已取得不代表網頁分析階段已接妥。
 
 在 repo 根目錄執行：
 

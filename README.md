@@ -1,66 +1,55 @@
-# CVEvidence — 今日重製整合分支
-以 2026-09-12 新寫的模組串接證據核心。工程初判待工程師覆核。
-- [Frankie 同步](docs/sync/Frankie.md) / [Horace 同步](docs/sync/Horace.md)
-- [里程碑紀錄](docs/progress/frankie.md)
-- [AI 協作、安全邊界與亮點指南](docs/ai/README.md)
-- apps/web：今天製作、使用者確認可保留的模擬 UI；不是真實判定。
-- src/cvevidence：今天新寫的共用契約、Runner、保存、CLI 與 Streamlit 整合。
-- 不包含舊登入程式、舊 core.py、舊測試、舊 Demo 或任何工程包。
-- Horace 核心已合入：真實匯入、候選探索、list/search/excerpt/compare、同 build delta 補件已接到共用 Runner 與 Streamlit。Q1–Q5、正式判定、AI 仍 NOT_RUN。
-- [實際接線驗收與操作](docs/releases/Frankie-core-integration-20260912.md) / [Horace 原始交件](docs/releases/Horace_第一輪資料與核心交件.md)
-- tests 的核心回應是今日建立的合成測試資料，不算產品漏洞驗收。
+# CVEvidence 今日從零實作
 
-分支採短期 codex/*、每里程碑 commit、PR＋另一位成員覆核；不強推、不自動合併。
-執行資料放忽略的 var/runtime，完整工程包不進 Git。
+本目錄是 2026-09-12 唯一的開發、Git 與交付根目錄。舊 CodexHackathon／Demo 僅作概念與需求參考，不複製或執行舊程式、建置腳本、資料包及結果。公開 OSS 今日重新取得，保存來源、版本、授權與 hash。
 
-安裝：`python -m pip install -r requirements.txt`。
-啟動：`PYTHONPATH=src python -m streamlit run runner_app.py --server.address 127.0.0.1 --server.port 8505`。
-CLI 真實收件：`PYTHONPATH=src python -m cvevidence.cli --store var/runtime import var/artifacts/archives/<revision>/<package>.tar.gz`。
-CLI 補件：`PYTHONPATH=src python -m cvevidence.cli --store var/runtime delta <parent-run-id> --package <supplement.tar.gz>`。
+## Demo 輸入與目前狀態
 
-核心在 `src/cvevidence_core/`，整合在 `src/cvevidence/`；builder 與來源 pins 在 `tools/demo-data/`。分析器不執行匯入成品。
-本目錄是今天唯一的開發與 Git 根目錄。今日重建的九個初始包、三個補件已放進 [demo-inputs](demo-inputs/README.md)，隊友可直接從 Git 取得展示輸入。Q1–Q5、Verifier、三個 CVE 規則、補件重新判定與 OpenAI 動態調查已有實作；工程九格與三組補件第一輪通過，31 項核心邊界測試通過。四個 Live 情境、三包各十次 OFFLINE 穩定性已完成驗收，詳見 [接線提案](docs/architecture/核心分析介面與接線提案.md) 與 [Horace 同步](docs/sync/Horace.md)。
+展示輸入集中在 [demo-inputs](demo-inputs/README.md)：9 個初始包、3 個同 build 補件、中文上傳對照表、catalog 與 SHA256SUMS，已納入 main。主展示先選 `rom/03_rom.tar.gz`，再補 `rom/supplement_03_rom.tar.gz`；補件須由補件入口提交，保留原 run。
 
-## 目前共同規劃
+Horace 的 Q1–Q5、Verifier、三個 CVE 規則、補件重判與 OpenAI 動態調查已實作。[PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9) 交付完整核心；已完成 main 基線的 119 項相容測試，九格工程與三組補件、四種 Live 情境及 30 次 OFFLINE 穩定性已有紀錄。這些核心驗收與網頁全流程分開，接線進度見 [Horace 同步](docs/sync/Horace.md)、[Frankie 同步](docs/sync/Frankie.md) 及 [整合計畫](docs/integration/plan.md)。
 
-以 [Champion Product Plan V5](docs/CVEvidence_Champion_Product_Plan_zh-TW_V5_2026-09-12.docx) 為準，V4 保留供查閱。
+Frankie 的共用 Runner、CLI、Streamlit 已接真實收件、原文操作、OFFLINE 工程分析、同 build delta 與報告；Live 的正式工作台啟動與保存仍由整合端接入。`apps/web/` 是今日製作、使用者允許保留的模擬 UI；正式工作台入口是 `runner_app.py`。
 
-兩條網頁入口分別支援現象描述與指定 CVE。深入查核先執行五個基礎 query，再由 AI 根據使用者資訊與證據自主追加查詢，或請使用者補件後接續分析。今日重建 ROM、CMake、curl 三種交付，每種各驗條件成立、有效阻斷與關鍵資料不足，合計九格目標。
+隊友可依 [測試情境手冊](docs/demo/test-scenarios.md) 試走；正式團隊服務的版本、登入與部署由 [整合紀錄](docs/integration/live-site.md) 管理。
 
-產出位置及前端交接依 [產出存放與前端交接規劃](docs/architecture/產出存放與前端交接規劃_2026-09-12.md)：程式、規格及使用者指定的今日 demo 輸入進 Git；demo 包集中在 `demo-inputs/`，原始 build/archive 歷史放 `var/artifacts/`，每次分析放 `var/runtime/runs/`，下載報告放 `var/exports/reports/`。完整建置暫存在 `var/build/`，完成封裝後才進 `var/artifacts/datasets/`。
+## 規劃與分工
 
-## 分工
+產品與展示以 [Champion Product Plan V5](docs/CVEvidence_Champion_Product_Plan_zh-TW_V5_2026-09-12.docx) 為準；分工依 Frankie 雙人確認文件更新。兩入口支援現象描述與指定 CVE；先查五項基礎 query，再由 AI 依本次證據追加調查或要求補件。候選、漏洞適用性與異常原因分開。
 
-以 Frankie 雙人分工確認文件更新 V5 的較早分工：
+- Horace：今日 builder／輸入包、parser、Query、Verifier、規則、Claim、AI、補件語意與核心驗收。
+- Frankie：contracts、正式 Runner／CLI／UI、不可變快照、保存、補件歷史、報告與接線。
+- HV：簡報、展示與實測成果整理。
 
-- Horace：三種新 builder、匯入/Query/Verifier、CVE profile 與判定引擎、AI 調查、補件驗證及驗收比對器。
-- Frankie：contracts 主維護、正式 Runner/Web/CLI、不可變快照、補件保存與前後比較、整合。
-- HV：報告、展示、今日實測成果與 Codex 使用過程整理。
+每人維護自己的同步 MD。介面見 [核心接線提案](docs/architecture/核心分析介面與接線提案.md)，評分證據見 [展示驗收對照](docs/presentation/評分項目與可驗收證據.md)。工程初判保留適用範圍與人工覆核；不以檔名、版本命中或 AI 意見指定答案。
 
-各自維護一份同步文件：[Horace](docs/sync/Horace.md)；Frankie 在其整合分支維護 `docs/sync/Frankie.md`。評分與證據整理見 [評分項目與可驗收證據](docs/presentation/評分項目與可驗收證據.md)。
+## 安裝與執行
 
-## 獨立驗收
+Linux 的真實 ELF／ROM 取證需要 `binutils` 與 `squashfs-tools`。
 
 ```bash
+sudo apt-get update
+sudo apt-get install -y binutils squashfs-tools
 python3 -m venv .venv
-.venv/bin/pip install .
-.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install .
+.venv/bin/python -m pytest -q
+PYTHONPATH=src .venv/bin/python -m streamlit run runner_app.py --server.address 127.0.0.1 --server.port 8505
 ```
 
-真實資料與 Live 命令見 `docs/architecture/核心分析介面與接線提案.md`。工程判定必須有完整必要條件支持，不能以案例名稱指定答案。
+正式 CLI：`PYTHONPATH=src .venv/bin/python -m cvevidence.cli --help`。Horace 獨立核心 CLI：`.venv/bin/python -m cvevidence_core --help`。Live 由可信任執行階段讀取 `OPENAI_API_KEY`、`OPENAI_MODEL` 與 `OPENAI_REASONING_EFFORT`；金鑰不進 Git。
 
 ## 目錄用途
 
-- `apps/web/`：Frankie 的正式網頁，待整合。
-- `src/cvevidence_core/`：Horace 的解析、取證、Verifier、規則與 AI 核心。
-- `contracts/`：前後端格式與小型測試範例，待建立。
-- `tools/demo-data/`：今日新寫資料建置程式與公開來源 pins。
-- `tests/`：今日新寫測試。
-- `scripts/`：啟動、資料取得、匯入與檢查腳本。
-- `data/`：資料 catalog、版本與取得位置。
-- `demo-inputs/`：Git 內的 9 個展示輸入＋3 個同 build 補件、中文操作表與 SHA256SUMS。
-- `docs/`：今日規劃與工作紀錄；V5 DOCX 暫留現有位置。
-- `var/`：本機 artifact、建置暫存、run、完整驗收結果與報告，不進 Git。
-- `outputs/`：既有空目錄；新產出依存放規劃分類，不再集中放入此處。
+| 位置 | 用途 |
+|---|---|
+| `demo-inputs/` | 隊友與展示共用的 Git 輸入包及補件 |
+| `src/cvevidence_core/` | Horace 取證、規則與 AI 核心 |
+| `src/cvevidence/`、`runner_app.py` | Frankie 契約、Runner、保存與工作台 |
+| `contracts/` | 共用 schema 與接線說明 |
+| `tools/demo-data/`、`data/catalogs/` | 今日 builder、官方來源 pins 與成品索引 |
+| `tests/`、`scripts/` | 測試、驗收與服務操作 |
+| `docs/` | 今日規劃、協作摘要、展示與可公開驗收證據 |
+| `var/artifacts/`、`var/build/` | 本機成品歷史與建置暫存，不進 Git |
+| `var/runtime/`、`var/exports/` | 當次分析、歷史與匯出報告，不進 Git |
 
-公開 OSS 依賴若有使用，須另記實際來源、版本與授權，不宣稱是團隊自行撰寫。
+只有使用者指定的今日 demo 輸入例外納入 Git；客戶資料、秘密及 runtime 不納管。詳細見 [產出存放規劃](docs/architecture/產出存放與前端交接規劃_2026-09-12.md)、[AI 開發指南](docs/ai/README.md)。短分支透過 PR 審閱，整合負責人依既有授權與 main 門檻發布，不強推。

@@ -1,0 +1,50 @@
+{
+  "tested_commit": "7479368ba68c8f7a4fb3d0f8d0438a48a7dba20e",
+  "archive_sha256": "99aa904a483062627751a3b9adae7108a1443613e75421734fc004689feb8e60",
+  "context_hash": "ca2782fc0b5c9c6f1541e09e6f575c1ac4d4131d0e29d0afca20b3ce29f6f72a",
+  "summary": {
+    "status": "PASS",
+    "checks": {
+      "baseline_not_affected": true,
+      "new_scope_stays_unresolved": true,
+      "verified_conditions_unchanged": true,
+      "new_scope_review_retained": true,
+      "asks_for_missing_material": true,
+      "native_live": true,
+      "replay_keeps_original_times": true,
+      "grouping_covers_current_conditions": true
+    },
+    "ai_status": "NEEDS_USER_INPUT",
+    "model": "gpt-5.6-sol",
+    "calls": 4,
+    "ai_seconds": 36.449,
+    "started_at": "2026-09-12T06:23:46.305595+00:00",
+    "finished_at": "2026-09-12T06:24:22.754646+00:00",
+    "questions": [
+      "新增的網路更新入口是否屬於同一 build，且其 gzip 解碼實作與目前已審查的 product/update-reader 共用同一份已修正 zlib？",
+      "快照中是否存在可識別為網路更新入口的成品、原始碼、啟動設定或編譯紀錄？",
+      "網路更新入口的實際交付程式是否也綁定同一份含修正的 zlib 1.2.13，且接收的 gzip 是否會走與 CVE-2022-37434 相關的 gzip header／EXTRA 處理？",
+      "網路更新入口的實際交付程式是否也綁定同一份含修正的 zlib 1.2.13，且接收的 gzip 是否會進入與 CVE-2022-37434 相關的 gzip header／EXTRA 處理？"
+    ],
+    "required_files": [
+      "網路更新入口的實際交付程式與其隨附／載入的解壓縮 library",
+      "該成品對應的 build record、編譯紀錄與最終連結輸入或 link map",
+      "網路資料接收至 gzip 解碼與 gzip header 處理的相關原始碼",
+      "該入口在交付環境中的部署／啟動設定"
+    ],
+    "limits": [
+      "核心 Live／Replay 驗收，未涵蓋正式網頁或 Runner 保存。",
+      "語意合理性另人工核對，不以字串測試取代。"
+    ]
+  },
+  "rejected_proposals": 1,
+  "final_request": "請向發布／建置負責人取得網路更新入口的實際交付程式、其解壓縮相依 library，以及對應的 build record、編譯與最終連結紀錄，以核對發布身分及實際連入的 zlib source/object/library。另請向網路更新模組負責人取得從網路資料接收至 gzip 解碼的相關原始碼與部署／啟動設定，以核對外部資料可達性、gzip header 處理，以及 extra 欄位的緩衝區配置與限制。材料須彼此對應同一個實際交付成品。漏洞重現或特殊攻擊輸入不是必要補件。",
+  "semantic_review": {
+    "unsubmitted_entry_not_assessed_as_safe": true,
+    "roles_and_acceptance_purpose_in_final_finding": true,
+    "optional_exploit_reproduction_not_required": true,
+    "rejected_source_id_citation_preserved_and_corrected": true
+  },
+  "raw_result_local": "var/validation/ai-new-scope-20260912T062343Z-044199/result.json",
+  "scope": "原文引用重核與模型語意人工核對；不是正式網頁或部署驗收。"
+}

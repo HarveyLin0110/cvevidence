@@ -37,6 +37,10 @@ def reassess_after_investigation(context,previous_assessment,investigation,state
         queries.append({'investigation_id':task.get('task_id'),'question':task.get('question'),'reason':task.get('reason'),'action':action,
                         'evidence_ids':ids,'required_files':task.get('required_files',[])})
     collection=collect_evidence(context,cve);verified=verify(context,collection)
+    if not statements and previous_assessment.get('statement_context'):
+        statements=[{'text':row['text'],'material_id':row.get('statement_id'),
+                     'source_context_hash':row.get('source_context_hash',context.context_hash)}
+                    for row in previous_assessment['statement_context']]
     current=assess(context,verified,statements)
     # If the caller retained a statement review but did not supply the original
     # statement material, keep its previous review state instead of dropping it.
