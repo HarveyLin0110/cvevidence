@@ -41,7 +41,10 @@ if not current():
     st.error("服務版本更新中，請等待重新部署完成。")
     st.stop()
 from cvevidence.workspace import workspace
-st.sidebar.caption("團隊測試站 · " + release_label(os.environ.get("CVEVIDENCE_RELEASE_SHA")))
+st.sidebar.subheader("◈ CVEvidence")
+st.sidebar.caption("每個結論，都有證據。")
+with st.sidebar.expander("版本資訊"):
+    st.caption("部署版本：" + release_label(os.environ.get("CVEVIDENCE_RELEASE_SHA")))
 st.sidebar.button("登出", on_click=st.logout)
 root = Path(os.environ.get("CVEVIDENCE_WEB_STORE", "var/team-runtime"))
 workspace(st, store_root=root / identity)

@@ -52,13 +52,26 @@ def select_analysis(payload, *, context_hash, cve_id):
     return entry
 
 
-def render_engineering(st, entry):
+def render_engineering(st, entry, *, package=None):
     st.subheader("工程分析結果")
     st.caption("CVE：" + text(entry.get("cve_id")) + " · 執行狀態：" + text(entry.get("status")))
     assessment = entry.get("assessment")
     if not isinstance(assessment, dict):
         st.info("尚未產生工程判定；未知 CVE 或未完成分析不能視為安全。")
         return
+    if package:
+        with st.expander("本次建置與輸入材料", expanded=True):
+            left, right = st.columns(2)
+            with left:
+                st.caption("產品 / Release")
+                st.text(text(package.get("product_id")) + " / " + text(package.get("release_id")))
+                st.caption("查核目標")
+                st.text(text(entry.get("cve_id")))
+            with right:
+                st.caption("資料包 / Build")
+                st.text(text(package.get("package_id")) + " / " + text(package.get("build_id")))
+                st.caption("輸入材料")
+                st.text(str(len(rows(package.get("sources")))) + " 個已收件來源；來源數不等於有效證據數。")
     verdict = assessment.get("verdict")
     with st.container(border=True):
         st.text(VERDICTS.get(verdict, "未提供有效工程判定"))
@@ -91,6 +104,7 @@ def render_engineering(st, entry):
     with queries_tab:
         st.caption("每項查核顯示當次保存的狀態；查核完成不代表產品不受影響。")
         query_rows = rows(entry.get("queries"))
+        evidence_by_id = {e.get("evidence_id"): e for e in rows(entry.get("evidence"))}
         status_names = {"COMPLETED": "已完成", "COMPLETED_WITH_GAPS": "已執行・有缺件", "CONFLICT": "有矛盾待覆核"}
         for qid, label in QUERIES.items():
             matches = [q for q in query_rows if q.get("query_id") == qid]
@@ -106,7 +120,15 @@ def render_engineering(st, entry):
                 if query.get("conflicts"):
                     st.text("需覆核的矛盾")
                     lines(st, query["conflicts"])
-                lines(st, query.get("evidence_ids"))
+                st.text("查核發現")
+                for eid in query.get("evidence_ids", []):
+                    evidence = evidence_by_id.get(eid)
+                    if evidence:
+                        st.text(text(evidence.get("reason")))
+                        for witness in rows(evidence.get("witnesses")):
+                            st.caption("來源：" + text(witness.get("path")))
+                with st.expander("追溯識別碼與查核原始資料"):
+                    st.json(query)
     with evidence_tab:
         st.caption("以下為保存的工程證據；如需重新核對原文，可使用本頁下方的來源檢視。")
         with st.expander("條件明細與引用"):
