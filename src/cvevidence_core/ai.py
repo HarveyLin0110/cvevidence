@@ -18,6 +18,7 @@ COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說�
 最多工具 8 次，優先以 2–4 次完成一項最有價值的追加調查。若已沒有工具可查而需要補件，直接 ASK_USER。
 READ 的 start_line/end_line 最多 200 行，SEARCH term 使用字面關鍵字。不要捏造 source_id。
 搜尋若只涵蓋部分來源，只能說那些來源未找到；需要宣告缺件前先 LIST 對應檔名。已有資料不要重複要求使用者補。
+LIST 的 term 比對檔名；SEARCH 只搜尋檔案內容，搜尋檔名字串沒有命中不代表該檔不存在。清單 truncated 時縮小 LIST term，不能據此宣告缺件。
 source_index 若已有 launcher、config 或觀測，先 READ 與當次缺口相關的原文；LIST 只證明檔案存在，不代表已檢查內容。
 完整材料已提供時，優先核對它能回答什麼；只要求仍欠缺的觀測或綁定證據，並說明現有材料為何不足。
 提到具體命令列開關時，必須在已提供的工程事實或 READ 原文看到它；不能發明開關或把 API 選項直接寫成 CLI 選項。
@@ -182,11 +183,11 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                     tool_output=compare_sources(context,*ids)
                 elif action=='VERIFY':tool_output=citation_check
                 elif action=='ASK_USER':
-                    if not args['required_files']:raise ValueError('ASK_USER 需要具體補件要求')
+                    if not args['required_files'] or any(not x.strip() for x in args['required_files']):raise ValueError('ASK_USER 需要具體補件要求')
                     tool_output={'required_files':args['required_files'],'same_build_required':True,'build_id':context.manifest['build_id'],'artifact_sha256':context.manifest['primary_artifact']['sha256']}
                     result['status']='NEEDS_USER_INPUT'
                 elif action=='COMPLETE':
-                    if not args['citations'] or not args['finding']:raise ValueError('COMPLETE 需要有引用的調查摘要')
+                    if not args['citations'] or not args['finding'].strip():raise ValueError('COMPLETE 需要有引用的調查摘要')
                     result['status']='COMPLETED';tool_output={'summary':args['finding'],'citation_check':citation_check}
                 found=tool_output.get('matches',[]) if isinstance(tool_output,dict) else []
                 if tool_output.get('excerpt_id'):found=[tool_output]
@@ -217,6 +218,8 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
         result['error']=str(exc);failure('INPUT_CHANGED_OR_INVALID','INPUT_INTEGRITY_ERROR',message=str(exc))
     except (ValueError,KeyError,TypeError) as exc:failure('INVALID_MODEL_OUTPUT','INVALID_RESPONSE_OR_ARGUMENTS',message=str(exc))
     except OSError:failure('CONNECTION_ERROR' if stage=='REQUEST' else 'INPUT_CHANGED_OR_INVALID','IO_ERROR')
+    if result['tasks'] and result['tasks'][-1]['status']=='RUNNING':
+        result['tasks'][-1].update(status=result['status'],result={'error':result['errors'][-1] if result['errors'] else result['status']})
     if attempt is not None and attempt['status']=='STARTED':attempt['status']=result['status']
     result['excerpts']=list(excerpts.values());result['elapsed_seconds']=round(time.monotonic()-start,3)
     result['rejected_proposals']=sum(t['status']=='REJECTED' for t in result['tasks'])

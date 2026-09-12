@@ -232,6 +232,30 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(result['status'], 'INVALID_MODEL_OUTPUT')
         self.assertEqual(result['rejected_proposals'], 1)
 
+    def test_corrected_ask_user_retains_same_build_binding(self):
+        ask = arguments('ASK_USER', required_files=['尚缺的同 build 握手觀測'], citations=[self.eid])
+        result = self.run_ai([self.complete(citations=['X-bad']), ask], max_calls=2)
+        self.assertEqual(result['status'], 'NEEDS_USER_INPUT')
+        self.assertEqual(result['tasks'][0]['status'], 'REJECTED')
+        self.assertEqual(result['tasks'][1]['result']['artifact_sha256'], self.context.manifest['primary_artifact']['sha256'])
+        self.assertEqual(result['tasks'][1]['result']['build_id'], 'b1')
+
+    def test_blank_terminal_arguments_are_tool_errors(self):
+        for args in [arguments('ASK_USER', required_files=[' ']), self.complete(finding='  ')]:
+            with self.subTest(action=args['action']):
+                self.seen = []
+                result = self.run_ai([args], max_calls=1)
+                self.assertEqual(result['status'], 'BUDGET_EXHAUSTED')
+                self.assertEqual(result['tasks'][0]['status'], 'TOOL_ERROR')
+
+    def test_local_io_failure_does_not_leave_a_running_task(self):
+        with patch('cvevidence_core.ai.read_excerpt', side_effect=OSError('input disappeared')):
+            result = self.run_ai([arguments(), self.read()], max_calls=2)
+        self.assertEqual(result['status'], 'INPUT_CHANGED_OR_INVALID')
+        self.assertEqual(result['tasks'][0]['status'], 'COMPLETED')
+        self.assertEqual(result['tasks'][1]['status'], 'INPUT_CHANGED_OR_INVALID')
+        self.assertEqual(result['errors'][0]['code'], 'IO_ERROR')
+
     def test_workflow_keeps_engineering_assessment_on_bad_api_envelope(self):
         with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
              patch('cvevidence_core.ai._request', return_value=None):

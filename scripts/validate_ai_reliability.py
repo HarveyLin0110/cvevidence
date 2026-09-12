@@ -112,6 +112,7 @@ def run_live(folder, options):
                'semantic_review': '待人工核對問題、結論與原文；此 gate 不把引用存在當語意正確。'}
         row['passed'] = (investigation['status'] in ('COMPLETED', 'NEEDS_USER_INPUT') and citation_gate
                          and row['engineering_unchanged'] and bool(investigation['calls'])
+                         and investigation['mode'] == ('SIMULATED' if injected else 'LIVE')
                          and (not injected or (fault['injected'] and recovery)))
         rows.append(row)
         write_json(folder/'summary.json', rows)
