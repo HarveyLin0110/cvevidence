@@ -209,9 +209,10 @@ def _r2_mock_transport(context, scenario):
     return transport
 
 
-def run_r2_case(folder, context, engineering, scenario, env_file):
+def run_r2_case(folder, context, engineering, scenario, env_file, question=R2_QUESTION):
     case_folder = folder/scenario
     case_folder.mkdir()
+    write_json(case_folder/'request-context.json', {'user_context': question, 'max_calls': 8, 'timeout_seconds': 90})
     simulated = scenario != 'live'
     original = copy.deepcopy(engineering)
     saved_hash = file_hash(folder/'engineering-saved.json')
@@ -229,9 +230,9 @@ def run_r2_case(folder, context, engineering, scenario, env_file):
             with patch('cvevidence_core.workflow.investigate', side_effect=injected), \
                  patch('cvevidence_core.ai.settings', return_value={'OPENAI_API_KEY': 'TEST_NOT_A_KEY', 'OPENAI_MODEL': 'SIMULATED_ONLY'}), \
                  patch('cvevidence_core.ai._request', side_effect=AssertionError('Mock must not call network')):
-                later = investigate_after_engineering(context, engineering, R2_QUESTION, event_callback=event_callback)
+                later = investigate_after_engineering(context, engineering, question, event_callback=event_callback)
         else:
-            later = investigate_after_engineering(context, engineering, R2_QUESTION, env_file=env_file, event_callback=event_callback)
+            later = investigate_after_engineering(context, engineering, question, env_file=env_file, event_callback=event_callback)
     except Exception as exc:
         row = {'scenario': scenario, 'status': 'FAIL', 'exception_type': type(exc).__name__, 'message': str(exc),
                'engineering_dict_unchanged': engineering == original,
@@ -255,7 +256,7 @@ def run_r2_case(folder, context, engineering, scenario, env_file):
         'saved_engineering_file_unchanged': file_hash(folder/'engineering-saved.json') == saved_hash,
         'record_hash_valid': investigation.get('record_hash') == digest({k: v for k, v in investigation.items() if k != 'record_hash'}),
         'completed_citations_valid': bool(completed) and all(c['valid'] for c in citation_checks),
-        'completed_original_retained': any(t['action'] == 'READ' and t['result'].get('excerpt_id') for t in completed),
+        'completed_original_retained': any((t['action'] == 'READ' and t['result'].get('excerpt_id')) or (t['action'] == 'SEARCH' and t['result'].get('matches')) for t in completed),
         'mode_truthful': investigation['mode'] == ('SIMULATED' if simulated else 'LIVE'),
         'engineering_binding_retained': investigation['engineering_assessment_id'] == original['analyses'][0]['assessment']['assessment_id'],
         'events_include_final_ai_status': any(e['status'] == investigation['status'] for e in events),
@@ -290,17 +291,31 @@ def run_r2_case(folder, context, engineering, scenario, env_file):
         row['status'] = 'NOT_RUN'
     if simulated:
         row['limitations'].append('workflow 外層 mode 固定為 LIVE；本 QA 明確標 MOCK_TRANSPORT，內層 AI mode=SIMULATED，實際 API 呼叫為 0。')
+    row['phase_results'] = {'engineering_retained': 'PASS' if checks['engineering_dict_unchanged'] and checks['saved_engineering_file_unchanged'] else 'FAIL',
+                            'ai_expected_outcome': 'PASS' if checks.get('expected_failure_visible', checks.get('live_completed')) else 'FAIL',
+                            'reassessment': 'NOT_RUN' if followup is None else 'PASS' if checks.get('history_preserved') and checks.get('verdict_preserved') else 'FAIL'}
     write_json(case_folder/'summary.json', row)
     return row
 
 
 def run_r2(folder, options):
     started = time.monotonic()
-    context, engineering = prepare_rom_r2(folder)
+    if options.r2_from_run:
+        source = options.r2_from_run.resolve()
+        if not source.is_relative_to((ROOT/'var/validation/parallel-ai-r2').resolve()):
+            raise ValueError('R2 reuse must stay inside this worktree validation directory')
+        context = ingest_package(source/'rom-supplemented')
+        engineering = json.loads((source/'engineering-saved.json').read_text())
+        if engineering['context_hash'] != context.context_hash:
+            raise ValueError('Saved engineering context mismatch')
+        write_json(folder/'engineering-saved.json', engineering)
+        write_json(folder/'reused-snapshot.json', {'source_run': str(source), 'context_hash': context.context_hash, 'engineering_file_sha256': file_hash(source/'engineering-saved.json')})
+    else:
+        context, engineering = prepare_rom_r2(folder)
     rows = []
     scenarios = ['timeout', 'invalid-citation'] if options.mode == 'r2-mock' else ['live']
     for scenario in scenarios:
-        row = run_r2_case(folder, context, engineering, scenario, options.env_file)
+        row = run_r2_case(folder, context, engineering, scenario, options.env_file, options.r2_question)
         rows.append(row)
         summary = {'base_commit': R2_BASE, 'scope': 'ROM same-build supplement plus historical neutral statement, later AI and reassessment',
                    'cases': rows, 'status': 'PASS' if all(r['status'] == 'PASS' for r in rows) else 'FAIL',
@@ -315,6 +330,8 @@ def main():
     parser.add_argument('--mode', choices=['mock', 'live', 'live-fault', 'r2-mock', 'r2-live'], default='mock')
     parser.add_argument('--case', choices=['all', *CASES], default='all')
     parser.add_argument('--env-file', type=pathlib.Path)
+    parser.add_argument('--r2-from-run', type=pathlib.Path)
+    parser.add_argument('--r2-question', default=R2_QUESTION)
     parser.add_argument('--max-calls', type=int, default=8)
     parser.add_argument('--timeout-seconds', type=int, default=90)
     options = parser.parse_args()

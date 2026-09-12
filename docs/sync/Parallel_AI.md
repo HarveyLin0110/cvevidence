@@ -7,8 +7,13 @@
 - 狀態：RUNNING。只新增／修改分配的 QA 腳本、測試、本同步檔與 `docs/releases/Parallel_AI_R2.md`，不修改產品程式。
 - 目標：ROM 03 同 build 補件後，攜帶歷史中性聲明，走 `investigate_after_engineering`，保留正式工程 dict 並驗證追加原文／重判；另做明確模擬的 timeout、無效引用終止。
 - 最新程式讀取結果：中性說明目前保存在 `statement_context`，不是 `statement_reviews`；第一輪「中性聲明將被 AI 入站拒絕」警示不能沿用，待本輪實測。
-- 首筆結果：PASS，ROM 補件完成後 `NOT_AFFECTED`，9 項工程／歷史綁定檢查全部通過；保留舊 context 的中性聲明且 statement_reviews 為空，已經通過 OFFLINE 的 AI 入站檢查。Live 與兩個模擬失敗仍在執行，尚未宣稱通過。
+- 首筆結果：PASS，ROM 補件完成後 `NOT_AFFECTED`，9 項工程／歷史綁定檢查全部通過；保留舊 context 的中性聲明且 statement_reviews 為空，已經通過 OFFLINE 的 AI 入站檢查。模擬 timeout、無效引用終止兩案已 PASS（25 項檢查）；第一個 Live FAIL：8 次 API／73.196 秒 AI，BUDGET_EXHAUSTED；正式工程 dict／已保存 JSON 均未變。原文 SEARCH 已取得、一次 COMPARE 用四個來源被 TOOL_ERROR 後修正，但沒有預算 COMPLETE；重判 NOT_RUN。
 - 首筆 JSON：`var/validation/parallel-ai-r2/20260912T060516180542-r2-mock-b924ca36/engineering-readiness.json`、同目錄 `engineering-saved.json`。Live run：`20260912T060523891384-r2-live-3f42af5f`。
+- 第一筆 Live 風險最小重現：上述 r2-live 命令，固定 8 次／90 秒。預期完成調查後重新核對原文並重判；實際工具順序 LIST、LIST、SEARCH、LIST、LIST、SEARCH、COMPARE(TOOL_ERROR)、COMPARE，未送出 COMPLETE。產品責任：AI 工具參數引導與剩餘預算收尾（`src/cvevidence_core/ai.py:182`、`:202`、`:208`）；`workflow.py:57` 正確跳過失败重判。本輪不改產品程式。
+- QA 也修正「只接受 READ 當原文」的檢查以接受 SEARCH matches；第一筆 Live 原始摘要保留不覆寫，另以閱讀核對註記其 SEARCH 原文確實保留。
+- 第二個且最後一個 Live 將聚焦同 ROM 的正常 TCP/TLS 原文；重用本輪已保存快照與工程 JSON，輸出另建 run，不重做補件工程驗證。
+- Mock 實測：總耗時 76.107 秒（含 ROM 解包／同 build 補件及前後工程取證）；timeout 案入口 11.637 秒、invalid-citation 案入口 14.172 秒。實際 API 0 次，模擬 transport 2／3 次。工程 dict 與已保存 JSON hash 均未變，先前 READ 保留，失敗不重判；無效引用兩次拒收均留下。
+- 首個 QA commit：`383c9929587a55b2a37aecbf5d90b7dee9825b8e`。
 - 已執行：`python3 scripts/validate_ai_reliability.py --mode r2-mock`；`python3 scripts/validate_ai_reliability.py --mode r2-live --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local`。不重跑已通過的 CMake／curl 或 75 項全套。
 - 本對話仍沒有 `send_message_to_thread` 工具；主對話可直接讀本 MD／commit。
 
