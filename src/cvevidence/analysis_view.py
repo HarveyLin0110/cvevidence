@@ -37,6 +37,37 @@ def lines(st, value):
             st.text(text(item))
 
 
+def condition_groups(entry):
+    """Use the core's presentation mapping; never derive a new PC verdict."""
+    mapping = entry.get("condition_groups")
+    if not isinstance(mapping, dict) or mapping.get("cve_id") != entry.get("cve_id") or mapping.get("grouping_only") is not True:
+        return []
+    conditions = rows((entry.get("assessment") or {}).get("conditions"))
+    by_id = {c.get("condition_id"): c for c in conditions}
+    if len(by_id) != len(conditions): return []
+    groups = [{"group_id": "共用前提", "title": "建置、綁定與範圍", "condition_ids": mapping.get("shared_prerequisite_ids", [])}, *rows(mapping.get("groups"))]
+    result = []
+    for group in groups:
+        ids = group.get("condition_ids")
+        if not isinstance(ids, list) or not ids or any(not isinstance(cid, str) or cid not in by_id for cid in ids):
+            return []
+        result.append({**group, "conditions": [by_id[cid] for cid in ids]})
+    return result
+
+
+def render_excerpts(st, evidence):
+    excerpts = rows(evidence.get("excerpts"))
+    if not excerpts:
+        st.caption("此紀錄未附原文段落，可由證據瀏覽器核對來源。")
+        return
+    paths = {w.get("source_id"): w.get("path") for w in rows(evidence.get("witnesses"))}
+    for excerpt in excerpts:
+        st.text(text(paths.get(excerpt.get("source_id")) or excerpt.get("source_id"))
+                + " · 行 " + text(excerpt.get("start_line")) + "–" + text(excerpt.get("end_line")))
+        st.code(text(excerpt.get("text")), language=None)
+        st.caption(text(excerpt.get("excerpt_id")) + " · SHA256 " + text(excerpt.get("file_sha256")))
+
+
 def select_analysis(payload, *, context_hash, cve_id):
     """Reject ambiguous or cross-scope selection before showing any contents."""
     if not isinstance(payload, dict) or not context_hash or payload.get("context_hash") != context_hash:
@@ -84,6 +115,18 @@ def render_engineering(st, entry, *, package=None):
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
     overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "五項工程查核", "證據與引用", "待補資料與覆核"])
     with overview:
+        groups = condition_groups(entry)
+        if groups:
+            st.subheader("PC 工程條件")
+            st.caption("依核心定義分組；每個條件各自保留狀態，不另推算 PC 通過或安全分數。")
+            for group in groups:
+                with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=True):
+                    if group.get("meaning"): st.text(text(group["meaning"]))
+                    for condition in group["conditions"]:
+                        state = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}.get(condition.get("state"), "尚待確認")
+                        st.text(text(condition.get("title")) + "：" + state)
+        else:
+            st.caption("此保存紀錄未提供可核對的 PC 分組；以下保留原始條件，重新分析後可取得新版分組。")
         st.subheader("下一步可以做什麼")
         if assessment.get("gaps") or assessment.get("statement_reviews") or assessment.get("conflicts"):
             st.info("先看「待補資料與覆核」，再從側邊第 04 步提供同 build 材料；補件後回第 03 步重新分析。")
@@ -127,6 +170,8 @@ def render_engineering(st, entry, *, package=None):
                         st.text(text(evidence.get("reason")))
                         for witness in rows(evidence.get("witnesses")):
                             st.caption("來源：" + text(witness.get("path")))
+                        with st.expander("原文段落 · " + text(eid)):
+                            render_excerpts(st, evidence)
                 with st.expander("追溯識別碼與查核原始資料"):
                     st.json(query)
     with evidence_tab:
@@ -144,6 +189,7 @@ def render_engineering(st, entry, *, package=None):
                 for witness in rows(evidence.get("witnesses")):
                     st.text(text(witness.get("source_id")) + " · " + text(witness.get("path")))
                     st.text("SHA256：" + text(witness.get("sha256")))
+                render_excerpts(st, evidence)
     with gaps_tab:
         any_pending = False
         for field, title in (("conflicts", "矛盾待覆核"), ("statement_reviews", "人工說明待覆核"),

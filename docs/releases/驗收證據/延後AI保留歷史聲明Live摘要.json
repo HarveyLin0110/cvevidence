@@ -1,0 +1,44 @@
+{
+  "tested_commit": "7b24110fc6531bc84d7ea35cadc0110e74680227",
+  "route": "SAVED_ENGINEERING_THEN_LIVE_WITH_EMPTY_USER_CONTEXT",
+  "archive_sha256": "99aa904a483062627751a3b9adae7108a1443613e75421734fc004689feb8e60",
+  "context_hash": "ca2782fc0b5c9c6f1541e09e6f575c1ac4d4131d0e29d0afca20b3ce29f6f72a",
+  "summary": {
+    "status": "PASS",
+    "checks": {
+      "saved_engineering_unchanged": true,
+      "baseline_not_affected": true,
+      "new_scope_stays_unresolved": true,
+      "verified_conditions_unchanged": true,
+      "new_scope_review_retained": true,
+      "asks_for_missing_material": true,
+      "native_live": true,
+      "replay_keeps_original_times": true,
+      "grouping_covers_current_conditions": true
+    },
+    "ai_status": "NEEDS_USER_INPUT",
+    "model": "gpt-5.6-sol",
+    "calls": 4,
+    "ai_seconds": 31.198,
+    "started_at": "2026-09-12T06:28:40.138382+00:00",
+    "finished_at": "2026-09-12T06:29:11.336549+00:00",
+    "questions": [
+      "尚未交付的網路更新入口是否產生於同一 build，且是否屬於本次實際交付／部署範圍？",
+      "快照內是否已有網路更新入口或其建置／連結紀錄，可界定它是否落在本次交付範圍？",
+      "本次 build／release 清單是否只交付 update-reader，因而無法把所述網路入口納入既有成品結論？",
+      "請確認所述網路更新入口究竟是本次 release 的已部署／應交付組件，還是另一個尚未交付的獨立 build；若屬前者，它實際連結的 zlib 實作是否也能追溯到已審查的 1.2.13 修正版？"
+    ],
+    "required_files": [
+      "由 release／部署負責人提供：本次 release 的受控交付或部署清單（需識別網路更新入口的成品、版本、build 身分與部署狀態）",
+      "若網路入口屬本次 release，由建置負責人提供：該入口的實際成品、gzip 處理相關原始碼、編譯紀錄與最終連結輸入／map 或等價 provenance"
+    ],
+    "limits": [
+      "核心 Live／Replay 驗收，未涵蓋正式網頁或 Runner 保存。",
+      "語意合理性另人工核對，不以字串測試取代。"
+    ]
+  },
+  "rejected_proposals": 0,
+  "final_request": "請先由 release／部署負責人提供受控的 release 或部署清單，列出網路入口的成品路徑、版本、build 身分及是否實際部署。若清單證明它不屬本次 release，本次評估維持只涵蓋 update-reader，網路入口應另案評估；若它屬本次 release，請再由建置負責人提供該入口的實際成品、處理 gzip 的相關原始碼，以及編譯與連結紀錄，用來核對入口可達性、zlib source/object/library 綁定及最終產品綁定。現有紀錄本身不足以回答這些事項。",
+  "raw_result_local": "var/validation/ai-new-scope-20260912T062837Z-3f4c07/result.json",
+  "semantic_review": "呼叫端未重傳文字；模型仍根據保存的另一入口聲明追問同 release／不同 build 及相應最小原始材料。舊條件不被文字改寫，未知入口未沿用安全結論。"
+}

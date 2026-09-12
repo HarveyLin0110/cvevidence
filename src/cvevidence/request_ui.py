@@ -2,6 +2,12 @@
 from uuid import uuid4
 from .requests import RequestStore
 
+def symptom_for_run(request, run_id):
+    """A selected request is not necessarily the owner of a history-selected run."""
+    if request and any(child.run_id == run_id for child in request.runs):
+        return request.spec.symptom
+    return ""
+
 def reset_request(st):
     st.session_state.request_token=str(uuid4())
     st.session_state.follow_parent=None

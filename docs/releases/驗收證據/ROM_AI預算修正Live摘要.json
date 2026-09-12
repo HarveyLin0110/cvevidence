@@ -1,0 +1,58 @@
+{
+  "tested_commit": "dd47a1e7c44d932fb260fbdc38edb6a2235803ae",
+  "input_context_hash": "41348a539faeb6f88e9274fab8e216a60024e2e47096cde630fea45d69d6dcc3",
+  "max_calls": 8,
+  "timeout_seconds": 90,
+  "summary": {
+    "status": "COMPLETED",
+    "mode": "LIVE",
+    "model": "gpt-5.6-sol",
+    "calls": 5,
+    "ai_seconds": 44.872,
+    "total_seconds": 59.181,
+    "tasks": [
+      {
+        "action": "LIST",
+        "status": "COMPLETED",
+        "question": "哪些已提交原文直接涵蓋 heartbeat 函式、TLS record dispatch，以及各自的編譯／預處理結果？",
+        "finding": ""
+      },
+      {
+        "action": "LIST",
+        "status": "COMPLETED",
+        "question": "同一 ROM 建置中，哪些 SSL 相關 source、object、編譯命令與預處理材料可供逐項核對？",
+        "finding": ""
+      },
+      {
+        "action": "LIST",
+        "status": "COMPLETED",
+        "question": "是否已提交 t1_lib.c 的 source、object、編譯命令與預處理輸出，可直接核對 tls1_process_heartbeat 是否被排除？",
+        "finding": ""
+      },
+      {
+        "action": "SEARCH",
+        "status": "COMPLETED",
+        "question": "同一建置的原始碼與預處理結果中，OPENSSL_NO_HEARTBEATS 對 heartbeat 函式及 TLS record dispatch 的控制是否一致？",
+        "finding": ""
+      },
+      {
+        "action": "COMPLETE",
+        "status": "COMPLETED",
+        "question": "heartbeat 函式與 TLS record dispatch 的排除是否一致，且此建置結論能否代表實際部署未暴露？",
+        "finding": "同一建置對 t1_lib.c 明確使用 OPENSSL_NO_HEARTBEATS，原始碼亦將 tls1_process_heartbeat 置於該條件保護下；既有工程證據記錄 heartbeat 函式與 TLS record dispatch 已一併核對為排除，與 NOT_AFFECTED 建置結論一致。此結論只適用目前 ROM／build 的已綁定成品；實際部署是否對外監聽、可由何網路區域到達仍未知，不能由建置排除或正常測試推定未暴露。"
+      }
+    ],
+    "engineering_preserved": true,
+    "reassessment": "REVERIFIED_AND_REASSESSED",
+    "new_observations": 8,
+    "reassessed_verdict": "NOT_AFFECTED"
+  },
+  "previous_outcome": {
+    "core_commit": "44efc7b",
+    "status": "BUDGET_EXHAUSTED",
+    "calls": 8,
+    "ai_seconds": 73.196
+  },
+  "scope": "同一 ROM 補件後、同一問題；只修工具引導與執行器預算提示。模型具隨機性，一次成功不代表成功率保證。",
+  "raw_result_local": "var/validation/ai-budget-20260912T061440Z/result.json"
+}

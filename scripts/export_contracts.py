@@ -8,3 +8,6 @@ target.write_text(json.dumps(RunEnvelope.model_json_schema(), indent=2, ensure_a
 from cvevidence.request_contracts import RequestResult
 request_target = target.with_name("request-result.json")
 request_target.write_text(json.dumps(RequestResult.model_json_schema(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+from cvevidence.ai_store import AIRequest, AIOutcome
+for name, model in (("ai-request.json", AIRequest), ("ai-outcome.json", AIOutcome)):
+    target.with_name(name).write_text(json.dumps(model.model_json_schema(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

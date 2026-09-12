@@ -7,6 +7,15 @@ from cvevidence.storage import RunStore
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_request_description_never_prefills_an_unrelated_history_run():
+    from types import SimpleNamespace
+    from cvevidence.request_ui import symptom_for_run
+    request=SimpleNamespace(spec=SimpleNamespace(symptom="TEST_ONLY scenario A"),runs=[SimpleNamespace(run_id="case-A")])
+    assert symptom_for_run(request,"case-A")=="TEST_ONLY scenario A"
+    assert symptom_for_run(request,"case-B")==""
+    assert symptom_for_run(None,"case-A")==""
+
+
 def test_account_scoped_workspace_omits_local_server_path(tmp_path):
     app=AppTest.from_string("import streamlit as st\nfrom cvevidence.workspace import workspace\nworkspace(st, store_root="+repr(str(tmp_path / "account"))+")").run()
     assert not app.exception
