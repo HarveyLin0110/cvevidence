@@ -17,6 +17,8 @@ def query_summaries(entry):
     for qid, label in QUERY_LABELS.items():
         matches = [q for q in objects(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
+        if isinstance(query.get("title"), str) and query["title"].strip():
+            label = qid.split("_", 1)[0] + " " + query["title"].strip()
         status = query.get("status")
         state = {"COMPLETED": "查核已完成", "COMPLETED_WITH_GAPS": "有缺件，尚未查清",
                  "CONFLICT": "存在矛盾，需覆核"}.get(status, "未提供可用結果")

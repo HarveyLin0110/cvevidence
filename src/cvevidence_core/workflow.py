@@ -31,6 +31,7 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
         followup=reassess_after_investigation(context,assessment,ai,notes) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
         results.append({'cve_id':cve_id,'status':'COMPLETED','queries':collection['queries'],'evidence':collection['evidence'],
                         'condition_groups':describe_condition_groups(cve_id),
+                        'followup_queries':collection['followup_queries'],'runtime_observation':collection['runtime_observation'],
                         'assessment':assessment,'claim_checks':[check_claim(context,assessment,c) for c in claims if c.get('cve_id')==cve_id],
                         'ai':ai,'investigation_verification':followup,'summary':summarize(assessment,ai)})
     context.assert_current()
@@ -51,6 +52,8 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
         if not assessment:continue
         collection={'schema_version':'1.0','cve_id':entry['cve_id'],'profile_version':assessment['profile_version'],
                     'context_hash':context.context_hash,'queries':entry['queries'],'evidence':entry['evidence']}
+        for field in ('followup_queries','runtime_observation'):
+            if field in entry:collection[field]=entry[field]
         verified=verify(context,collection)
         if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
         ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file)

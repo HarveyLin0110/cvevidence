@@ -18,6 +18,19 @@ VERDICTS = {
     "NOT_AFFECTED": "不受影響（限本次成品與 CVE）",
     "NEEDS_INVESTIGATION": "需要進一步調查",
 }
+FOLLOWUP_STATES = {
+    "WAITING_USER_INPUT": "等待用戶補件",
+    "WAITING_VERIFICATION": "材料已收到，等待交叉驗證",
+    "VERIFIED": "核心已驗證",
+    "REJECTED": "已拒絕",
+}
+RUNTIME_STATES = {
+    "MISSING": "缺少實際運作證據",
+    "AWAITING_EVIDENCE": "等待運作證據補件",
+    "VERIFIED": "核心已驗證運作證據",
+    "REJECTED": "運作證據已拒絕",
+    "NOT_REQUIRED": "本次核心判定不需運作證據",
+}
 
 
 def text(value):
@@ -36,6 +49,100 @@ def lines(st, value):
     if isinstance(value, list):
         for item in value:
             st.text(text(item))
+
+
+def query_title(query, query_id):
+    """Use saved titles/metadata; never assign new semantics to a legacy query."""
+    metadata = query.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    for title in (query.get("title"), metadata.get("title")):
+        if isinstance(title, str) and title.strip():
+            return title
+    return QUERIES[query_id]
+
+
+def scoped_followup_queries(entry, *, context_hash):
+    """Check display scope/identity only, without verifying or resolving a gap."""
+    if "followup_queries" not in entry:
+        return []
+    queries = entry["followup_queries"]
+    if not isinstance(queries, list):
+        raise ValueError("Invalid follow-up queries")
+    seen = set()
+    for query in queries:
+        if not isinstance(query, dict):
+            raise ValueError("Invalid follow-up query")
+        qid = query.get("query_id")
+        if (not isinstance(qid, str) or not qid or qid in seen
+                or not context_hash or query.get("context_hash") != context_hash
+                or query.get("origin") != "RULE_GAP"
+                or query.get("target_condition_id") != "runtime_observation"
+                or query.get("status") not in FOLLOWUP_STATES
+                or any(not isinstance(query.get(k), str) for k in ("question", "reason"))
+                or any(not isinstance(query.get(k), list)
+                       or any(not isinstance(v, str) for v in query[k])
+                       for k in ("required_files", "evidence_ids"))):
+            raise ValueError("Follow-up query identity or scope mismatch")
+        seen.add(qid)
+    return queries
+
+
+def runtime_summary(entry):
+    """Describe only the saved summary; absence in old runs means no new claim."""
+    if "runtime_observation" not in entry:
+        return []
+    observation = entry["runtime_observation"]
+    if not isinstance(observation, dict):
+        return ["此紀錄的運作證據摘要格式無法讀取；請核對保存資料。"]
+    basis = {
+        "CONTROLLED_LOCAL_OBSERVATION": "受控環境本機觀測",
+        "USER_SUPPLIED_OBSERVATION": "用戶提供的運作觀測材料",
+        "NOT_OBSERVED": "尚無運作觀測",
+    }
+    return ["PC3 運作證據狀態：" + RUNTIME_STATES.get(observation.get("status"), "未提供有效狀態")
+            + "（" + text(observation.get("status")) + "）",
+            "證據基礎：" + basis.get(observation.get("evidence_basis"), "未提供有效證據基礎")
+            + "（" + text(observation.get("evidence_basis")) + "）",
+            text(observation.get("description")),
+            "保存的 provenance_verified：" + text(observation.get("provenance_verified")),
+            "受控環境觀測或用戶提供材料不代表實體客戶 FW 認證；本頁未驗證來源真實性。"]
+
+
+def model_task_status(task):
+    if task.get("status") == "COMPLETED":
+        if task.get("action") == "ASK_USER":
+            return "等待用戶補件（WAITING_USER_INPUT；補件要求已提出）"
+        return "調查動作已完成（不代表 CVE 條件成立）"
+    return text(task.get("status"))
+
+
+def render_followup_queries(st, entry, *, context_hash):
+    if "followup_queries" not in entry:
+        return
+    st.subheader("追加 Query · 規則缺口")
+    st.caption("RULE_GAP 由核心提出；問題狀態採保存結果，補件與條件是否成立由核心核對。")
+    try:
+        queries = scoped_followup_queries(entry, context_hash=context_hash)
+    except ValueError:
+        st.error("追加 Query 的格式或快照範圍不符，未顯示其內容。")
+        return
+    if not queries:
+        st.info("本次核心未列出規則缺口追加 Query。")
+    for query in queries:
+        with st.expander(text(query["query_id"]) + " · " + FOLLOWUP_STATES[query["status"]], expanded=True):
+            st.text(query["question"])
+            st.text("原因：" + query["reason"])
+            st.caption("來源：RULE_GAP · 目標條件：" + query["target_condition_id"])
+            st.text("問題狀態：" + query["status"])
+            if query["status"] == "REJECTED":
+                st.warning("此證據未通過驗證，請覆核或補回正確的同成品資料。")
+                lines(st, query["required_files"])
+            else:
+                st.text("需提供的資料（同 build／成品）" if query["status"] == "WAITING_USER_INPUT"
+                        else "此問題要求的資料（保存紀錄）")
+                lines(st, query["required_files"])
+            st.text("引用證據：" + text(query["evidence_ids"]))
+            st.caption("Context：" + query["context_hash"])
 
 
 def condition_groups(entry):
@@ -117,7 +224,7 @@ def render_engineering(st, entry, *, package=None):
     metrics[0].metric("有證據支持的條件", sum(c.get("state") == "SUPPORTED" for c in conditions))
     metrics[1].metric("有證據阻斷的條件", sum(c.get("state") == "BLOCKED" for c in conditions))
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
-    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "五項工程查核", "證據與引用", "待補資料與覆核"])
+    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "起始查核與追加問題", "證據與引用", "待補資料與覆核"])
     with overview:
         st.subheader("這份結果能回答什麼")
         for dimension in conclusion_dimensions(entry):
@@ -138,21 +245,26 @@ def render_engineering(st, entry, *, package=None):
                 for item in query_summary["conflicts"][:2]:
                     st.text("待釐清：" + text(item))
                 if any(len(query_summary[field]) > 2 for field in ("findings", "missing", "conflicts")):
-                    st.caption("此處呈現重點；完整發現與缺件請見「五項工程查核」。")
+                    st.caption("此處呈現重點；完整發現與缺件請見「起始查核與追加問題」。")
         st.subheader("深入查核：PC 條件")
         groups = condition_groups(entry)
         if groups:
             st.subheader("PC 工程條件")
             st.caption("依核心定義分組；每個條件各自保留狀態，不另推算 PC 通過或安全分數。")
+            if entry["condition_groups"].get("schema_version") == "2.0":
+                st.caption("PC2：成品實作與靜態輸入路徑。PC3：實際部署與運作證據；靜態路徑不等於已觀測到實際運作。")
             for group in groups:
                 with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=False):
                     if group.get("meaning"): st.text(text(group["meaning"]))
                     for condition in group["conditions"]:
                         state, boundary = condition_interpretation(condition)
                         st.text(text(condition.get("title")) + "：" + state)
+                        st.text(text(condition.get("explanation")))
                         st.caption(boundary)
         else:
             st.caption("此保存紀錄未提供可核對的 PC 分組；以下保留原始條件，重新分析後可取得新版分組。")
+        for line in runtime_summary(entry):
+            st.text(line)
         st.subheader("下一步可以做什麼")
         if assessment.get("gaps") or assessment.get("statement_reviews") or assessment.get("conflicts"):
             st.info("先看「待補資料與覆核」，再從側邊第 04 步提供同 build 材料；補件後回第 03 步重新分析。")
@@ -176,12 +288,19 @@ def render_engineering(st, entry, *, package=None):
         query_rows = rows(entry.get("queries"))
         evidence_by_id = {e.get("evidence_id"): e for e in rows(entry.get("evidence"))}
         status_names = {"COMPLETED": "已完成", "COMPLETED_WITH_GAPS": "已執行・有缺件", "CONFLICT": "有矛盾待覆核"}
-        for qid, label in QUERIES.items():
+        for qid in QUERIES:
             matches = [q for q in query_rows if q.get("query_id") == qid]
             query = matches[0] if len(matches) == 1 else {}
+            label = query_title(query, qid)
             status = status_names.get(query.get("status"), text(query.get("status")))
             with st.expander(qid + " · " + label + " ｜ " + status):
                 st.text("狀態：" + text(query.get("status")))
+                if query.get("description"):
+                    st.text(text(query["description"]))
+                if query.get("pc_layer"):
+                    st.caption("核心查核層級：" + text(query["pc_layer"]))
+                if isinstance(query.get("metadata"), dict):
+                    st.text("查核範圍：" + text(query["metadata"]))
                 if len(matches) > 1:
                     st.warning("重複的查核結果，需重新核對；未選取其中任何一筆。")
                 if query.get("missing"):
@@ -201,6 +320,7 @@ def render_engineering(st, entry, *, package=None):
                             render_excerpts(st, evidence)
                 with st.expander("追溯識別碼與查核原始資料"):
                     st.json(query)
+        render_followup_queries(st, entry, context_hash=assessment.get("context_hash"))
     with evidence_tab:
         st.caption("以下為保存的工程證據；如需重新核對原文，可使用本頁下方的來源檢視。")
         with st.expander("條件明細與引用"):
@@ -231,7 +351,7 @@ def render_engineering(st, entry, *, package=None):
                             st.caption(text(item.get("query_id")) + (" · 需同 build 資料" if item.get("same_build_required") else ""))
                         else:
                             st.text(text(item))
-        if not any_pending:
+        if not any_pending and "followup_queries" not in entry:
             st.info("本次保存結果沒有列出缺件或矛盾；仍須人工覆核範圍，不能推論其他 CVE 或部署環境安全。")
         st.caption("補充資料請使用第 04 或 05 步的補件入口；會建立新紀錄，保留這次結果。")
 
@@ -250,11 +370,12 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
     if ai.get("status") in ("OFFLINE", "NOT_RUN", "CONFIG_REQUIRED"):
         st.info("本次沒有完成模型調查；工程结果仍可查閱與下載。")
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
+    st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
     for index, task in enumerate(rows(ai.get("tasks")), 1):
-        with st.expander("調查問題 " + str(index), expanded=True):
+        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=True):
             st.text(text(task.get("question")))
             st.text("目的：" + text(task.get("reason")))
-            st.text("動作：" + text(task.get("action")) + " · " + text(task.get("status")))
+            st.text("動作：" + text(task.get("action")) + " · " + model_task_status(task))
             if task.get("status") == "REJECTED":
                 st.warning("此提案被拒絕，不作為有效發現或補件要求。")
                 continue

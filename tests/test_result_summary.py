@@ -27,6 +27,12 @@ def test_missing_and_conflict_are_not_hidden_by_completed_status():
     assert row["state"]=="存在矛盾，需覆核"
     assert row["missing"] and row["conflicts"]
 
+def test_runtime_v2_summary_uses_saved_query_semantics():
+    entry={"queries":[{"query_id":"Q5_PATH","title":"實際部署與運作證據",
+                       "pc_layer":"PC3","query_plan_version":"2.0"}]}
+    assert query_summaries(entry)[4]["label"]=="Q5 實際部署與運作證據"
+    assert query_summaries({})[4]["label"]=="Q5 輸入路徑與必要條件"
+
 def test_dimensions_do_not_invent_reproduction_from_positive_engineering():
     from cvevidence.result_summary import conclusion_dimensions, condition_interpretation
     for verdict in ("AFFECTED", "NOT_AFFECTED", "NEEDS_INVESTIGATION", None):
