@@ -7,6 +7,13 @@ from cvevidence.storage import RunStore
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_account_scoped_workspace_omits_local_server_path(tmp_path):
+    app=AppTest.from_string("import streamlit as st\nfrom cvevidence.workspace import workspace\nworkspace(st, store_root="+repr(str(tmp_path / "account"))+")").run()
+    assert not app.exception
+    assert "受控路徑" not in app.radio[0].options
+    assert "上傳工程包" in app.radio[0].options
+
+
 def click(app, label):
     next(b for b in app.button if b.label == label).click().run(timeout=40)
     assert not app.exception

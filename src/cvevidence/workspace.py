@@ -105,7 +105,10 @@ def workspace(st, *, store_root=None):
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
-        kind=st.radio("資料來源",["產品／版本樣品","上傳工程包","受控路徑","先描述情境"],horizontal=True)
+        source_options=["產品／版本樣品","上傳工程包"]
+        if store_root is None: source_options.append("受控路徑")
+        source_options.append("先描述情境")
+        kind=st.radio("資料來源",source_options,horizontal=True)
         available=[e for e in entries if e["available"] and e["kind"]=="initial"]
         selected=None
         upload=None
