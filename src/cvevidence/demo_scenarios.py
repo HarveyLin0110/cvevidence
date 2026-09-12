@@ -1,5 +1,5 @@
 """Detailed demo inputs. Business background is illustrative, not evidence."""
-SCENARIOS = {
+DETAILED_SCENARIOS = {
     'A': '''情境 A｜更新匯入工具的產品影響查核
 
 【產品與操作背景】
@@ -26,4 +26,10 @@ SCENARIOS = {
 
 【希望的協作流程】
 請先列出目前能確認的內容，以及 PC3 還缺什麼。針對缺件提出可操作的追加 Queries，說明應補哪些檔案、成品／build 要如何一致、收到後需核對什麼。後續我會補入受控本機的同成品運作材料，請保留原紀錄、重新執行 Queries，並比較前後條件與追加問題狀態。若另有未解決的範圍或矛盾，請繼續保留待查，不要為了展示而強行判定。''',
+}
+
+# Short inputs for on-stage typing; expected outcomes are never sent to the engine.
+SCENARIOS = {
+    'A': '我們的設備管理介面使用 OpenSSL 1.0.1f，想確認這版韌體是否受 Heartbleed（CVE-2014-0160）影響。這次提供同一建置的韌體、編譯連結資料及正常 TLS 連線紀錄，請按 PC1、PC2、PC3 說明判定依據。',
+    'B': '更新工具解壓縮 gzip 檔案時偶爾失敗，想確認是否與 zlib 的 CVE-2022-37434 有關。目前只有成品與編譯資料，還沒有操作紀錄及輸入樣本，請先分析並告訴我還需要補什麼。',
 }

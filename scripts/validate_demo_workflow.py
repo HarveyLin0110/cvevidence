@@ -23,9 +23,9 @@ def select(label, value):
     next(s for s in app.selectbox if s.label == label).set_value(value).run(timeout=30)
     assert not app.exception
 catalog = next(s for s in app.selectbox if s.label == '選擇已取得的產品／建置／資料包')
-idx = next(i for i, label in enumerate(catalog.options) if 'demo_cmake_complete_v2' in label)
+idx = next(i for i, label in enumerate(catalog.options) if 'demo_openssl_complete_v3' in label)
 catalog.set_value(idx).run()
-next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2022-37434, CVE-2099-9999').run()
+next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2014-0160, CVE-2099-9999').run()
 next(t for t in app.text_area if t.label == '情境與想確認的問題').set_value(SCENARIOS['A']).run()
 button('匯入並建立查核')
 request_id = app.session_state.selected_request
@@ -37,6 +37,14 @@ button('03 分析進度與結果')
 button('執行 Queries 與正式判定')
 first_engineering_id = app.session_state.selected_run
 assert runner.read_engineering(first_engineering_id)['analyses'][0]['assessment']['verdict'] == 'AFFECTED'
+from cvevidence.query_preparation import prepare_queries
+from cvevidence.result_summary import pc_summaries
+entry = runner.read_engineering(first_engineering_id)['analyses'][0]
+assert [q['query_id'] for q in prepare_queries('CVE-2014-0160','rom')['queries']] == [q['query_id'] for q in entry['queries']]
+pc = {group['group_id']:group['summary'] for group in pc_summaries(entry)}
+assert '本次工程證據核對到 OpenSSL 1.0.1f' in pc['PC1']
+assert 'OPENSSL_NO_HEARTBEATS' in pc['PC2']
+assert 'TCP／TLS 1.2' in pc['PC3']
 button('04 AI 查核與補件')
 assert any('尚無' in str(t.value) or '未啟用' in str(t.value) for t in [*app.info, *app.caption, *app.text])
 button('05 報告與後續行動')
