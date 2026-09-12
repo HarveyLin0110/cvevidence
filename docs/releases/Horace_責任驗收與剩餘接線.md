@@ -1,6 +1,14 @@
 # Horace 責任驗收與剩餘接線
 
-更新：2026-09-12 14:38。依 Frankie 雙人分工確認 DOCX、Champion Product Plan V5 與 Demo 白話說明逐項核對；以當日新作為證據，不拿舊 Demo 成績代替。
+更新：2026-09-12 16:26。依 Frankie 雙人分工確認 DOCX、Champion Product Plan V5 與使用者後續修正核對；以當日新作為證據，不拿舊 Demo 成績代替。下方表格保留 14:38 checkpoint 的具名驗收，最新進度由本節補充。
+
+## 最新實作與 Demo
+
+- 正式網站已完成真實 CMake Live、同 build 補件、NI→Affected、報告與歷史回讀；不是仍未接 API。固定版本／run 見 [網站實測](團隊站_CMake_Live_實測_2026-09-12.md)。其當時尚缺的文字歷史接線已由 PR #20 合入 main。
+- PC3 runtime-v2 由 PR #22 交付，三格式正常運作材料、命令／配置／gzip 核對、追加問題及補件保留。PR #23 的兩個初始 CMake 包實現「完整包直接查核」及「缺件包停在 AI 指引」，43／43 的三格式與歷史驗收、244 項測試及 23 subtests 已有具名紀錄，見 [Horace 同步](../sync/Horace.md)。
+- #22／#23 已隨整合進入 main，#25 再加入 OpenSSL 完整情境；目前 main `063e581` 的預設是 OpenSSL 完整案例與 CMake 缺件案例。CMake 原兩包仍在 Git。展示 B 只說明如何補件，不要求現場真的補；講稿不列本輪優先工作。
+- 本輪 PR #26 提供具體 PC 命中位置與最小補件清單，已合入上述 main；新實際 CMake Live 2 calls／24.883 秒、16／16，核心 hash 核對一致。呈現與交接詳見 [PC 命中細節與最小補件指引](PC命中細節與最小補件指引.md)。PR 合併、最新 CI 與公開網站發布仍須分開核對。
+- 通用 CVE 調查由側邊 `codex/general-cve-triage` 開發，本分支仍只宣稱已有三個審查 profile 的正式判定能力。
 
 產品 checkpoint 為 `7b24110`。其 PR #9 的 GitHub Actions **34678280555** 成功：**167 passed、23 subtests，45.22 秒**，含 schema 重產一致；此數為該 PR 與當時 main 的 CI 範圍。本機合回 main `9d11d48` 時 165 項通過，之後保存文字的改動另有 50 項聚焦測試及實際 Live。不同基準與測試種類分開記，不相加成漏洞通過率。
 
@@ -39,13 +47,13 @@
 - [D 指定版本的 consumer QA](https://github.com/HarveyLin0110/cvevidence/blob/754e6a3/docs/releases/Parallel_Contract.md)：基本資料及 scope 隔離通過，兩個 excerpts 呈現失敗；當時舊 Runner 未接分析，不能套用為新 main 狀態。
 - [PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9)、[7b24110 CI](https://github.com/HarveyLin0110/cvevidence/actions/runs/34678280555)。更新 head 後以新 checks 為準。
 
-## 還需要完成的聯合驗收
+## 14:38 待辦的現況與剩餘聯合驗收
 
-1. 整合端取得 PR #9 的完整修正；固定同一核心版本供分析、原文工具與 Replay 使用。
-2. 正式 Live worker 由可信任配置取得 API 設定，保存獨立 AI stage；前端以 context／CVE／assessment ID 組合顯示，不能拿 stage wrapper 取代工程 JSON。
-3. Frankie 的證據畫面／報告補呈現既有 evidence.excerpts 與原文定位；可依 condition_groups 顯示 PC 分組。
-4. 用實際網站及固定整合 commit 走 ROM 缺件→Live→同 build 補件→新工程結果→報告，重啟後再取回原結果。既有 OFFLINE 真實瀏覽器閉環已由 Frankie 記錄；本表不把核心 Live 或 recording fake Streamlit 當此項完成。
+1. 核心、獨立 AI stage、scope 組合及原文呈現已接入 main；正式網站 CMake Live 及報告回讀已驗，不再標示未接線。
+2. 最新 runtime-v2／两版 Demo 的正式網站操作須以整合端具名發布紀錄驗收。原 CMake 網站測試跨兩個部署版本，不能当成單一固定版本或受控服務重啟驗收。
+3. PR #26 的細節呈現需整合端審閱、合併及发布後再核對。舊 AI 保存紀錄沒有核心收件清單時，仍顯示原始問題；必須新發起 AI 才會保存新格式清單，不能將舊紀錄改寫成新呼叫。
+4. 原目標中的三格式核心、補件、保存與邊界驗收保留；現場不再走完整補件閉環。剩餘工作聚焦最新版發布、報告與歷史可讀，以及實測發現的問題。
 
-上述第 1–4 項屬整合與正式操作驗收；核心會配合處理發現的介面或語意問題。全目標保持有效，尚不宣告完整網站 Live 已完成。
+上述剩餘項目屬整合與正式操作驗收；核心會配合處理發現的介面或語意問題。保留已完成的網站 Live 證據，也不將它擴張成最新版本所有流程都已驗收。
 
 所有結論限定已審查的三 profile 與本次交付範圍。正常觀測不是漏洞利用重現；來源 hash 不是供應商認證；模型引用可核對仍不代表語意推論已證明。沒有用一次成功推估成功率或未量測的時間節省。

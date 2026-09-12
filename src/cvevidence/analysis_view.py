@@ -210,7 +210,29 @@ def render_engineering(st, entry, *, package=None):
             for index, group in enumerate(g for g in groups if not g["shared"]):
                 with st.container(border=True, key="pc_" + group["tone"] + "_" + scope_key + "_" + str(index)):
                     st.text(text(group.get("group_id")) + " · " + text(group.get("title")) + " ｜ " + group["label"])
-                    st.text(group["summary"])
+                    if group["context"]: st.text(group["context"])
+                    for finding in group["findings"]:
+                        st.text(finding["headline"])
+                        if finding["locations"]:
+                            st.caption("來源位置：" + "；".join(loc["label"] for loc in finding["locations"][:2]))
+                        elif finding["state"] == "UNKNOWN":
+                            st.caption("目前尚無可用來確認此條件的命中位置。")
+                        for missing in finding["missing"][:2]: st.text("尚缺：" + missing)
+                        for conflict in finding["conflicts"][:2]: st.text("矛盾：" + conflict)
+                        if finding["condition_id"] == "runtime_observation" and finding["state"] == "SUPPORTED":
+                            observation = next((loc for loc in finding["locations"] if loc["excerpt"]), None)
+                            if observation:
+                                st.text("本次原始運作紀錄：")
+                                st.code("\n".join(observation["excerpt"].splitlines()[:3]), language=None)
+                    with st.expander(text(group["group_id"]) + " 的判讀依據與命中原文", expanded=False):
+                        for finding in group["findings"]:
+                            st.text(finding["explanation"])
+                            for location in finding["locations"][:8]:
+                                st.text(location["label"])
+                                if location["excerpt"]: st.code(location["excerpt"], language=None)
+                                st.caption("來源 SHA256：" + text(location["file_sha256"]))
+                            if len(finding["locations"]) > 8:
+                                st.caption("其餘來源請見「證據與引用」。")
                     if group.get("meaning"): st.caption(text(group["meaning"]))
                     if any(c.get("condition_id") in ("entry_reachable", "trigger_prerequisites") for c in group["conditions"]):
                         st.caption("本段是交付程式路徑與必要條件的工程證據；不代表漏洞已觸發、實際部署可達或已遭利用。")
@@ -322,6 +344,25 @@ def render_engineering(st, entry, *, package=None):
         st.caption("補充資料請使用第 04 或 05 步的補件入口；會建立新紀錄，保留這次結果。")
 
 
+def saved_collection_guide(ai, *, context_hash, cve_id, assessment_id):
+    """Check display scope/shape; this does not verify collected materials."""
+    for task in reversed(rows(ai.get("tasks"))):
+        if task.get("action") != "ASK_USER" or task.get("status") != "COMPLETED": continue
+        result = task.get("result")
+        guide = result.get("collection_guide") if isinstance(result, dict) else None
+        if not isinstance(guide, dict): continue
+        if (guide.get("origin") != "CORE_PARSER_CONTRACT" or guide.get("schema_version") != "1.0"
+                or guide.get("context_hash") != context_hash or guide.get("cve_id") != cve_id
+                or guide.get("assessment_id") != assessment_id): continue
+        items = guide.get("items")
+        if not isinstance(items, list) or not 1 <= len(items) <= 8 or not isinstance(guide.get("details"), dict): continue
+        if any(not isinstance(row, dict) or type(row.get("present")) is not bool
+               or any(not isinstance(row.get(k), str) or not row[k] or len(row[k]) > 4000
+                      for k in ("title", "path", "how", "purpose")) for row in items): continue
+        return guide
+    return None
+
+
 def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
     st.subheader("AI 查核建議")
     if not isinstance(ai, dict):
@@ -337,8 +378,20 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
         st.info("本次沒有完成模型調查；工程结果仍可查閱與下載。")
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
     st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
+    guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id, assessment_id=assessment_id)
+    if guide:
+        st.subheader("需要準備的最小材料")
+        st.caption("清單依核心可接受的收件格式整理；已收到不等於已通過驗證。AI 調查與詳細格式可展開查看。")
+        for item in guide["items"]:
+            st.text(item["title"] + (" · 已收件，仍需核對" if item["present"] else " · 待提供"))
+            st.text("取得方式：" + item["how"])
+            st.caption("檔案：" + item["path"])
+        with st.expander("詳細格式、成品範圍與驗收方式", expanded=False):
+            st.text(text(guide.get("notice")))
+            for item in guide["items"]: st.text(item["title"] + "：" + item["purpose"])
+            st.code(text(guide["details"]), language="json")
     for index, task in enumerate(rows(ai.get("tasks")), 1):
-        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=True):
+        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=not bool(guide)):
             st.text(text(task.get("question")))
             st.text("目的：" + text(task.get("reason")))
             st.text("動作：" + text(task.get("action")) + " · " + model_task_status(task))

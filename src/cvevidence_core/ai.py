@@ -5,6 +5,7 @@ from datetime import datetime,timezone
 from .integrity import IntegrityError,digest
 from .sources import list_sources,search_sources,read_excerpt,compare_sources,verify_excerpt
 from .verifier import require_verified,verify_citations
+from .collection_guidance import collection_guide
 
 SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律用繁體中文。
 先讀取已完成 Q1–Q5 的事實與缺口，自行提出值得追加的具體問題，再使用 investigation_step。
@@ -22,6 +23,7 @@ statement_context 是先前保存的使用者補充，仍非工程事實；優�
 每個新問題寫 question、reason（簡短的調查目的，非內部思考過程）。READ/SEARCH 結果可引 X-ID；工程事實引用 E-ID。
 COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說未知。ASK_USER 時清楚寫 required_files 及同 build/hash 要求。
 每項補件要求要說明向哪個角色取得、需要哪份材料，以及要核對的內容；不要重複索取已提交且足夠的檔案。
+collection_guide 是核心提供的收件格式指引，並非已驗觀測或使用者要求。依其中材料用途提出問題；CMake 的運作驗證需配對原始 gzip 樣本，不能只索取日誌或配置。先用簡短文字列最小材料與取得方式，格式細節由工具另附。故障日誌可作症狀調查的可選資料，不能當作正常運作驗證的必要材料。
 required_files 只列解除目前缺口所必要的最小既有工程材料。可選的新增動態測試放在 finding 並註明可選、由工程師在受控環境評估；不能把重現漏洞或產生特殊攻擊輸入當作工程適用性判定的必要補件。
 總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 COMPLETE／ASK_USER。優先以 2–4 次完成一項最有價值的追加調查。
 預留一次呼叫收尾；剩兩次時至多做一個必要查核，剩一次時依已有證據 COMPLETE 或提出具體 ASK_USER。不得為了完成而捏造答案，資料不足要明說限制。
@@ -132,12 +134,13 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                         'text_truncated':len(note['text'])>1000,'source_context_hash':note.get('source_context_hash'),
                         'blocks_verdict':note.get('blocks_verdict',True),'review_reason':note.get('reason','')[:600],
                         'verified_engineering_fact':False} for _,note in selected]
+    guide=collection_guide(context,verified,assessment)
     payload={'user_context':user_context[:12000],'cve_id':verified.cve_id,'artifact':context.manifest['primary_artifact'],
              'build_id':context.manifest['build_id'],'engineering_verdict':assessment['verdict'],'conditions':assessment['conditions'],
              'gaps':assessment['gaps'][:30],'evidence':compact,'source_index':index[:40],
              'statement_context':statement_context,'statement_context_total':len(history),
              'statement_context_truncated':len(history)>len(selected),
-             'scope':assessment['scope'],'advisories':assessment['source_advisories']}
+             'scope':assessment['scope'],'advisories':assessment['source_advisories'],'collection_guide':guide}
     items=[{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]
     start=time.monotonic();request=transport or _request;repairs=0;attempt=None;stage='REQUEST'
     def failure(status,code,**details):
@@ -211,6 +214,7 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                 elif action=='ASK_USER':
                     if not args['required_files'] or any(not x.strip() for x in args['required_files']):raise ValueError('ASK_USER 需要具體補件要求')
                     tool_output={'required_files':args['required_files'],'same_build_required':True,'build_id':context.manifest['build_id'],'artifact_sha256':context.manifest['primary_artifact']['sha256']}
+                    if guide is not None:tool_output['collection_guide']=guide
                     result['status']='NEEDS_USER_INPUT'
                 elif action=='COMPLETE':
                     if not args['citations'] or not args['finding'].strip():raise ValueError('COMPLETE 需要有引用的調查摘要')
