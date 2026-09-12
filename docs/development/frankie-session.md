@@ -5,11 +5,11 @@
 ## 工作位置
 | 工作 | Session | WSL checkout | 分支 |
 | --- | --- | --- | --- |
-| Frankie 功能開發 | CVEvidence (2) | /home/frankie/projects/cvevidence-fresh | codex/frankie-fresh-milestones |
+| Frankie 功能開發 | CVEvidence (2) | /home/frankie/projects/cvevidence-fresh | codex/frankie-feature-development |
 | 跨成員整合 | CVEvidence | /home/frankie/projects/cvevidence-integration | codex/integration-handoff |
 | Horace 核心 | Horace 的開發環境 | 由 Horace 維護 | codex/horace-fresh-core |
 
-兩個本機 checkout 已確認存在，協作訊息已送往整合 session；整合端確認前，不跨目錄修改或停止對方服務。
+兩個 checkout 已確認；整合端已回覆同意以下分工。各自不跨目錄修改或停止對方服務。功能分支從 b02fc31 建立，既有 codex/frankie-fresh-milestones 保留作交付基線。
 
 ## 此 session 繼續開發
 - 情境入口、無檔案的資料需求引導與多 CVE 請求管理。
@@ -26,11 +26,11 @@ contracts.py、runner.py 屬共用接口：修改前通知整合端，附新舊�
 - ROM/CMake/curl 與九包／三補件的整合驗收。
 - Horace 後續 Q1–Q5／Verifier／assess／investigate 接線與整體版本發布。
 
-此檔中的檔案責任是已送出的協調提案，等待整合端確認；在確認前不並行修改共用檔案。
+整合端已確認以上檔案責任；跨責任修改前交換 commit 與接口。runner.py 由 Frankie 維護，core_service/core_worker 由整合端維護。
 
 ## 服務與資料隔離
-目前 8505 仍由 fresh checkout 的 workspace_service 管理。
-建議 8505 交整合端，Frankie 開發另用 8506；尚未接管前不停止或重啟 8505。
+8505 已由整合端接管；它確認已正常停止舊 fresh 服務，改由 integration checkout 啟動。
+Frankie 開發使用8506；此分支 scripts/workspace_service.py 預設8506，提供 --port，PID與日誌按port分開。不得操作整合端8505。
 個別 checkout 使用自己的 var/runtime，不共享可寫 run store。既有資料不得刪除、覆寫或自動搬移。
 
 ## 交付方式
@@ -43,5 +43,5 @@ contracts.py、runner.py 屬共用接口：修改前通知整合端，附新舊�
 ## 分流時基線
 - 44dc613：runtime/history 修正，54項測試通過；已推 GitHub。
 - dc95e44：合入 Horace b71926f，包含 demo-inputs 9初始包＋3補件；尚未完成原始包的三格式整合驗收。
-- catalog_entries 尚未支援新增 archive.repo_path，正式樣品尚需整合端接入選單。
+- 整合端回報 1ac9d4b 已支援 archive.repo_path、補件hash和正式樣品；12包hash、9/9收件、3/3補件通過。這是整合分支成果，此功能分支不重做相同修改；合入由整合端統一處理。
 - Q1–Q5／正式判定／AI 仍未有可整合交付；Horace 的 Live 試跑是他同步的進度，不是本工作台的驗收。
