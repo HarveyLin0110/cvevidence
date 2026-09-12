@@ -1,111 +1,70 @@
 # Horace 開發同步
 
-更新：2026-09-12 13:41（Asia/Taipei）
+更新：2026-09-12 14:06（Asia/Taipei）。此檔只由 Horace 對話維護，Frankie 維護 `docs/sync/Frankie.md`。只保留影響協作的現況；變動共用介面前讀對方同步，不互相覆蓋。
 
-此檔由 Horace 的工作對話維護，供 Frankie 及其 Codex 讀取。每次形成決定、變更介面或交件後更新；只留影響協作的摘要，不保存完整聊天。Frankie 請自行維護 `docs/sync/Frankie.md`；雙方先讀對方最新內容再動共用介面，避免重做。
+## 現在可取得的交件
 
-## 已確認的限制
+- **輸入包已在 main**：`demo-inputs/` 的 9 初始包＋3 同 build 補件隨 PR #2 於 13:34 合併。12 包 SHA-256 本輪全通過；約 95 MB，最大 17 MB，不需要 LFS。不要再等待 PR #2 或從舊 Demo 搬檔。
+- **完整核心 PR #9**：https://github.com/HarveyLin0110/cvevidence/pull/9 。固定產品 checkpoint `44efc7bdcc533760ab167a2a005b0111b9758483` 已推送；Q1–Q5、verify/assess、Claim、中文摘要、AI 與同 build 補件重判均可接線。本輪將 main 基線合回作者分支，解 README／gitignore 衝突並補 CI 的 binutils、squashfs-tools；不改 Frankie 產品程式。
+- **最短真實網頁路徑**：`demo-inputs/rom/03_rom.tar.gz` → `analyze_archive_for_runner(..., options={"requested_cves": ["CVE-2014-0160"], "mode": "OFFLINE"})` → 保存完整 JSON → 顯示工程結果。不要等額外 Live／長回歸才接 checkpoint。
+- 完整介面：`docs/architecture/核心分析介面與接線提案.md`；展示選檔：`demo-inputs/README.md`；已有驗收：`docs/releases/Horace_完整核心與Demo交件.md`、`docs/releases/Parallel_QA.md`。
 
-- 比賽當日團隊程式、builder、測試及 demo 資料全部重新製作。舊 Demo_3x3、舊程式及驗收結果不複製、不執行；舊 DOCX 僅供需求與概念參考。
-- 公開 OSS 今日從官方重新取得，保存版本、URL、授權及 SHA-256。
-- 分工以「CVEvidence 工具架構與雙人分工確認 Frankie」DOCX 為準。V5 plan 的較早分工若不一致，由這份分工更新覆蓋；產品與 demo 情境仍參考 V5。
-- 模型使用 OpenAI API；使用者已選 `gpt-5.6-sol` / `medium`，真實呼叫成功。key 放環境變數或 Git 忽略的 `.env.local`。金鑰、客戶原始資料不進 Git；使用者要求今天重建的 demo 輸入納入 Git，已新增 `demo-inputs/`。
-- 給隊友看的文件盡量用繁體中文；程式識別字與必要技術名詞保留原文。
-- 判定為工程初判，待工程師覆核；不能將正常功能測試、版本命中或 AI 意見當完整適用性證明。
+## 責任與已定限制
 
-## 責任邊界
-
-| Horace 製作 | Frankie 製作 |
+| Horace | Frankie／整合端 |
 |---|---|
-| 三種新 builder、真實觀測、九包及補件、驗收比對器 | 樣品/ZIP 操作入口、實測表呈現 |
-| 匯入解析、檔案與成品核對、Q1–Q5、原文工具、Verifier | Runner 串接、進度、證據檢視 |
-| 三個 CVE profile、候選匹配、判定引擎、Claim 查核、缺口 | 結果與條件呈現、摘要組裝/下載 |
-| OpenAI 呼叫、AI 追加問題與工具調查、引用核對、補件指引 | 模式操作、整次逾時、UI 錯誤處理 |
-| 同 build 補件驗證、文字聲明語意、矛盾提示 | 保存、不可變快照、parent run、歷史與前後比較 |
-| 分析欄位與語意提案、可獨立驗收的小型 CLI | 共用 contracts 主維護、正式 Web/CLI 共用 Runner |
+| 新 builder、真實觀測、9＋3 輸入包 | 收件 UI、Runner、工作台 |
+| parser、Q1–Q5、來源工具、Verifier | 共用 contracts、執行進度及錯誤映射 |
+| CVE profile、規則、Claim、缺口／摘要 | 結果呈現、保存與報告 |
+| OpenAI 動態調查、引用核對與補件建議 | 模式入口、整次執行期限、可信設定注入 |
+| 同 build 補件驗證、文字與矛盾語意 | 不可變 snapshot／parent run／歷史比較 |
 
-Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存系統。Frankie 不需再寫另一套 AI planner、query、Verifier 或判定規則。
+團隊程式、builder、測試及資料全於今日重新製作；舊 DOCX／Demo 只看概念。公開 OSS 今日從官方重新下載並保留授權／hash。唯一根目錄為 `CVEvidence_Fresh_2026-09-12`；棄用目錄已移至垃圾桶。給隊友的文件用繁體中文。
 
-## 產品及 demo 對齊
+核心只讀當次交付，不執行匯入 binary、不讀 factory／測試答案／其他包／未交補件。人工文字、模型推論與版本警示不能直接改判定。初判須人工覆核，來源 hash 一致不是供應商簽章或已證明實際部署。
 
-- 兩入口：先描述現象（允許初始無檔案、無 CVE），或指定一至多個 CVE；候選 ≠ 產品適用性 ≠ 異常原因。
-- 先跑 Q1_COMPONENT、Q2_BUILD、Q3_IMPLEMENTATION、Q4_BINDING、Q5_PATH，再讓 AI 依當次內容提出新的調查問題、使用唯讀工具或要求補件。新增問題不固定為 Q6。
-- 三種實際交付：ROM/SquashFS＋SDK；CMake 靜態 zlib；curl 安裝＋launcher/config。
-- 完整目標六個新 build、九個初始包、三組同 build 補件。03 來自 ROM 02，補回同次資料後有效阻斷才 Not Affected；06 來自 CMake 04、09 來自 curl 07，完整條件成立才 Affected。
-- build 完成、工程判定通過、Live AI 通過分開統計，不預填九格結果。
-- 分析器只讀當次匯入資料，不執行匯入 binary，不讀 factory/測試答案/其他樣品/未交補件。
+使用者指定 `gpt-5.6-sol`／`medium`，實際 API 已成功。key 由環境或 Git 忽略的 `.env.local` 提供，不寫入同步／PR／結果。OFFLINE、LIVE、REPLAY 與 SIMULATED 必須分清。
 
-## 介面狀態
+## 介面與接線要點
 
-**已讀 Frankie 分支 364a657 的 M5a 同步：已整合第一輪核心、file-backed 收件、來源操作與同 build delta 補件。下面分析階段擴充仍為提案。**
+1. **工程先完成**：`workflow.analyze_package(context, mode="OFFLINE", ...)` 或 file-backed `frankie_adapter.analyze_archive_for_runner(...)` 回傳完整 JSON。Runner 擁有 run ID、固定 archive/context、保存、parent 與執行外層期限。原 v0.2 collect/read 維持相容，沒有另做正式 Runner。
+2. **後續 AI 獨立階段**：`workflow.investigate_after_engineering(context, saved_engineering_result, ...)` 重新核對來源與已保存判定；AI 逾時／錯誤不改原工程 dict。傳入 trusted `env_file` 或由可信程序讀環境，不能讓上傳資料決定 key 路徑。既有 intake worker 不傳 key；AI 階段需另外接入。
+3. **JSON 保存提案**：完整工程 payload 具有 `context_hash` 與 `analyses[]`；每個 analysis 含 `cve_id`、queries、evidence、assessment、ai。舊 RunEnvelope 的 TRUE／FALSE 與 NOT_RUN 不可硬轉成新狀態；整合端以版本化 sidecar／envelope 保存。Frankie F14 renderer 可吃完整工程 payload，但正式保存位置與啟動入口仍由整合端確認。
+4. **分階段 AI 的呈現**：AI 階段回傳項目只有 CVE、工程 assessment ID、ai、investigation_verification，不能單獨當完整工程 payload 傳給 renderer。保留原工程結果，依相同 context/CVE/assessment ID 組合顯示，AI 記錄另存不可變結果。
+5. **五 query 與動態問題**：Q1_COMPONENT／Q2_BUILD／Q3_IMPLEMENTATION／Q4_BINDING／Q5_PATH。AI 依內容新增不同問題、READ／SEARCH 等工具或 ASK_USER，不硬編固定 Q6。新原文经 exact bytes 重核為來源觀測，再 collect→verify→assess；自由推論不升格為條件。
+6. **狀態不能混用**：condition 為 SUPPORTED／BLOCKED／UNKNOWN；未執行或完整性失敗 assessment=null。未知 CVE 保留 UNSUPPORTED，即使外層程序 COMPLETED 也不能顯示安全。malformed tar 可拋 `tarfile.ReadError`，整合 worker 必須保留 TarError 映射。
+7. **文字語意已修**：中性「已提供檔案」保留 `statement_context`，不阻擋正式條件；只有未決／矛盾／新增範圍工程主張進 `statement_reviews`。同 build 補件可由新證據解除舊待查主張，但不信任傳入的 verified flags。
 
-- Python 可匯入核心，由 Frankie 的 Runner/Streamlit 呼叫；回傳可 JSON 化物件。
-- 物件：InputPackage（可讀來源/manifest/context）、EvidenceRecord、AIProposal/InvestigationTask、Supplement、Assessment、RunEnvelope。
-- 入口：`ingest_package`、`discover_candidates`、`collect_evidence`、`list_sources`、`search_sources`、`read_excerpt`、`compare_sources`、`verify`、`assess`、`investigate`、`validate_supplement`。
-- Frankie 擁有 `run_analysis`、`save_supplement`、run ID/parent run/context 保存及前後比較。
-- 五項 query 的成功/缺件與正式 verdict 分開；完整性失敗 `assessment=null`；未知 CVE 不套別的 profile。
-- OpenAI key 用 `OPENAI_API_KEY`，模型用 `OPENAI_MODEL`；Live/Offline/Replay 分開。尚未設定模型或金鑰不能標 Live 成功。
-- Evidence ID 決定於來源/事實/locator，不用 package 顯示名稱決定判定。所有引用須能核對原值與 hash。
+兩入口：先描述現象可沒有 CVE／檔案；或指定最多五個 CVE，逐個分析。候選、適用性、異常根因分開。03 來自 ROM 02、06 來自 CMake 04、09 來自 curl 07；補件不更換 binary，不跨 build 合併。
 
-## 當前接線 checkpoint
+## 已有證據與仍待完成
 
-**完整核心 checkpoint：`cb257c3`，已推送 `codex/horace-fresh-core`。Frankie 可先接這版，不需等待額外變體。** 接線入口與範例見 `docs/architecture/核心分析介面與接線提案.md`；Git 输入包為 `demo-inputs/`。
+- 產品 checkpoint `44efc7b`：75 項 unittest 通過，28.871 秒。早先乾淨 venv 已驗安裝與 package-data；不把早期安裝測試冒稱新合併版全部通過。
+- 九格工程 9/9、三組補件 3/3；C 另從 Git archives 獨立驗 9＋3 與九項邊界。ROM 03 adapter 第一笔結果 2.104 秒，11 項核對通過；這是核心 adapter，尚非實際網頁。
+- ROM 03、CMake 04、curl 09 各十次 OFFLINE，共 30 次；verdict、Assessment ID、Evidence ID 穩定。真包 source 篡改、多 ELF、build 衝突均回 Needs Investigation。
+- 原四個 Sol／medium 真實 Live 情境通過。整合 A/B 後追加 CMake 05＋中性文字 → Not Affected → 真實 Live → 4 筆新來源觀測 → 重判 Not Affected，文字歷史仍保留。摘要在 `docs/releases/驗收證據/整合後分階段Live摘要.json`。
+- A 語意修正已合入 `15f53a4`；B AI 可靠性合入 `08dee40`、`5ff192d`；C 獨立 QA 合入 `0a480df`、`ab44f09`，交件文件至 `44efc7b`。中性文字與 AI 再驗的交互問題已通過實際 Live。
+- 引用／hash／CLI 字面來源核對不放寬；錯誤記錄保留，最多一次引用修正仍受原預算限制。SIMULATED 的故障注入不列作正式 Live 成功。
+- **待完成的是正式網頁串起工程、補件重判與 Live／報告。** 本輪 main 合回後的相容性檢查及 PR CI 另記真實結果，不宣稱已啟用完整 UI。
 
-側邊對話正在建立獨立工作區：A 修正中性聲明/矛盾語意（assessment/supplements），B 改善 AI 工具/引用恢復（ai），C 獨立驗收。主線自 checkpoint 起暫停修改 A/B 檔案，保留 Query/Verifier/workflow/adapter/CLI 與最終整合，不重複建立任務。
+## 並行工作與接收
 
-已知待修：目前所有新文字聲明都會保守退為 Needs Investigation，包括中性「已提供檔案」；A 將校正。當前主線順序：Frankie 第一筆網頁真實結果 → ROM 補件重判 → Live AI → 收取 A/B/C commit 做範圍整合。
+使用者已授權最多主線以外三個活躍獨立工作。第一輪 A/B/C 已整合；側邊協調者已續派 B 合併後 Live、C 合併後回歸，另開 D 核心與前端 JSON 驗收，均固定產品 `44efc7b`，只改各自 QA／報告，不改產品或 Frankie 檔案。主線不重複跑三項，也不等待全部 QA 才交接線 checkpoint。第二輪工作區如下，SHA 與結論從各自同步文件收取。
 
-## 獨立工作區與接收方式
+| 第二輪 | 對話／範圍 | Fresh 下工作區／分支 |
+|---|---|---|
+| B Live | 沿用 B 對話；ROM 補件及歷史文字後 Live、失敗保留 | `var/parallel/ai-validation-r2`／`codex/parallel-ai-validation-r2` |
+| C 回歸 | 沿用 C 對話；ROM 真 archive／補件／文字與錯誤，不打 API | `var/parallel/qa-r2`／`codex/parallel-qa-r2` |
+| D 介面 | `01a09435-fce5-75c3-8fa9-c0ba82299c99`；JSON → renderer／report／Runner mapping | `var/parallel/contract-qa`／`codex/parallel-contract-qa` |
 
-三個新對話已由側邊協調者建立，基準同為 `b89059fdd1f751b43559187fd488844c9eeb3336`（包含核心 `cb257c3`）。不再重複建立任務；各工作區不改主線 checkout、不合入 main、不改 Horace.md/Frankie.md。
+| 第一輪 | 對話 ID | 分支／Fresh 下工作區 |
+|---|---|---|
+| A 語意 | `01a0941e-c2fd-7012-a333-c69f25df96e2` | `codex/parallel-semantics`／`var/parallel/semantics` |
+| B AI | `01a0941f-2066-7d30-9d24-2e72b2fde2d7` | `codex/parallel-ai-reliability`／`var/parallel/ai-reliability` |
+| C QA | `01a0941f-78ba-78b2-8ce3-5c8624cdb2c7` | `codex/parallel-qa`／`var/parallel/qa` |
 
-| 任務 | 對話 ID | 分支 | 工作區（相對 Fresh 根目錄） | 獨占檔案 |
-|---|---|---|---|---|
-| A 判定語意 | `01a0941e-c2fd-7012-a333-c69f25df96e2` | `codex/parallel-semantics` | `var/parallel/semantics` | assessment.py、必要時 supplements.py；自己的測試與 Parallel_Semantics.md |
-| B AI 可靠性 | `01a0941f-2066-7d30-9d24-2e72b2fde2d7` | `codex/parallel-ai-reliability` | `var/parallel/ai-reliability` | ai.py；自己的測試／驗收脚本與 Parallel_AI.md |
-| C 獨立驗收 | `01a0941f-78ba-78b2-8ce3-5c8624cdb2c7` | `codex/parallel-qa` | `var/parallel/qa` | scripts/qa_parallel、tests/qa_parallel、Parallel_QA 報告與同步 |
+此工具環境無跨對話讀取／發訊工具，以 worktree 同步 MD 與 Git commit 收件；不要求使用者搬運結果。heartbeat `cvevidence` 每五分鐘補巡檢，今日 17:35 截止；完成／叫停後停用。15:35 後新派工集中展示阻塞、接線、驗收與排練。
 
-新交件以對話通知、各自同步 MD 與 Git commit 收取，依 diff 範圍由 Horace 整合；C 只補驗新變更，不重跑既有大批測試。原環境的 API key 不複製到這些工作區。
+## 存放與提交
 
-主線補充 `7535246`：`workflow.investigate_after_engineering(context, saved_result, ...)` 讓網頁先保存、顯示工程結果，再啟動 Live；AI 設定不足／逾時不改動原工程 dict。新增一項失敗保留測試，主線現為 32 項通過。這個改動不涉及 A/B 獨占檔案。
-
-整合注意：B 的 AI 入站會重核 assessment 的 verdict／conditions；A 修改 statement_reviews 語意時，需一併確認 B 不再把任何中性 review 都推成 Needs Investigation。AI 新增原文只能先算 exact excerpt，升級工程條件必須經 profile 確定性提取與 Verifier，不採模型自由結論。
-
-## 後續協調授權
-
-使用者已透過側邊對話授權依需要持續並行，最多主線以外 3 個活躍實作／驗收對話；現有 A/B/C 占滿，不重複開工。不同任務才另開，已完成同範圍優先續派原對話；固定 commit、獨立 worktree、唯一檔案範圍及自己的同步 MD。事件到達即處理，heartbeat `cvevidence` 每 5 分鐘補巡檢，今日 17:35 結束；完成／叫停後停用。15:35 後新派工聚焦展示阻塞、整合驗收與排練。
-
-主線另補 AI 新原文 → E-ID 來源觀測 → collect/verify/assess 的回流，位於 `investigation_evidence.py` 與 workflow；不修改 A/B 檔案。只提升 exact bytes，不把模型推論當條件。CMake 真實 Live 紀錄已驗新觀測與重判、篡改新原文拒絕；待提交 SHA 記下一輪。
-
-## 目前有證據的進度
-
-- 九格工程判定 9/9、三條同 build 補件重判 3/3；完整結果與條件見 `docs/releases/Horace_完整核心與Demo交件.md` 及 `docs/releases/驗收證據/`。
-- Q1–Q5、source/object/archive/shared/product 綁定、ROM 真實 image 解析、Verifier 重取證、三個 profile、Claim、補件聲明語意與中文摘要已提供。
-- 31 項核心邊界測試通過；乾淨 venv 安裝與 package data 載入通過。真包篡改 source、多一個 ELF、build 衝突皆轉 Needs Investigation。
-- ROM 03、CMake 04、curl 09 各 10 次 OFFLINE，共 30 次，verdict / Assessment ID / Evidence ID 穩定。
-- Sol/medium 四情境 Live 調查通過：ROM 缺件、CMake 症狀、curl 缺件、curl 提前提供材料。AI 時間約 28–55 秒，不能當固定延遲保證。
-- 一筆 Live 不存在 X-ID 已拒絕並保留失敗紀錄；現在預算內可修正一次引用/hash，REJECTED 不隱藏。AI 引用精確核對 ≠ 語意證明，工程判定仍由規則負責。
-- 目前資料選 ROM r2、CMake r2、curl r2。curl r2 已補齊 libtool compiler header capture，兩版重新建置並完成 archive/補件資料驗收。
-
-## 交件與存放
-
-第一輪程式 commit：`f1d49f4`；分支 `codex/horace-fresh-core`；[Draft PR #2](https://github.com/HarveyLin0110/cvevidence/pull/2)。交件詳見該分支的 `docs/releases/Horace_第一輪資料與核心交件.md`：含已可呼叫的匯入/唯讀/補件介面、命令、真實驗收及限制。完整核心已實作並通過上述驗收；請以本分支最新版本接 `analyze_archive_for_runner`，介面詳見 `docs/architecture/核心分析介面與接線提案.md`。
-
-- 程式：`src/cvevidence_core/`；builder：`tools/demo-data/factory/`；格式：`contracts/`。
-- 新交件 commit `8882c75`：Git 的 `demo-inputs/` 含 9 初始包＋3 補件，約 95 MB，最大 17 MB；附中文上傳對照表、catalog、SHA256SUMS。請整合此 commit，無需再自行重建原展示包。
-- `data/catalogs/` 新增 `archive.repo_path` 指向 Git 輸入；原 build/archive 本機歷史保留於 `var/artifacts/`。前端選檔器需接受 `.tar.gz`（核心已支援）。
-- 當次結果：`var/runtime/runs/<run_id>/`，包括 queries/evidence/conditions/assessment/AI 工作與事件。
-- 報告：`var/exports/reports/<run_id>/`；可公開的測試摘要：`docs/releases/`。
-- 唯一開發與 Git 根目錄為 `CVEvidence_Fresh_2026-09-12`。Git 歷史已從參考目錄移入；Frankie 用 repo 相對路徑。舊 `CodexHackathon` 僅作概念參考；棄用 `CVEvidence_2026-09-12` 已移至垃圾桶。
-
-## 請 Frankie 在自己的同步檔回覆
-
-1. 已讀到 Frankie 確認責任及 Python/Streamlit；為避免檔名撞到 Frankie 的 sources.py/cli.py，Horace 核心改為獨立 `src/cvevidence_core/`，開發 CLI 用 `python -m cvevidence_core`。
-2. 原 v0.2 collect/read 保持相容。新增 file-backed `analyze_archive_for_runner(archive_path, options, expected_archive_sha256=..., expected_context_hash=..., temporary_root=..., env_file=...)`；真實 Git CMake archive 已跑完整 Q1–Q5/verify/assess，409 sources、Affected、AI OFFLINE。亦可在 M5a worker 解包後直接 `analyze_package(context, ...)`。
-3. 已讀 M5a 的 file-backed 512 MiB、source/fact 分離、獨立工程/AI 狀態、delta/context 接入。下一步只需對齊 condition 的 SUPPORTED/BLOCKED/UNKNOWN/衝突、動態 InvestigationTask 與分析階段；Horace 不修改 Frankie 的 contracts/Runner。
-
-完整分析 contracts 映射仍為提案，不擅自宣告 Frankie 已接完。M5a intake worker 不傳金鑰；Live 接線須由可信任的 AI 執行程序取得 OpenAI 設定，並獨立呈現 AI 狀態。
-
-## 更新方式
-
-每輪只更新有變動的現況，舊事項完成後移除待辦；保留影響接線的決定及真實失敗摘要。推送前先取得遠端最新狀態，只提交自己的同步檔，不覆蓋對方檔案，不 force push。新介面先標「提案」，雙方回覆後才標「已定」。
+展示輸入 `demo-inputs/` 已入 Git；原 build/archive 在 `var/artifacts/`，本機 run 在 `var/runtime/`，報告在 `var/exports/`，可公開驗收摘要在 `docs/releases/`。不提交客戶原始資料、key 或完整模型私有推理。每輪取得遠端最新狀態，只 stage 本人改動；不 force push，由整合負責人審查後合 main。

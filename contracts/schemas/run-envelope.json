@@ -1,0 +1,512 @@
+{
+  "$defs": {
+    "AIProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "OFFLINE",
+            "LIVE"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "explanation": {
+          "maxLength": 4000,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "questions": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Questions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode",
+        "explanation"
+      ],
+      "title": "AIProposal",
+      "type": "object"
+    },
+    "Assessment": {
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "enum": [
+            "AFFECTED",
+            "NOT_AFFECTED",
+            "NEEDS_INVESTIGATION"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "minItems": 1,
+          "title": "Conditions",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "review_required": {
+          "const": true,
+          "default": true,
+          "title": "Review Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "verdict",
+        "reason",
+        "conditions"
+      ],
+      "title": "Assessment",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "properties": {
+        "condition_id": {
+          "title": "Condition Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "TRUE",
+            "FALSE",
+            "UNKNOWN"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "condition_id",
+        "state"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
+    "EvidenceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "minLength": 1,
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "verification": {
+          "const": "HASH_MATCH",
+          "default": "HASH_MATCH",
+          "title": "Verification",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "path",
+        "sha256",
+        "size",
+        "kind"
+      ],
+      "title": "EvidenceRecord",
+      "type": "object"
+    },
+    "InputPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "product_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Product Id",
+          "type": "string"
+        },
+        "release_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Release Id",
+          "type": "string"
+        },
+        "declared_build_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Declared Build Id",
+          "type": "string"
+        },
+        "package_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Package Id",
+          "type": "string"
+        },
+        "archive_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Archive Sha256",
+          "type": "string"
+        },
+        "format": {
+          "default": "core-adapter-v0.2",
+          "enum": [
+            "core-adapter-v0.2",
+            "rom",
+            "cmake",
+            "curl"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "context_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Hash"
+        },
+        "provenance_verified": {
+          "const": false,
+          "default": false,
+          "title": "Provenance Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "product_id",
+        "release_id",
+        "declared_build_id",
+        "package_id",
+        "archive_sha256"
+      ],
+      "title": "InputPackage",
+      "type": "object"
+    },
+    "RunError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "INTAKE_REJECTED",
+            "CORE_UNAVAILABLE",
+            "INTEGRITY_ERROR",
+            "TIMEOUT",
+            "SYSTEM_ERROR"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RunError",
+      "type": "object"
+    },
+    "SourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "symlink"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        }
+      },
+      "required": [
+        "source_id",
+        "path",
+        "sha256",
+        "size",
+        "kind"
+      ],
+      "title": "SourceRecord",
+      "type": "object"
+    },
+    "Supplement": {
+      "additionalProperties": false,
+      "properties": {
+        "parent_run_id": {
+          "title": "Parent Run Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "REPLACEMENT_SNAPSHOT",
+            "NOTE",
+            "DELTA"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 4000,
+          "title": "Note",
+          "type": "string"
+        },
+        "review_required": {
+          "const": true,
+          "default": true,
+          "title": "Review Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "parent_run_id",
+        "kind"
+      ],
+      "title": "Supplement",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.2",
+      "default": "0.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "parent_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Run Id"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "cve_id": {
+      "pattern": "^(CVE-\\d{4}-\\d{4,})?$",
+      "title": "Cve Id",
+      "type": "string"
+    },
+    "mode": {
+      "default": "OFFLINE",
+      "enum": [
+        "OFFLINE",
+        "LIVE"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "COLLECTED",
+        "COMPLETED",
+        "FAILED",
+        "TIMED_OUT"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "input_package": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InputPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceRecord"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceRecord"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "engineering_status": {
+      "const": "NOT_RUN",
+      "default": "NOT_RUN",
+      "title": "Engineering Status",
+      "type": "string"
+    },
+    "ai_status": {
+      "const": "NOT_RUN",
+      "default": "NOT_RUN",
+      "title": "Ai Status",
+      "type": "string"
+    },
+    "candidates": {
+      "additionalProperties": true,
+      "title": "Candidates",
+      "type": "object"
+    },
+    "missing": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing",
+      "type": "array"
+    },
+    "assessment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Assessment"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "advice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AIProposal"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "supplement": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Supplement"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "run_id",
+    "created_at",
+    "cve_id",
+    "status"
+  ],
+  "title": "RunEnvelope",
+  "type": "object"
+}

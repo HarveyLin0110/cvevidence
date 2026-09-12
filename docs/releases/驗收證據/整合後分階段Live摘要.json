@@ -1,0 +1,20 @@
+{
+  "product_checkpoint": "44efc7bdcc533760ab167a2a005b0111b9758483",
+  "input_repo_path": "demo-inputs/cmake/05_cmake.tar.gz",
+  "record_kind": "ACTUAL_LIVE_STAGE_SUMMARY",
+  "summary": {
+    "initial_verdict": "NOT_AFFECTED",
+    "ai_status": "COMPLETED",
+    "mode": "LIVE",
+    "model": "gpt-5.6-sol",
+    "new_observations": 4,
+    "reassessment": "NOT_AFFECTED",
+    "statement_history_preserved": true,
+    "pass": true
+  },
+  "full_record_local": "var/validation/integrated-stages-live.json",
+  "limits": [
+    "核心分階段呼叫，尚非正式網頁全流程。",
+    "新原文僅驗證來源觀測；工程條件仍由 profile 與 Verifier 重算。"
+  ]
+}
