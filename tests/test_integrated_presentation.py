@@ -9,8 +9,9 @@ def test_groups_preserve_unknown_and_reject_foreign_or_missing_conditions():
     payload = sample()
     entry = payload['analyses'][0]
     entry['assessment']['conditions'][0]['condition_id'] = 'test-condition'
+    entry['assessment']['conditions'].append({'condition_id': 'shared-condition', 'state': 'SUPPORTED'})
     entry['condition_groups'] = {'cve_id': entry['cve_id'], 'grouping_only': True,
-        'shared_prerequisite_ids': ['test-condition'],
+        'shared_prerequisite_ids': ['shared-condition'],
         'groups': [{'group_id': 'PC1', 'title': 'TEST_ONLY', 'condition_ids': ['test-condition']}]}
     before = deepcopy(payload)
     app = app_for(payload)
