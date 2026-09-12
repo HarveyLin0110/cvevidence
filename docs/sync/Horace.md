@@ -1,6 +1,6 @@
 # Horace 開發同步
 
-更新：2026-09-12 14:06（Asia/Taipei）。此檔只由 Horace 對話維護，Frankie 維護 `docs/sync/Frankie.md`。只保留影響協作的現況；變動共用介面前讀對方同步，不互相覆蓋。
+更新：2026-09-12 14:11（Asia/Taipei）。此檔只由 Horace 對話維護，Frankie 維護 `docs/sync/Frankie.md`。只保留影響協作的現況；變動共用介面前讀對方同步，不互相覆蓋。
 
 ## 現在可取得的交件
 
@@ -45,7 +45,13 @@
 - 原四個 Sol／medium 真實 Live 情境通過。整合 A/B 後追加 CMake 05＋中性文字 → Not Affected → 真實 Live → 4 筆新來源觀測 → 重判 Not Affected，文字歷史仍保留。摘要在 `docs/releases/驗收證據/整合後分階段Live摘要.json`。
 - A 語意修正已合入 `15f53a4`；B AI 可靠性合入 `08dee40`、`5ff192d`；C 獨立 QA 合入 `0a480df`、`ab44f09`，交件文件至 `44efc7b`。中性文字與 AI 再驗的交互問題已通過實際 Live。
 - 引用／hash／CLI 字面來源核對不放寬；錯誤記錄保留，最多一次引用修正仍受原預算限制。SIMULATED 的故障注入不列作正式 Live 成功。
-- **待完成的是正式網頁串起工程、補件重判與 Live／報告。** 本輪 main 合回後的相容性檢查及 PR CI 另記真實結果，不宣稱已啟用完整 UI。
+- **待完成的是正式網頁串起工程、補件重判與 Live／報告。** 合回 main 的 `871eb7b` 已通過 GitHub CI 34677290816：116 passed、23 subtests、schema 重產一致。本機預設 pytest 曾誤收集 var/parallel 內其他 checkout；本輪補 `testpaths = tests`，只收本 checkout，修正後本機亦為 116 passed、23 subtests，35.46 秒。正式 UI 仍未宣稱完成。
+
+## 第二輪首筆接線與 Live 風險
+
+- D 固定 renderer `40802c8`、report `184145c` 的真 ROM JSON 呈現通過，AI 身分欄位完整。指定整合 `a47a1a3` 尚缺 analyze／正式分析保存；新 `codex/integration-offline` 的 `70b3b68` 已交 `Runner.analyze_offline`／`read_engineering` 與固定 OFFLINE worker，並記錄真實 ROM／CMake／curl 五 query 的保存驗收；UI 接線及 Live 仍待完成。該版核心基於 `0a480df`，請再接 PR #9 以取得 A/B 修正，不能把舊基線發現套到新版本。
+- 上述 renderer/report 只顯示 witnesses，未呈現核心既有 `evidence.excerpts` 的 X-ID、行號、原文與 hash；請 Frankie 接上既有內容及同 scope 的來源操作，不自造 locator。
+- B 的 ROM 補件後 Live 第一筆用盡 8 次呼叫（73.196 秒）仍未 COMPLETE，含一次 COMPARE 四來源的 TOOL_ERROR；工程 dict／已保存 JSON 保留，AI 失敗後未重判。這筆保留為 BUDGET_EXHAUSTED，不能被早先 Live 成功數掩蓋；需評估工具參數引導與剩餘預算收尾。第二筆聚焦原文的 Live 仍由 B 驗收，主線不重跑。
 
 ## 並行工作與接收
 
