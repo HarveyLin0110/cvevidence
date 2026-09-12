@@ -24,7 +24,8 @@ def test_report_timeout_keeps_result_and_rejects_wrong_ai_scope():
     payload = sample()
     report = export_analysis(payload, context_hash="test-context", cve_id="CVE-2099-0001", run_id="TEST_ONLY")
     assert "需要進一步調查" in report and "TIMED_OUT" in report
-    assert all(q in report for q in ("Q1_COMPONENT", "Q2_BUILD", "Q3_IMPLEMENTATION", "Q4_BINDING", "Q5_PATH"))
+    assert "Q1_COMPONENT" in report
+    assert all(q not in report for q in ("Q2_BUILD", "Q3_IMPLEMENTATION", "Q4_BINDING", "Q5_PATH"))
     payload["analyses"][0]["ai"].update(context_hash="another", tasks=[{"question": "PRIVATE"}])
     report = export_analysis(payload, context_hash="test-context", cve_id="CVE-2099-0001", run_id="TEST_ONLY")
     assert "AI_SCOPE_MISMATCH" in report and "PRIVATE" not in report

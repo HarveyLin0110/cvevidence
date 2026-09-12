@@ -194,3 +194,21 @@ def test_ai_form_requires_consent_and_report_preserves_engineering(case, monkeyp
     assert original["analyses"][0]["ai"]["mode"] == "OFFLINE"
     next(b for b in app.button if b.label == "開始 AI 調查").click().run()
     assert not app.exception and len(calls) == 1
+
+
+def test_old_engineering_profile_disables_new_ai_without_hiding_history(case):
+    from streamlit.testing.v1 import AppTest
+    runner, parent = case
+    source = ("import streamlit as st\n"
+        "from cvevidence.runner import Runner\n"
+        "from cvevidence.storage import RunStore\n"
+        "from cvevidence.ai_workspace import ai_workspace\n"
+        f"r = Runner(RunStore({str(runner.store.root)!r}))\n"
+        f"run = r.store.read({parent.run_id!r})\n"
+        "payload = r.read_engineering(run.run_id)\n"
+        "payload['analyses'][0]['assessment']['profile_version'] = 'TEST_ONLY_OLD_PROFILE'\n"
+        "ai_workspace(st, r, run, payload)\n")
+    app = AppTest.from_string(source).run()
+    assert not app.exception
+    assert next(b for b in app.button if b.label == '開始 AI 調查').disabled
+    assert any('舊版規則' in warning.value for warning in app.warning)

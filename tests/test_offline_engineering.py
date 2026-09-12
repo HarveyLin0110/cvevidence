@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def case(tmp_path):
     runner = Runner(RunStore(tmp_path))
-    parent = runner.start_file(ROOT / "demo-inputs/cmake/06_cmake.tar.gz", cve="CVE-2022-37434")
+    parent = runner.start_file(ROOT / "demo-inputs/runtime-v2/pc3_cmake_static.tar.gz", cve="CVE-2022-37434")
     assert parent.status == "COLLECTED"
     return runner, parent
 
@@ -67,7 +67,7 @@ def test_timeout_keeps_parent_and_no_partial_result(case, monkeypatch):
 
 def test_unknown_cve_is_not_a_verdict(tmp_path):
     runner = Runner(RunStore(tmp_path))
-    parent = runner.start_file(ROOT / "demo-inputs/cmake/06_cmake.tar.gz", cve="CVE-2099-99999")
+    parent = runner.start_file(ROOT / "demo-inputs/runtime-v2/pc3_cmake_static.tar.gz", cve="CVE-2099-99999")
     child = runner.analyze_offline(parent.run_id)
     assert child.engineering_status == "UNSUPPORTED_CVE" and child.ai_status == "NOT_RUN"
     assert runner.read_engineering(child.run_id)["analyses"][0]["assessment"] is None
@@ -85,7 +85,7 @@ def test_real_delta_reanalysis_changes_context_not_parent(case):
     runner, parent = case
     original = runner.analyze_offline(parent.run_id)
     saved = runner.read_engineering(original.run_id)
-    supplemented = runner.supplement_file(original.run_id, path=ROOT / "demo-inputs/cmake/supplement_06_cmake.tar.gz")
+    supplemented = runner.supplement_file(original.run_id, path=ROOT / "demo-inputs/runtime-v2/supplement_pc3_cmake_runtime.tar.gz")
     child = runner.analyze_offline(supplemented.run_id)
     new = runner.read_engineering(child.run_id)
     assert new["context_hash"] != saved["context_hash"]

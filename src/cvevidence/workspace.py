@@ -174,6 +174,10 @@ def workspace(st, *, store_root=None):
         return
     with st.expander("本次查核識別資訊"):
         st.caption("Run: "+run.run_id+" · "+run.status)
+    saved_context = (payload.get("discovery") or {}).get("symptom", "") if payload else run.candidates.get("symptom", "")
+    if saved_context:
+        with st.expander("本次情境描述", expanded=False):
+            st.text(saved_context)
     if run.error:
         st.error(run.error.code+"：本次操作失敗；父 run 與原始資料保留。")
         if page!=PAGES[4]:
@@ -188,7 +192,7 @@ def workspace(st, *, store_root=None):
             cols[1].metric("資料包",p.package_id)
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
-        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由 Q1–Q5 工程分析確認。")
+        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
         if run.missing:
             for item in run.missing: st.text(item)
         candidates=run.candidates.get("candidates",[])
@@ -218,10 +222,14 @@ def workspace(st, *, store_root=None):
                     st.error("本次查核的歷史材料無法核對；請保留原紀錄並確認歷程，暫停建立新判定。")
             symptom=st.text_area("本次調查情境",value=saved_symptom or symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
             can_analyze=history_ok and run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
-            st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
-            if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
+            st.caption("執行目前核心的 Queries、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
+            with st.expander("Queries 如何執行"):
+                st.text("工程 Queries 依核心版本查核元件、建置、實作、成品綁定與運作材料；項目可能隨版本增加或調整。")
+                st.text("完成後可在「Queries 執行紀錄」查看本次實際保存的名稱、用途、層級、狀態及引用。")
+                st.text("缺件可能產生規則追加問題；AI 另經授權才能調查。提出問題不等於已提供材料或完成驗證。")
+            if st.button("執行 Queries 與正式判定",type="primary",disabled=not can_analyze):
                 try:
-                    with st.spinner("核對本次工程資料並執行 Q1–Q5…"):
+                    with st.spinner("核對本次工程資料並執行 Queries…"):
                         child=runner.analyze_offline(run.run_id,cve_id=cve,symptom=symptom)
                     st.session_state.selected_run=child.run_id
                     st.rerun()
@@ -281,7 +289,8 @@ def workspace(st, *, store_root=None):
                     st.subheader("補件前後工程結果")
                     st.text("前次工程 Run："+previous.run_id)
                     st.json(compare_analyses(runner.read_engineering(previous.run_id),payload,
-                        parent_context=previous.input_package.context_hash,child_context=run.input_package.context_hash,cve_id=run.cve_id))
+                        parent_context=previous.input_package.context_hash,child_context=run.input_package.context_hash,cve_id=run.cve_id,
+                        include_followup_queries=True))
             except (ValueError,OSError,TypeError,KeyError):
                 st.warning("前後工程結果無法核對，不顯示未確認的比較。")
         if not run.error:

@@ -1,14 +1,12 @@
 {
-  "schema_version": "1.0",
-  "selected_datasets": [
-    "fresh-rom-r2",
-    "fresh-cmake-r2",
-    "fresh-curl-r2"
-  ],
   "notes": [
     "ROM r2 包含今日新建的 localhost TCP TLS 入口。",
     "curl r2 補齊 libtool 編譯的標頭依賴紀錄，兩版均重新建置。",
     "選定的今日展示壓縮包已納入 Git demo-inputs/；原始 build/archive 歷史留於本機 var/artifacts/。",
     "資料完整性、工程判定與 Live AI 分開驗收。"
+  ],
+  "schema_version": "1.0",
+  "selected_datasets": [
+    "fresh-demo-two-flows-v2"
   ]
 }

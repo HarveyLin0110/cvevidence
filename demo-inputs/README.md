@@ -1,5 +1,7 @@
 # Demo 輸入檔：今天重建、可直接交給前端
 
+**現場請使用 [兩個獨立 Demo 輸入](two-flows/README.md)。** 第一版直接分析完整包；第二版只展示 AI 的補件指引，不在現場補件或重判。預設 catalog 選 `fresh-demo-two-flows-v2`。三格式完整補件能力另見 [runtime-v2 工程驗收](runtime-v2/README.md)。以下十二包及其驗收為今天較早版本的材料與歷史說明；以新版重新分析可能因 PC3 缺件而維持待查，舊 run 保留原判定及 profile。
+
 此資料夾就是隊友與展示時選檔的共同位置，隨 Git 一起取得。12 個壓縮包全部來自 2026-09-12 新製作的 builder 與官方重新下載的 OSS；未沿用舊 Demo 的程式、成品或驗收結果。
 
 共約 95 MB，最大單包約 17 MB，直接納入 Git，不需要額外下載 Release 或 Git LFS。請保留 `.tar.gz` 原檔與檔名，避免重新壓縮造成 catalog hash 不同。每包 root 都有 `manifest.json`，副檔名為 gzip tar；核心已支援此格式。前端選檔器也須允許 `.tar.gz`，不能只接受 `.zip`。

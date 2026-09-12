@@ -3,8 +3,12 @@
 Callers supply authorized saved runs; this module does not load files or verify
 core evidence. Comparisons describe differences, never infer why verdicts changed.
 """
-from .analysis_view import QUERIES, VERDICTS, rows, select_analysis, text, condition_groups
+from .analysis_view import (
+    QUERIES, VERDICTS, FOLLOWUP_STATES, rows, select_analysis, text, condition_groups,
+    query_title, scoped_followup_queries, runtime_summary, model_task_status,
+)
 from .result_summary import conclusion_dimensions, pc_summaries
+from .query_display import query_ids, query_description
 
 
 def previous_engineering_run(store, run):
@@ -36,15 +40,38 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
     output += ["", "PC 綜合說明（共用前提與各 PC 合計為全部條件；不是獨立 PC 判定）"]
     for group in pc_summaries(entry):
         output += [group["group_id"] + " · " + group["title"] + " · " + group["label"], group["summary"]]
-    for qid, title in QUERIES.items():
+    for qid in query_ids(entry):
         matches = [q for q in rows(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
+        title = query_title(query, qid)
         output += ["", qid + " · " + title, "狀態: " + text(query.get("status"))]
-        for field in ("missing", "conflicts", "evidence_ids"):
+        output.append("用途: " + query_description(query))
+        if len(matches) > 1:
+            output.append("重複的查核結果，未選取其中任何一筆。")
+        for field in ("description", "pc_layer", "query_plan_version", "metadata", "missing", "conflicts", "evidence_ids"):
             if query.get(field): output.append(field + ": " + text(query[field]))
     for field in ("conditions", "conflicts", "statement_reviews", "gaps", "next_steps"):
         output += ["", field + ":", text(assessment.get(field))]
     output += ["", "PC 分組（僅呈現，不另推算判定）", text(condition_groups(entry))]
+    output += runtime_summary(entry)
+    if "followup_queries" in entry:
+        output += ["", "追加 Query · RULE_GAP（採核心保存的問題狀態）"]
+        try:
+            followups = scoped_followup_queries(entry, context_hash=context_hash)
+        except ValueError:
+            output.append("FOLLOWUP_SCOPE_MISMATCH：格式或快照範圍不符，未匯出追加 Query 內容。")
+        else:
+            if not followups:
+                output.append("本次核心未列出規則缺口追加 Query。")
+            for query in followups:
+                output += ["Query: " + query["query_id"], "來源: " + query["origin"],
+                           "問題: " + query["question"], "原因: " + query["reason"],
+                           "目標條件: " + query["target_condition_id"],
+                           "問題狀態: " + FOLLOWUP_STATES[query["status"]] + "（" + query["status"] + "）",
+                           "Context: " + query["context_hash"], "evidence_ids: " + text(query["evidence_ids"])]
+                if query["status"] == "REJECTED":
+                    output.append("此證據未通過驗證，請覆核或補回正確的同成品資料。")
+                output.append("required_files（問題要求的資料）: " + text(query["required_files"]))
     output += ["", "證據原值（保存紀錄；此匯出沒有重新驗證原文）"]
     for evidence in rows(entry.get("evidence")):
         for field in ("evidence_id", "value", "reason", "witnesses", "excerpts"):
@@ -58,9 +85,11 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
     else:
         output += ["模式: " + text(ai.get("mode")), "狀態: " + text(ai.get("status"))]
         if ai.get("mode") == "REPLAY": output.append("舊紀錄播放，本次未呼叫模型。")
+        output.append("追加 Query 來源：MODEL；工具動作完成不代表 CVE 條件成立。")
         for task in rows(ai.get("tasks")):
-            output += ["問題: " + text(task.get("question")), "目的: " + text(task.get("reason")),
-                       "狀態: " + text(task.get("status"))]
+            output += ["Query: " + text(task.get("task_id")), "來源: MODEL",
+                       "問題: " + text(task.get("question")), "目的: " + text(task.get("reason")),
+                       "問題／動作狀態: " + model_task_status(task)]
             if task.get("status") != "COMPLETED":
                 output.append("此項未完成或被拒絕，不列為有效調查結果。")
                 continue
@@ -70,8 +99,13 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
     return "\n".join(output) + "\n"
 
 
-def compare_analyses(parent, child, *, parent_context, child_context, cve_id):
-    """Same product/release/build/artifact only; caller checks parent run lineage."""
+def compare_analyses(parent, child, *, parent_context, child_context, cve_id,
+                     include_followup_queries=False):
+    """Same build only; optional RULE_GAP deltas preserve the legacy return shape.
+
+    The caller checks parent run lineage. Query IDs come from the core; queries
+    with new IDs are added/removed, never matched by guessed question semantics.
+    """
     before = select_analysis(parent, context_hash=parent_context, cve_id=cve_id)
     after = select_analysis(child, context_hash=child_context, cve_id=cve_id)
     identities = []
@@ -100,8 +134,25 @@ def compare_analyses(parent, child, *, parent_context, child_context, cve_id):
         a, b = left.get(key, {}), right.get(key, {})
         if a != b:
             changes.append({"condition_id": key, "before": a or None, "after": b or None})
-    return {"cve_id": cve_id, "parent_context": parent_context, "child_context": child_context,
+    result = {"cve_id": cve_id, "parent_context": parent_context, "child_context": child_context,
             "before_verdict": (before.get("assessment") or {}).get("verdict"),
             "after_verdict": (after.get("assessment") or {}).get("verdict"),
             "condition_changes": changes,
             "note": "僅呈現保存結果差異；不由差異推論因果或確認 parent run 關係。"}
+    if include_followup_queries:
+        left = {q["query_id"]: q for q in scoped_followup_queries(before, context_hash=parent_context)}
+        right = {q["query_id"]: q for q in scoped_followup_queries(after, context_hash=child_context)}
+        query_changes = []
+        for key in sorted(set(left) | set(right)):
+            a, b = left.get(key), right.get(key)
+            # A supplement has a new context even when the saved query is unchanged.
+            a_content = {k: v for k, v in a.items() if k != "context_hash"} if a else None
+            b_content = {k: v for k, v in b.items() if k != "context_hash"} if b else None
+            if a_content != b_content:
+                query_changes.append({"query_id": key,
+                                      "change": "ADDED" if a is None else "REMOVED" if b is None else "UPDATED",
+                                      "before_status": a.get("status") if a else None,
+                                      "after_status": b.get("status") if b else None,
+                                      "before": a, "after": b})
+        result["followup_query_changes"] = query_changes
+    return result

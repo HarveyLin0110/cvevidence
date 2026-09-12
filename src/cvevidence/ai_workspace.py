@@ -39,6 +39,10 @@ def ai_workspace(st, runner, run, engineering):
         return None
     st.subheader("追加 AI 調查")
     config = runner.ai_configuration()
+    from cvevidence_core.queries import PROFILE_VERSION
+    compatible = not assessment.get("profile_version") or assessment["profile_version"] == PROFILE_VERSION
+    if not compatible:
+        st.warning("此工程紀錄使用舊版規則。請載入其原始收件／補件紀錄重新執行 Queries，再啟動新版 AI；既有工程與 AI 紀錄仍可查閱。")
     st.text("供應者：OpenAI · 模型：" + (config.get("model") or "尚未配置"))
     if not config["configured"]:
         st.info("管理者尚未啟用本機 AI 設定；工程分析與補件仍可使用。金鑰請勿填入情境或上傳檔。")
@@ -50,7 +54,7 @@ def ai_workspace(st, runner, run, engineering):
         st.caption("只調查目前成品與 CVE；每次建立獨立紀錄，最長 180 秒。模型可能產生 API 使用費。")
         # Consent is checked again by the service. A form must submit before its
         # checkbox state is available, so the button gates configuration only.
-        submit = st.form_submit_button("開始 AI 調查", disabled=not config["configured"])
+        submit = st.form_submit_button("開始 AI 調查", disabled=not config["configured"] or not compatible)
     signature = (context, consent, config.get("model"), config.get("reasoning_effort"))
     if st.session_state.get("ai-signature-" + run.run_id) != signature:
         st.session_state["ai-signature-" + run.run_id] = signature
