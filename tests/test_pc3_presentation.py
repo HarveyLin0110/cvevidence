@@ -79,8 +79,11 @@ def test_static_pc2_cannot_fill_unknown_pc3_and_new_titles_follow_saved_queries(
     pc2 = next(g for g in pc_summaries(entry) if g['group_id']=='PC2')
     pc3 = next(g for g in pc_summaries(entry) if g['group_id']=='PC3')
     assert 'entry_reachable' in pc2['summary'] and 'entry_reachable' not in pc3['summary']
-    assert pc2['summary'] in displayed(app) and pc3['summary'] in displayed(app)
-    assert "TEST_ONLY 運作觀測（此項條件仍需確認）" in displayed(app)
+    for group in (pc2, pc3):
+        for finding in group['findings']:
+            assert finding['headline'] in displayed(app)
+            assert finding['explanation'] in displayed(app)
+    assert "尚未確認：TEST_ONLY 運作觀測" in displayed(app)
     assert "缺少實際運作證據（MISSING）" in displayed(app)
     assert "需要進一步調查" in displayed(app)
     assert "RULE_GAP" in displayed(app) and "runtime/observation.json" in displayed(app)

@@ -1,6 +1,13 @@
 # Horace 開發同步
 
-更新：2026-09-12 15:56（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
+更新：2026-09-12 16:16（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
+
+## 正在交付：PC 命中細節與最小補件指引
+
+- 最新使用者要求：PC1／PC2／PC3 要說明實際命中元件、版本、函式／設定及原文位置；補件先顯示最小材料與取得方式，詳細格式展開。
+- 獨立分支 `codex/horace-collection-guidance`，基於 PR #23 `0d4f8ee`。沒有改既有判定或 Evidence ID；依條件引用的唯一 E-ID 找到來源、同 context／hash 的原文與行號。UNKNOWN 不改寫成命中；前端及文字報告使用同一組細節。
+- 發現 CMake 真實 AI 指引漏列 gzip 樣本：新增 CORE_PARSER_CONTRACT 收件資訊，提供三格式對應材料、角色、用途與格式。新 AI 可參照，ASK_USER 另外附核心清單；清單不當觀測或已驗事實，旧 AI 仍可讀。
+- 跨到 Frankie 呈現層的部分限結果卡片／AI 清單及報告，獨立 PR 交審，沒有修改 Runner、contracts、主站或其他人的 checkout。新實包／顯示／scope 測試已驗，完整 suite 與新 Live 接續中。
 
 ## 最新決定：先實作與 Demo，講稿暫緩
 

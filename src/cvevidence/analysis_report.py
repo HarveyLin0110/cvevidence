@@ -5,7 +5,7 @@ core evidence. Comparisons describe differences, never infer why verdicts change
 """
 from .analysis_view import (
     QUERIES, VERDICTS, FOLLOWUP_STATES, rows, select_analysis, text, condition_groups,
-    query_title, scoped_followup_queries, runtime_summary, model_task_status,
+    query_title, scoped_followup_queries, runtime_summary, model_task_status, saved_collection_guide,
 )
 from .result_summary import conclusion_dimensions, pc_summaries
 
@@ -84,6 +84,14 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
         output += ["模式: " + text(ai.get("mode")), "狀態: " + text(ai.get("status"))]
         if ai.get("mode") == "REPLAY": output.append("舊紀錄播放，本次未呼叫模型。")
         output.append("追加 Query 來源：MODEL；工具動作完成不代表 CVE 條件成立。")
+        guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id,
+                                       assessment_id=assessment.get("assessment_id"))
+        if guide:
+            output += ["", "核心收件指引（不是已完成觀測）", text(guide.get("notice"))]
+            for item in guide["items"]:
+                output += [item["title"] + " · " + item["path"] + (" · 已收件，仍需核對" if item["present"] else " · 待提供"),
+                           "取得方式：" + item["how"], "驗收用途：" + item["purpose"]]
+            output += ["詳細格式與成品範圍：", text(guide["details"])]
         for task in rows(ai.get("tasks")):
             output += ["Query: " + text(task.get("task_id")), "來源: MODEL",
                        "問題: " + text(task.get("question")), "目的: " + text(task.get("reason")),
