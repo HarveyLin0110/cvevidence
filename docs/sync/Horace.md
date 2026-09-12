@@ -1,13 +1,15 @@
 # Horace 開發同步
 
-更新：2026-09-12 14:32（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
+更新：2026-09-12 15:23（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
 
 ## 可立即接線的版本
 
-- 最新產品 checkpoint：**`7b24110`**，分支 `codex/horace-fresh-core`，[PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9)。已合回 main `9d11d48` 的 OFFLINE 工作台；沒有覆改 Frankie 的產品程式。PR 最新 head／CI 以 GitHub 即時狀態為準。
-- Git 的 **`demo-inputs/` 已在 main**：9 初始包＋3 同 build 補件，12 包 hash 通過，約 95 MB／最大 17 MB。主展示先 `rom/03_rom.tar.gz`，再從補件入口傳 `rom/supplement_03_rom.tar.gz`。配對與可貼文字見該資料夾 README。
-- main 已交 OFFLINE 工程頁、同 build 補件、重判及前後報告；Frankie 的真實瀏覽器紀錄在 `docs/releases/Frankie-workspace-engineering-20260912.md`。**Live 的正式執行／保存與來源原文定位顯示仍須整合端接入；核心成功不等於網站已啟用。**
-- 本輪不是要求隊友重做 Query／規則／AI：使用 `src/cvevidence_core/` 的現成入口即可。完整語意及樣例見 `docs/architecture/核心分析介面與接線提案.md`。
+- 核心 `7b24110` 已隨整合 PR #17 進 main `256fe2c`；固定整合基線 `c65e9c7` 的 `src/cvevidence_core` 與 Horace 當時核心相同。原 PR #9 最新 `d3211da` 另含 ROM 網站驗收文件，合併狀態以 GitHub 為準。
+- **網站 API 已真正接通**：15:16，HTTPS 團隊站頁面版本 `5918858`，工程 run `0a700c0f-0a94-481d-b7b9-23e3aecf6ec4` 追加 AI ID `b4565c59-ee92-492b-93ea-1a22b36e65c3`，`gpt-5.6-sol` 真實 5 calls，LIVE／NEEDS_USER_INPUT。AI 區分截短檔案線索與 CVE 適用性，要求同 build source／libz.a／link 及客戶檔案雜湊。之前 ea5e571 的未接線狀態是歷史，不再代表現站。
+- 本機 key 不隨 Git 傳送；網站由服務主機的可信設定取得金鑰。本輪只從網站觸發既有 AI worker，沒有複製金鑰或修改部署。
+- **修正提案 `codex/horace-integration-history`**：真 Runner 重現「NOTE 指出未交付入口→工程 DELTA→前文消失」；現在沿同 scope parent 鏈傳回原文字／M-ID／來源 context，再由核心重核；歷史頁也恢復原現象。涉及 Frankie 接線，獨立分支交審，未自行部署。詳見 `docs/releases/Runner_補件歷史接線修正_2026-09-12.md`。
+- Git 的 `demo-inputs/` 已在 main：9 初始包＋3 同 build 補件，12 包 hash 通過，約 95 MB。主展示原版為 ROM 03→supplement_03；PC3 新展示另由側邊協調工作建立，不混為已驗收。
+- 已收到側邊分工：PC1–PC3 是查核面向，PC3 的實際部署／運作證據允許缺件，由 AI 依缺口新增 Query／補件要求，驗證後重判並保留歷史。側邊在 `var/worktrees/pc3-query-evolution` 實作核心與今日新 Demo；本分支避開其核心改動，維持歷史接線與真實網站驗收。
 
 ## 責任與固定限制
 
@@ -42,6 +44,8 @@
 
 ## 最新驗收與限制
 
+- 本次歷史接線分支以整合基線 c65e9c7 執行 **193 passed、23 subtests，170.96 秒**；契約重產一致。包含真 CMake NOTE→DELTA、ROM 聲明重新核對、不可變歷史、scope／損壞拒收與歷史頁情境回填。網站 Live／CMake 補件紀錄見 `docs/releases/團隊站_CMake_Live_實測_2026-09-12.md`。
+
 - 合回 main 的 `e887c00`：**165 passed、23 subtests，52.77 秒**；schema 重產一致。之後 `7b24110` 只補 AI 的保存文字上下文及專項驗收，50 項 AI／回流聚焦測試通過；7b24110 的 CI 34678280555 已通過：167 passed、23 subtests，45.22 秒（含當時 main 的合併檢查）；後續 head 以新 checks 為準。
 - 九格工程 9/9、三組補件 3/3；C 另從 Git archives 獨立驗 9＋3 與九項邊界。三個展示輸入各十次共 30 次 OFFLINE，結果／ID 穩定。這些是具名既有驗收，不冒稱每個新 head 都重跑全部。
 - A 中性／矛盾語意已整合。C 第二輪 ROM 文字、補件、重核與失敗隔離 **16/16**，原檔／結果保留，沒有新核心 blocker。
@@ -60,7 +64,7 @@
 | C 第二輪回歸 | 44efc7b；16 PASS／0 FAIL | 主線 19a8b78／65789d2；Parallel_QA 報告 |
 | D 指定 consumer | 44efc7b；基本 JSON／隔離通過，兩個原文呈現失敗 | 分支 codex/parallel-contract-qa，754e6a3；未混入最新產品通過數 |
 
-D 的 integration a47a1a3 未接分析屬當時結果，main 新 OFFLINE 已取代該狀態；原文呈現與 Live 正式接線仍列給負責者。A/B/C/D 第一、二輪均已交件，不作為仍活躍名額。下一步優先固定最新整合版本做真實網頁／重啟／Live 保存驗收，避免重跑同版核心案例。
+D 的 integration a47a1a3 未接分析屬當時結果，main 新 OFFLINE 已取代該狀態；c65e9c7 已接 PC／excerpts 與 Live worker，網站具名验收見上方。A/B/C/D 第一、二輪均已交件，不作為仍活躍名額。新的網站 Live 及歷史接線狀態以本檔最上方為準；舊 consumer 結果不替代新版本驗收。
 
 本環境無跨對話讀／發訊工具，透過 worktree MD、Git commit 與 PR 收件，不宣稱已自動傳訊。使用者授權最多主線之外三個活躍工作，依需要續派；側邊協調者管理任務。heartbeat cvevidence 每五分鐘補巡檢，17:35 截止，完成／叫停後停用。
 
