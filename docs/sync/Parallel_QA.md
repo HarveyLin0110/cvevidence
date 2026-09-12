@@ -1,13 +1,36 @@
 # Parallel QA 同步
 
-更新：2026-09-12 13:42（Asia/Taipei）。僅 C 對話維護。
+更新：2026-09-12 13:49（Asia/Taipei）。僅 C 對話維護。**核心通過／網頁未驗。**
+
+## 給主對話與 Frankie 的交接
 
 - 基準：`b89059fdd1f751b43559187fd488844c9eeb3336`；分支 `codex/parallel-qa`。
 - Worktree：`/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/parallel/qa`。
-- 首筆 ROM 03 已完成：真實 Git archive → `analyze_archive_for_runner`，`NEEDS_INVESTIGATION`，AI `OFFLINE`，2.683 秒，432 sources / 8 evidence / 9 events，11 個檢查通過。**核心通過／網頁未驗。**
-- 命令：在本 worktree 執行 `PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/adapter_probe.py`。
-- 原始結果：本 worktree 的 `var/validation/parallel-qa/archive-20260912T054111493886Z/`，含 `report.json`、`03_rom.result.json`、`03_rom.events.json`。
-- Context：`362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726`。
-- 第一個小交件包含這份同步檔與重現腳本；commit 以 `git log -1 -- scripts/qa_parallel/adapter_probe.py` 查得，後續摘要會記錄確切 ID。尚未合入主線。
-- 下一步只補 archive 邊界與同 build 補件；不重建六個產品、不重跑 31 項原測試或 30 次穩定性。
-- 通知限制：本對話工具清單無 `send_message_to_thread`，無法直接投遞至主對話 `01a09347-f3e1-77a3-b66f-f1f2877bef7a`。此檔是可讀交接，未宣稱訊息已送達。
+- 第一筆交件：`63520e182c1aadec897b50a93bdb23bfaefec343`；完整 QA 程式交件：`b431c8a892fed7d348ed2bf9b6ccb12b35d6ce21`。本摘要另隨後續文件 commit 交付。全部尚未合入主線。
+- 真實 Git archive → `analyze_archive_for_runner` 九格 9/9、三條同 build 補件 3/3、錯誤／狀態邊界 9/9。舊工程驗收、31 項單元與 30 次穩定性不計入本輪，也未重跑；六個產品未重建。
+- ROM 03 第一筆：`NEEDS_INVESTIGATION`，AI `OFFLINE`，2.683 秒，432 sources / 8 evidence / 9 events；JSON/context/hash 與暫存清除通過。
+- ROM 03 補件後 `NOT_AFFECTED`，CMake 06／curl 09 補件後 `AFFECTED`；三者同 build、成品 bytes/hash 不變、新 context／assessment，原 snapshot／Git archive 不變。
+- 第一筆命令：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/adapter_probe.py`。最小 ROM 補件：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/supplement_probe.py --initial-report var/validation/parallel-qa/archive-20260912T054111493886Z/report.json`。其他 worktree 請代入自己的新報告路徑。
+- 依賴：Python 3.12.3、GNU readelf 2.42、unsquashfs 4.6.1；無新安裝。每個 report 記錄測試 HEAD 與全部核心檔 SHA-256。
+
+## 需要主線／Frankie 接手的最小需求
+
+1. 損壞 archive 直接拋出 `tarfile.ReadError`，不是 `IntegrityError`／`UnsupportedError`。請主線 adapter 負責者確認統一例外，或 Frankie 的外層納入 tar/ZIP 解包錯誤。
+2. 收件前失敗没有 stage event，也沒有結果 dict；Runner 需用例外路徑保存失敗與 assessment=null，不能只靠事件清除進度。C 未改 Runner 或產品程式。
+3. 未知 CVE 的外層狀態為 `COMPLETED`，analysis 為 `UNSUPPORTED_CVE`，工程/AI `NOT_RUN`、assessment/ai=null；UI 不能只看外層成功。
+4. 正式 UI、保存／parent run、Live、報告下載及 A/B／主線新 commit 均未驗。截至交件未收到新 commit；收到後只補驗受影響項。
+
+## 檔案與證據
+
+改動只有三個 `scripts/qa_parallel/` 腳本及自己的兩份 MD；沒有修改 `src`、contracts、原測試或原驗收報告。詳細實測值、精確命令、耗時與限制見 `docs/releases/Parallel_QA.md`。
+
+原始資料只存本 worktree 的 `var/validation/parallel-qa/`：
+
+- `archive-20260912T054111493886Z/`：ROM 03。
+- `archive-20260912T054300647924Z/`：其餘八包。
+- `supplements-20260912T054433782100Z/`：三條補件。
+- `boundaries-20260912T054544993791Z/`：九項錯誤／狀態邊界。
+
+每個目錄有 `report.json`，實際分析另存完整 JSON 與 events；補件計畫亦保留。四個實测命令 exit 0；語法與 `git diff --check` 通過。程式未修改後不反覆重跑。
+
+通知限制：本對話工具清單無 `send_message_to_thread`，無法直接投遞至主對話 `01a09347-f3e1-77a3-b66f-f1f2877bef7a`。此檔是可讀交接，未宣稱訊息已送達。未推送、未發布、未合入主線。

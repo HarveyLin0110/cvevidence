@@ -1,6 +1,6 @@
 # Parallel QA：固定 checkpoint 接線驗收
 
-**核心通過／網頁未驗。** 本輪只驗 Git `demo-inputs/` → 核心 adapter 的真實邊界；不把資料交付、mock、既有驗收或舊 `var` 成品計作新的端到端成功。
+**核心通過／網頁未驗。** 新增 archive 接線驗收九格 9/9、補件 3/3、錯誤／狀態邊界 9/9。本輪只驗 Git `demo-inputs/` → 核心 adapter 的真實邊界；不把資料交付、mock、既有驗收或舊 `var` 成品計作新的端到端成功。
 
 ## 基準與操作
 
@@ -33,4 +33,92 @@
 
 既有工程報告 `驗收證據/engineering-20260912T052948.json` 記錄九格 9/9、補件 3/3、五個反例，80.060 秒；穩定性報告記錄三個主展示輸入共 30 次 OFFLINE。兩者讀取已解包 `var/artifacts`，本輪不重跑、不列入本輪完成數。既有同步只記錄 CMake archive 成功；本次補第一筆 ROM archive 可重現結果。
 
-尚未驗 Frankie 正式網頁、Runner 保存/parent run、Live 金鑰程序、畫面錯誤狀態與報告下載；不能由 adapter 成功推論端到端通過。後續只补尚缺 archive／補件邊界，A/B 新 commit 到達後只驗受影響項。
+尚未驗 Frankie 正式網頁、Runner 保存/parent run、Live 金鑰程序、畫面錯誤狀態與報告下載；不能由 adapter 成功推論端到端通過。本輪已補齊以下 archive／補件邊界；截至交件未收到 A/B 新 commit，A/B 與正式整合版本未驗，之後只驗受影響項。
+
+
+## 本輪完整實測：串行 archive 邊界
+
+初始包各分析一次，輸入全來自今日 Git `demo-inputs/`；沒有重跑原工程驗收、單元測試或穩定性全套。下表的秒數是實際 adapter 呼叫耗時，受本機負載影響，不是網頁延遲保證。
+
+| 初始包 | 實測 verdict | Adapter 秒數 | 結果 |
+|---|---|---:|---|
+| ROM 01 | AFFECTED | 13.616 | 通過 |
+| ROM 02 | NOT_AFFECTED | 16.456 | 通過 |
+| ROM 03 | NEEDS_INVESTIGATION | 2.683 | 通過 |
+| CMake 04 | AFFECTED | 0.963 | 通過 |
+| CMake 05 | NOT_AFFECTED | 0.560 | 通過 |
+| CMake 06 | NEEDS_INVESTIGATION | 0.380 | 通過 |
+| curl 07 | AFFECTED | 11.258 | 通過 |
+| curl 08 | NOT_AFFECTED | 19.441 | 通過 |
+| curl 09 | NEEDS_INVESTIGATION | 11.539 | 通過 |
+
+九次 adapter 秒數合計 76.896；每包都有 5 queries、8 evidence、9 events，以及全部 11 項邊界檢查。這不是原工程報告的 80.060 秒。
+
+| 補件基底 | 補件前 → 後 | 新增檔案 | 補件後 adapter 秒数 | 包含解包／驗補件／組快照總秒數 |
+|---|---|---:|---:|---:|
+| ROM 03 | NEEDS_INVESTIGATION → NOT_AFFECTED | 3862 | 10.894 | 17.859 |
+| CMake 06 | NEEDS_INVESTIGATION → AFFECTED | 149 | 1.312 | 2.254 |
+| curl 09 | NEEDS_INVESTIGATION → AFFECTED | 5 | 14.673 | 28.361 |
+
+沿用 `validate_supplement` → 複製到拋棄式 QA snapshot → 僅加入 `added_files` → `scan` 生成新 manifest → re-ingest → archive adapter。為減少 CPU 負載，暫時用不壓縮的 tar 送 adapter；未另建正式 Runner／保存系統。原始結果沿用本輪先前實測，不再次分析基底；程式先核對核心 SHA-256、catalog、archive/context 與預期 verdict，才接受先前報告。
+
+三條皆核對同 build、成品檔案 bytes/hash 相同、原 snapshot 與 Git archives 不變、新 assessment/context、獨立 re-ingest 的 context 被 `expected_context_hash` 接受。快照與暫時 tar 離開測試即清除，結果／events／補件計畫保留。
+
+| 基底 | 補件後 context hash |
+|---|---|
+| ROM 03 | `a6fab5c228c1f805ce4a2c0ab74bbf2ef9e9b08c35e35e70c64f0a68c6e4a460` |
+| CMake 06 | `140bb352ba077171aa9781784c5e9b68ec64d0e8212327da9b78b22e6fa2e2b4` |
+| curl 09 | `dfa8a0388599b46955f9d03e72b7cf94b935549d09a5a339e5321bded33eb941` |
+
+QA snapshot 使用自己的 package ID，因此補件後 context 不必等於正式 Runner 未來建立的 snapshot；這不是跨 run 身分保證。
+
+## 錯誤與狀態實測，以及 Frankie 最小接線注意事項
+
+`boundary_probe.py` 九項均符合基準的實際邊界行為；沒有調用 API 或注入 mock transport：
+
+| 測項 | 真實回傳／例外 |
+|---|---|
+| 不存在、空檔、symlink archive | `IntegrityError`：無效的工程壓縮包 |
+| 錯誤 archive SHA-256 | `IntegrityError`：工程壓縮包 hash 不一致 |
+| 錯誤 expected context | `IntegrityError`：分析快照與原 run 不一致 |
+| 不支援的 options key | `ValueError`：不支援的分析選項 |
+| 真實損壞的 archive bytes | `tarfile.ReadError`；沒有結果物件 |
+| 未知 CVE（真實 ROM archive） | 外層 `COMPLETED`，該分析 `UNSUPPORTED_CVE`，assessment/ai 為 null，工程/AI 皆 `NOT_RUN` |
+| 無檔案現象（workflow 入口） | `AWAITING_INPUT`、空 analyses、工程/AI 皆 `NOT_RUN` |
+
+前七個拒絕情境皆無結果、無 stage event，暫存清除通過。這證明核心未回傳成功 assessment，**不代表正式 Runner 已保存失敗狀態**。最小接線需求：
+
+1. Runner 的呼叫外層必須處理例外並保存失敗與 assessment=null；不能只依 event_callback 結束進度。完整性檢查與解包發生在首個 INGEST event 之前。
+2. 損壞 archive 的 `tarfile.ReadError` 尚未統一為核心 `IntegrityError`／`UnsupportedError`。請主線 adapter 負責者確認是否統一例外，或 Frankie 明確涵蓋 tar/ZIP 解包例外；C 未改產品程式。現有測試記錄這個相容性缺口，未宣稱已修正。
+3. UI 必須讀每個 analysis 的狀態與工程/AI 狀態；外層 `COMPLETED` 只表示呼叫完成，未知 CVE 沒有 assessment。
+4. 正常 OFFLINE 事件末端是 `AI/OFFLINE`；ASSESS 只有 COMPLETED。Live、等待補件、API_ERROR／TIMED_OUT 的正式畫面仍待 Frankie 實測。
+
+## 實際操作命令與原始報告
+
+在指定 QA worktree 根目錄，依序執行過，四個命令退出碼均為 0：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/adapter_probe.py
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/adapter_probe.py --cases 01_rom 02_rom 04_cmake 05_cmake 06_cmake 07_curl 08_curl 09_curl
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/supplement_probe.py --cases 03_rom 06_cmake 09_curl --initial-report var/validation/parallel-qa/archive-20260912T054111493886Z/report.json --initial-report var/validation/parallel-qa/archive-20260912T054300647924Z/report.json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/boundary_probe.py
+```
+
+新 clone 可先只執行第一個命令，再把新產生的 `report.json` 路徑交給 `supplement_probe.py --initial-report ...`；預設補 ROM 03。不傳先前報告也可獨立執行補件腳本，會先真實分析基底。`--cases` 只選需要補驗的案例，不要求全套重跑。
+
+原始報告皆在 QA worktree 的 `var/validation/parallel-qa/`：
+
+- `archive-20260912T054111493886Z/report.json`：首筆 ROM 03，測試 commit 為基準 `b89059f`。
+- `archive-20260912T054300647924Z/report.json`：其餘八包，測試 commit `63520e1`。
+- `supplements-20260912T054433782100Z/report.json`：三條補件，測試 commit `63520e1`。
+- `boundaries-20260912T054544993791Z/report.json`：九項錯誤／狀態邊界，測試 commit `63520e1`。
+
+原始 report 中逐檔核心 SHA-256 一致；`63520e1` 只增 QA 腳本與自己的文件，產品核心仍等於基準。補件／邊界脚本當時為未提交的自有檔，實測後以相同內容提交為 `b431c8a892fed7d348ed2bf9b6ccb12b35d6ce21`，不將該 commit 誤寫為先前實測 HEAD。語法檢查與 `git diff --check` 通過；相對基準的 `src`、原測試、contracts、原驗收腳本皆無 diff。
+
+## 交件與限制
+
+- 第一筆重現交件：`63520e182c1aadec897b50a93bdb23bfaefec343`。
+- 完整 QA 程式交件：`b431c8a892fed7d348ed2bf9b6ccb12b35d6ce21`；本文件另以後續文件 commit 交付，精確文件 commit 可用 `git log -1 -- docs/releases/Parallel_QA.md` 查得。
+- 改動範圍只有 `scripts/qa_parallel/{adapter_probe,supplement_probe,boundary_probe}.py`、`docs/releases/Parallel_QA.md`、`docs/sync/Parallel_QA.md`。
+- 未驗正式網頁、Runner 保存／parent run／下載、Live AI、A/B 後續改動及主線整合；未發布、未推送、未合入主線。
+- 本對話未提供 `send_message_to_thread` callable，無法直接投遞主對話。交接摘要已存自己的同步檔，不能宣稱已通知送達。
