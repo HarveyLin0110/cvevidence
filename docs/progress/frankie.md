@@ -15,3 +15,8 @@
 
 舊環境 43／52／60／66／69 次測試是草擬階段結果，不作為今日乾淨分支驗收。
 docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔及 docs/sync/Frankie.md 為準。
+
+## M1 已完成
+- 6 種今日新写契約、JSON schema 與 9 個契約測試。
+- 乾淨分支 python -m pytest -q：9 passed；沒有執行或複製舊測試。
+- M0 dd54b81。契約仍為 proposal，需 Horace 確認語意。
