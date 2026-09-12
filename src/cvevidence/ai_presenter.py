@@ -11,6 +11,16 @@ BILLING = {
     "codex_cli": "使用後端 ChatGPT 登入帳號的 Codex 額度；不是瀏覽者的帳號。",
 }
 REASONS = {
+    "CONFIG_UNREADABLE": "無法讀取操作者設定。",
+    "LINUX_RUNTIME_REQUIRED": "AI 調查需要 WSL Linux 後端。",
+    "MODEL_CONFIG_REQUIRED": "尚未設定有效的模型與推理強度。",
+    "API_KEY_REQUIRED": "尚未設定 API Key。",
+    "CLI_NOT_INSTALLED": "後端尚未安裝或設定 Codex CLI。",
+    "CLI_VERSION_UNSUPPORTED": "Codex CLI 版本尚未通過此接線的驗證。",
+    "CLI_NATIVE_LINUX_REQUIRED": "請設定 WSL 內的原生 Linux Codex CLI 路徑。",
+    "CLI_CHATGPT_LOGIN_REQUIRED": "後端 Codex 尚未使用 ChatGPT 登入。",
+    "CLI_FILE_AUTH_IDENTITY_REQUIRED": "找不到官方 CLI 的檔案認證入口，請依設定文件完成登入。",
+    "CHATGPT_LOGIN_REQUIRED": "後端 Codex 必須使用 ChatGPT 登入。",
     "DEFAULT_PROVIDER_INVALID": "預設來源設定無效，請明確選擇可用來源。",
     "AI_DISABLED": "管理者尚未啟用 AI 調查。",
     "PROVIDER_DISABLED": "管理者尚未啟用此來源。",

@@ -18,7 +18,8 @@ def receipt_fixture(provider='codex_cli', *, mode='LIVE', action='LIST'):
         'assessment_id': 'A-TEST_ONLY', 'requested_mode': 'LIVE', 'consent': True,
         'context_text_sha256': validation.digest(validation.CONTEXT.encode()), 'model': 'TEST_ONLY',
         'reasoning_effort': 'low', 'created_at': 'TEST_ONLY', 'timeout_seconds': 180.0,
-        'provider': provider, 'auth_type': 'chatgpt' if provider == 'codex_cli' else 'api_key', 'config_id': '3' * 64}
+        'provider': provider, 'auth_type': 'chatgpt' if provider == 'codex_cli' else 'api_key', 'config_id': '3' * 64,
+        'versions': {'code_sha256': '5' * 64, 'prompt_sha256': '6' * 64, 'contract_version': '2.0'}}
     native = {'provider': provider, 'call_number': 1, 'status': 'completed', 'model': None, 'usage': None}
     if provider == 'codex_cli':
         native.update(thread_id='TEST_ONLY_THREAD', exit_code=0, terminal_event='turn.completed', events_sha256='4' * 64)
@@ -31,9 +32,10 @@ def receipt_fixture(provider='codex_cli', *, mode='LIVE', action='LIST'):
     inner = {'schema_version': '2.0', 'provider': provider, 'auth_type': request['auth_type'], 'mode': mode,
              'status': 'NEEDS_USER_INPUT', 'context_hash': request['context_hash'], 'cve_id': validation.CVE,
              'engineering_assessment_id': request['assessment_id'], 'model': request['model'],
-             'adapter_version': 'TEST_ONLY', 'calls': [native], 'tasks': tasks}
+             'reasoning_effort': request['reasoning_effort'], 'adapter_version': 'TEST_ONLY', 'calls': [native], 'tasks': tasks}
     inner['record_hash'] = digest(inner)
     payload = {'schema_version': '2.0', 'context_hash': request['context_hash'], 'mode': mode,
+               'provider': provider, 'auth_type': request['auth_type'], 'versions': request['versions'],
                'status': 'COMPLETED', 'analyses': [{'cve_id': validation.CVE,
                  'engineering_assessment_id': request['assessment_id'], 'ai': inner}]}
     record = {'request': request, 'status': 'NEEDS_USER_INPUT', 'outcome': None, 'result': payload}

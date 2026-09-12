@@ -31,7 +31,7 @@ def synthetic(request, status="NEEDS_USER_INPUT"):
                   reasoning_effort=request.reasoning_effort)
         ai["calls"][0].update(provider=request.provider, call_number=1, status="completed")
     ai["record_hash"] = hashlib.sha256(json.dumps(ai, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
-    return {"schema_version": schema_version, **({"provider": request.provider, "auth_type": request.auth_type} if schema_version == "2.0" else {}),
+    return {"schema_version": schema_version, **({"provider": request.provider, "auth_type": request.auth_type, "versions": request.versions.model_dump()} if schema_version == "2.0" else {}),
             "context_hash": request.context_hash, "mode": "LIVE",
             "status": "COMPLETED" if status in ("NEEDS_USER_INPUT", "COMPLETED") else "INCOMPLETE",
             "analyses": [{"cve_id": request.cve_id, "engineering_assessment_id": request.assessment_id, "ai": ai}]}

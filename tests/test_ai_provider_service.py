@@ -35,6 +35,7 @@ def request(provider="openai_api"):
         cve_id="CVE-2022-37434", assessment_id="A-TEST_ONLY", consent=True,
         context_text_sha256="3" * 64, model="TEST_ONLY_MODEL", created_at="TEST_ONLY",
         timeout_seconds=180, provider=provider,
+        versions={"code_sha256": "6" * 64, "prompt_sha256": "7" * 64, "contract_version": "2.0"},
         auth_type="api_key" if provider == "openai_api" else "chatgpt", config_id="4" * 64)
 
 
@@ -50,6 +51,7 @@ def synthetic(req):
           "model": req.model, "reasoning_effort": req.reasoning_effort, "calls": [call], "tasks": [], "excerpts": []}
     ai["record_hash"] = hashlib.sha256(json.dumps(ai, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
     return {"schema_version": "2.0", "provider": req.provider, "auth_type": req.auth_type,
+            "versions": req.versions.model_dump(),
             "context_hash": req.context_hash, "mode": "LIVE", "status": "COMPLETED",
             "analyses": [{"cve_id": req.cve_id, "engineering_assessment_id": req.assessment_id, "ai": ai}]}
 
@@ -70,7 +72,7 @@ def test_readiness_does_not_disclose_credentials_and_tracks_changes(settings, mo
 def test_version_dispatch_does_not_upgrade_old_request():
     newer = request()
     assert isinstance(parse_ai_request(newer.model_dump_json()), AIRequestV2)
-    older = newer.model_dump(exclude={"provider", "auth_type", "config_id"})
+    older = newer.model_dump(exclude={"provider", "auth_type", "config_id", "versions"})
     older["schema_version"] = "1.0"
     raw = json.dumps(older)
     parsed = parse_ai_request(raw)
@@ -191,3 +193,25 @@ def test_worker_constructor_provider_error_remains_structured(monkeypatch, capsy
     assert ai_worker.main() == 0
     assert json.loads(capsys.readouterr().out) == {
         "worker_error": {"status": "CONFIG_REQUIRED", "code": "CHATGPT_LOGIN_REQUIRED"}}
+
+
+def test_execution_versions_are_bound_to_saved_request():
+    req = request()
+    payload = synthetic(req)
+    payload["versions"]["prompt_sha256"] = "8" * 64
+    with pytest.raises(ValueError, match="version mismatch"):
+        validate_ai_payload(payload, req)
+
+
+def test_changed_worker_code_is_rejected_before_material_read(monkeypatch):
+    from cvevidence import ai_worker
+    from cvevidence_core.providers import ProviderError
+    monkeypatch.setenv("CVEVIDENCE_AI_ENABLED", "1")
+    payload = dict.fromkeys(("archive", "archive_sha256", "context_hash", "temporary_root", "engineering_blob",
+                            "engineering_payload_sha256", "cve_id", "assessment_id", "user_context",
+                            "config_id", "provider_config", "deadline_monotonic"))
+    payload.update(provider="codex_cli", auth_type="chatgpt", consent=True, versions={})
+    with pytest.raises(ProviderError) as error:
+        ai_worker.execute(payload)
+    assert error.value.status == "INPUT_CHANGED_OR_INVALID"
+    assert error.value.code == "AI_IMPLEMENTATION_CHANGED"

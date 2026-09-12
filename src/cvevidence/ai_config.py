@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+from .ai_versions import execution_versions
 
 PROVIDERS = ("openai_api", "codex_cli")
 EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
@@ -63,7 +64,8 @@ def provider_configuration(provider):
         "reasoning_effort": effort if effort in EFFORTS else None,
         "auth_type": "api_key" if provider == "openai_api" else "chatgpt",
         "billing_label": "後端 API 帳號，依 API 用量計費" if provider == "openai_api" else "後端登入的 ChatGPT 帳號，使用 Codex 額度",
-        "version": None, "mode": "LIVE",
+        "version": "1.0" if provider == "openai_api" else None, "mode": "LIVE",
+        "versions": execution_versions(),
     }
     if provider == "openai_api":
         private.update(OPENAI_API_KEY=settings.get("OPENAI_API_KEY", ""),
@@ -93,7 +95,7 @@ def provider_configuration(provider):
             if not readiness.get("configured") and not reason:
                 reason = "CODEX_CONFIG_REQUIRED"
             public["version"] = readiness.get("version")
-            if readiness.get("auth_type") != "chatgpt":
+            if readiness.get("configured") and readiness.get("auth_type") != "chatgpt":
                 reason = "CHATGPT_LOGIN_REQUIRED"
             private["auth_identity"] = readiness.get("auth_identity")
         except ImportError:
@@ -103,6 +105,7 @@ def provider_configuration(provider):
     public.update(configured=reason is None, reason_code=reason)
     # Only a digest leaves this module. Credential changes invalidate submitted consent.
     public["config_id"] = _digest({"private": private, "auth_type": public["auth_type"],
+                                   "versions": public["versions"],
                                    "version": public["version"], "enabled": sorted(enabled),
                                    "ai_enabled": settings.get("CVEVIDENCE_AI_ENABLED")})
     return private, public

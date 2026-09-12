@@ -10,6 +10,7 @@ from .core_worker import checked_archive
 from cvevidence_core.integrity import safe_extract, ingest_package, file_hash
 from cvevidence_core.workflow import investigate_after_engineering
 from cvevidence_core.providers import ProviderError
+from .ai_versions import execution_versions
 
 
 def execute(request):
@@ -17,7 +18,7 @@ def execute(request):
                "engineering_payload_sha256", "cve_id", "assessment_id", "user_context", "consent"}
     provider_name = request.get("provider")
     if provider_name is not None:
-        allowed |= {"provider", "auth_type", "config_id", "provider_config", "deadline_monotonic"}
+        allowed |= {"provider", "auth_type", "config_id", "provider_config", "deadline_monotonic", "versions"}
     if set(request) != allowed or request["consent"] is not True or os.environ.get("CVEVIDENCE_AI_ENABLED") != "1":
         raise ValueError("AI execution not authorized")
     if provider_name not in (None, "openai_api", "codex_cli"):
@@ -26,6 +27,8 @@ def execute(request):
         raise ValueError("AI operator configuration missing")
     provider = None
     if provider_name is not None:
+        if request["versions"] != execution_versions():
+            raise ProviderError("INPUT_CHANGED_OR_INVALID", "AI_IMPLEMENTATION_CHANGED")
         if request["auth_type"] != ("chatgpt" if provider_name == "codex_cli" else "api_key"):
             raise ValueError("Provider authentication mismatch")
         config = request["provider_config"]
@@ -69,6 +72,10 @@ def execute(request):
                 provider.close()
         if file_hash(archive) != actual or hashlib.sha256(blob.read_bytes()).hexdigest() != request["engineering_payload_sha256"]:
             raise ValueError("AI inputs changed during execution")
+        if provider_name is not None:
+            if request["versions"] != execution_versions():
+                raise ProviderError("INPUT_CHANGED_OR_INVALID", "AI_IMPLEMENTATION_CHANGED")
+            result["versions"] = request["versions"]
         return result
 
 

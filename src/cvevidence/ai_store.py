@@ -34,11 +34,18 @@ class AIRequest(Model):
         return self
 
 
+class AIExecutionVersions(Model):
+    code_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    prompt_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    contract_version: Literal["2.0"] = "2.0"
+
+
 class AIRequestV2(AIRequest):
     schema_version: Literal["2.0"] = "2.0"
     provider: Literal["openai_api", "codex_cli"]
     auth_type: Literal["api_key", "chatgpt"]
     config_id: str = Field(pattern=r"^[a-f0-9]{64}$")
+    versions: AIExecutionVersions
 
     @model_validator(mode="after")
     def provider_authentication(self):
@@ -124,6 +131,8 @@ def validate_ai_payload(payload, request):
         if (payload.get("schema_version") != "2.0" or payload.get("provider") != request.provider
                 or payload.get("auth_type") != request.auth_type):
             raise ValueError("AI wrapper version or provider mismatch")
+        if payload.get("versions") != request.versions.model_dump():
+            raise ValueError("AI execution version mismatch")
         _validate_v2_receipts(ai, request)
     status = ai.get("status")
     # Pydantic validates the finite status set, without treating unknown values as success.

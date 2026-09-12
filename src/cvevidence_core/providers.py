@@ -21,7 +21,7 @@ class ProviderError(Exception):
     """Only finite statuses and safe codes cross the provider boundary."""
     def __init__(self, status: str, code: str):
         allowed = {'TIMED_OUT', 'API_ERROR', 'CONNECTION_ERROR', 'INCOMPLETE',
-                   'BUDGET_EXHAUSTED', 'CONFIG_REQUIRED', 'INVALID_MODEL_OUTPUT', 'FAILED'}
+                   'BUDGET_EXHAUSTED', 'CONFIG_REQUIRED', 'INVALID_MODEL_OUTPUT', 'FAILED', 'INPUT_CHANGED_OR_INVALID'}
         self.status = status if status in allowed else 'FAILED'
         self.code = code if isinstance(code, str) and re.fullmatch(r'[A-Z][A-Z0-9_]{0,99}', code) else 'PROVIDER_ERROR'
         super().__init__(self.code)

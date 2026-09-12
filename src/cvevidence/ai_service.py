@@ -59,6 +59,7 @@ class AIService:
             public_keys = ("bin", "model", "reasoning_effort", "codex_home", "auth_revision", "auth_identity")
             payload.update(provider=request.provider, auth_type=request.auth_type,
                            config_id=request.config_id,
+                           versions=request.versions.model_dump(),
                            provider_config={key: config[key] for key in public_keys if key in config},
                            deadline_monotonic=monotonic() + timeout)
             if request.provider == "codex_cli":
@@ -110,7 +111,8 @@ class AIService:
             if not isinstance(config_id, str) or not re.fullmatch(r"[a-f0-9]{64}", config_id):
                 raise ValueError("Current provider configuration identity required")
             request_type = AIRequestV2
-            identity = {"provider": provider, "auth_type": public["auth_type"], "config_id": config_id}
+            identity = {"provider": provider, "auth_type": public["auth_type"], "config_id": config_id,
+                        "versions": public["versions"]}
         request = request_type(ai_id=ai_id or str(uuid4()), parent_run_id=parent_run_id,
             engineering_payload_sha256=parent.engineering_payload_sha256,
             context_hash=parent.input_package.context_hash, cve_id=parent.cve_id,
