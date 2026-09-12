@@ -41,3 +41,20 @@ def test_openssl_explanation_does_not_promote_unknown_or_legacy():
     assert openssl_context(entry,'PC3')==''
     entry['assessment']['profile_version']='legacy'
     assert openssl_context(entry,'PC1')==''
+
+def test_wrong_package_format_cannot_execute_deep_analysis(tmp_path,monkeypatch):
+    from cvevidence.runner import Runner
+    from cvevidence.storage import RunStore
+    root=Path(__file__).resolve().parents[1]
+    runner=Runner(RunStore(tmp_path/'mismatch'))
+    intake=runner.start_file(root/'demo-inputs/runtime-v2/pc3_cmake_static.tar.gz',cve='CVE-2014-0160')
+    assert not intake.error
+    monkeypatch.setenv('CVEVIDENCE_STORE',str(runner.store.root))
+    app=AppTest.from_file(str(root/'runner_app.py')).run(timeout=30)
+    app.session_state.selected_run=intake.run_id
+    app.session_state.step='03 分析進度與結果'
+    app.run(timeout=30)
+    assert not app.exception
+    assert next(b for b in app.button if b.label=='執行 Queries 與正式判定').disabled
+    assert any('資料包與此 CVE' in w.value for w in app.warning)
+    assert len(runner.store.list_runs())==1

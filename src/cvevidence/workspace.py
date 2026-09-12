@@ -235,7 +235,10 @@ def workspace(st, *, store_root=None):
             st.caption("執行目前核心的 Queries、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
             with st.expander("Queries 如何執行：本次查核內容",expanded=True):
                 if cve:
-                    render_preparation(st,cve,run.input_package.format if run.input_package else None)
+                    prepared = render_preparation(st,cve,run.input_package.format if run.input_package else None)
+                    if prepared['status']=='FORMAT_GAP':
+                        can_analyze=False
+                        st.warning('資料包與此 CVE 的已審查格式不對應。請回到第一步更換資料包或建立正確 CVE 的請求；暫停執行，避免產生無法深入查核的結果。')
                 else:
                     st.info("先選擇或輸入 CVE，這裡會列出對應的查核項目。")
             if st.button("執行 Queries 與正式判定",type="primary",disabled=not can_analyze):

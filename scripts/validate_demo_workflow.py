@@ -68,8 +68,8 @@ assert len(runner.store.list_runs()) == initial_count + 4  # switching did not r
 button('01 產品與資料來源')
 button('建立另一個請求')
 catalog = next(s for s in app.selectbox if s.label == '選擇已取得的產品／建置／資料包')
-catalog.set_value(next(i for i, label in enumerate(catalog.options) if 'pc3_cmake_static' in label)).run()
-next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2022-37434').run()
+catalog.set_value(next(i for i, label in enumerate(catalog.options) if 'pc3_curl_static' in label)).run()
+next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2023-38545').run()
 next(t for t in app.text_area if t.label == '情境與想確認的問題').set_value(SCENARIOS['B']).run()
 button('匯入並建立查核')
 supplement_request = app.session_state.selected_request
@@ -79,6 +79,10 @@ button('執行 Queries 與正式判定')
 missing_id = app.session_state.selected_run
 original = runner.read_engineering(missing_id)
 assert original['analyses'][0]['assessment']['verdict'] == 'NEEDS_INVESTIGATION'
+groups = {g['group_id']:g for g in pc_summaries(original['analyses'][0])}
+assert all(c['state']=='SUPPORTED' for name in ('PC1','PC2') for c in groups[name]['conditions'])
+assert [c['state'] for c in groups['PC3']['conditions']] == ['UNKNOWN']
+assert sum(c['state']=='UNKNOWN' for c in original['analyses'][0]['assessment']['conditions']) == 1
 button('04 AI 查核與補件')
 button('套用已取得的補件並建立新 run')
 button('執行 Queries 與正式判定')
