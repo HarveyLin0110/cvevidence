@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from typing import Any
 
@@ -26,6 +27,9 @@ MAX_INPUT = 256 * 1024
 MAX_STREAM = 2 * 1024 * 1024
 MAX_LINE = 256 * 1024
 MAX_FINAL = 128 * 1024
+READINESS_TTL = 15.0
+_READINESS_CACHE: dict[tuple, tuple[float, dict]] = {}
+_READINESS_LOCK = threading.Lock()
 _SUPERVISOR = """import ctypes,os,signal,subprocess,sys
 def stop(*args): os.killpg(os.getpgrp(),signal.SIGKILL)
 signal.signal(signal.SIGTERM,stop)
@@ -221,6 +225,26 @@ def _auth_link(home: str, directory: Path) -> Path:
     return auth_home
 
 
+def _file_identity(path: Path) -> tuple:
+    """Metadata only; detect both symlink replacement and target replacement."""
+    try:
+        link = path.lstat()
+        target = path.stat()
+        return tuple((st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns,
+                      st.st_ctime_ns, st.st_mode) for st in (link, target))
+    except OSError as exc:
+        return ("unavailable", exc.errno)
+
+
+def _readiness_cache_key(config: dict) -> tuple:
+    cli = str(config.get("bin", ""))
+    home = str(config.get("codex_home") or Path.home() / ".codex")
+    fields = tuple(str(config.get(key) or "") for key in
+                   ("provider", "model", "reasoning_effort", "auth_revision"))
+    return (cli, home, fields, CLI_VERSION, POLICY_VERSION,
+            _file_identity(Path(cli)), _file_identity(Path(home) / "auth.json"))
+
+
 def _account_identity(cli: str, home: str, directory: Path, timeout: float) -> str:
     """Official account/read only; a link isolates config without copying secrets.
 
@@ -229,7 +253,9 @@ def _account_identity(cli: str, home: str, directory: Path, timeout: float) -> s
     """
     if timeout <= 0:
         raise ProviderError("TIMED_OUT", "CLI_DEADLINE")
-    auth_home = _auth_link(home, directory)
+    account_directory = directory / "account-check"
+    account_directory.mkdir(mode=0o700)
+    auth_home = _auth_link(home, account_directory)
     args = [cli, "app-server", "--stdio", "-c", "features.plugins=false",
             "-c", "features.hooks=false", "-c", "features.apps=false",
             "-c", "analytics.enabled=false"]
@@ -291,8 +317,15 @@ def _account_identity(cli: str, home: str, directory: Path, timeout: float) -> s
             stream.close()
 
 
-def codex_readiness(config: dict, *, timeout: float = 8) -> dict:
+def codex_readiness(config: dict, *, timeout: float = 8, force_refresh: bool = False) -> dict:
     """No inference; messages and credential contents never escape this check."""
+    key = _readiness_cache_key(config)
+    now = time.monotonic()
+    if not force_refresh:
+        with _READINESS_LOCK:
+            cached = _READINESS_CACHE.get(key)
+            if cached is not None and now - cached[0] < READINESS_TTL:
+                return dict(cached[1])
     result = {"configured": False, "reason_code": "CLI_NOT_INSTALLED", "version": None,
               "auth_type": None, "auth_identity": None, "policy_version": POLICY_VERSION}
     try:
@@ -300,7 +333,8 @@ def codex_readiness(config: dict, *, timeout: float = 8) -> dict:
         cli, _, _, home = _validate_config(config)
         with tempfile.TemporaryDirectory(prefix="cvevidence-ready-") as name:
             directory = Path(name)
-            env = _environment(directory, home)
+            auth_home = _auth_link(home, directory)
+            env = _environment(directory, str(auth_home))
             code, out, _ = _bounded_run([cli, "--version"], data=b"", cwd=directory,
                                          env=env, timeout=min(3, deadline-time.monotonic()), max_output=4096)
             version = out.decode("utf-8", errors="replace").strip()
@@ -321,6 +355,13 @@ def codex_readiness(config: dict, *, timeout: float = 8) -> dict:
         result["reason_code"] = exc.code
     except (OSError, ValueError):
         result["reason_code"] = "CLI_READINESS_FAILED"
+    # If credentials changed during this check, don't associate a possibly old
+    # account response with new file metadata. The next call must check again.
+    if key == _readiness_cache_key(config):
+        with _READINESS_LOCK:
+            if len(_READINESS_CACHE) >= 32:
+                _READINESS_CACHE.pop(min(_READINESS_CACHE, key=lambda item: _READINESS_CACHE[item][0]))
+            _READINESS_CACHE[key] = (time.monotonic(), dict(result))
     return result
 
 
@@ -407,7 +448,7 @@ class CodexCLIAdapter:
         started = time.monotonic()
         if timeout <= 0:
             raise ProviderError("TIMED_OUT", "CLI_DEADLINE")
-        ready = codex_readiness(self.config, timeout=min(8, timeout))
+        ready = codex_readiness(self.config, timeout=min(8, timeout), force_refresh=True)
         if not ready["configured"]:
             if time.monotonic() - started >= timeout:
                 raise ProviderError("TIMED_OUT", "CLI_DEADLINE")

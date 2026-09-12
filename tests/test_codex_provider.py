@@ -18,6 +18,14 @@ from cvevidence_core.codex_provider import (
 from cvevidence_core.providers import ProviderError
 
 
+@pytest.fixture(autouse=True)
+def clear_readiness_cache():
+    import cvevidence_core.codex_provider as provider
+    provider._READINESS_CACHE.clear()
+    yield
+    provider._READINESS_CACHE.clear()
+
+
 def events(*, decision=None, item_type="agent_message", usage=None):
     return b"\n".join(json.dumps(x).encode() for x in [
         {"type": "thread.started", "thread_id": "test-only-thread"},
@@ -102,6 +110,7 @@ def test_auth_link_shares_only_path_and_cleanup_keeps_original(tmp_path):
 def test_readiness_rejects_api_auth_and_does_not_query_identity(monkeypatch, tmp_path):
     import cvevidence_core.codex_provider as provider
     monkeypatch.setattr(provider, "_validate_config", lambda config: ("/fake", "model", "low", str(tmp_path)))
+    (tmp_path / "auth.json").write_text("TEST_ONLY_AUTH_METADATA")
     responses = iter([(0, CLI_VERSION.encode(), b""), (0, b"Logged in using an API key", b"")])
     monkeypatch.setattr(provider, "_bounded_run", lambda *args, **kwargs: next(responses))
     monkeypatch.setattr(provider, "_account_identity", lambda *args: pytest.fail("API auth must not query identity"))
@@ -112,12 +121,77 @@ def test_readiness_rejects_api_auth_and_does_not_query_identity(monkeypatch, tmp
 def test_readiness_returns_only_identity_hash(monkeypatch, tmp_path):
     import cvevidence_core.codex_provider as provider
     monkeypatch.setattr(provider, "_validate_config", lambda config: ("/fake", "model", "low", str(tmp_path)))
+    (tmp_path / "auth.json").write_text("TEST_ONLY_AUTH_METADATA")
     responses = iter([(0, CLI_VERSION.encode(), b""), (0, b"Logged in using ChatGPT", b"")])
     monkeypatch.setattr(provider, "_bounded_run", lambda *args, **kwargs: next(responses))
     monkeypatch.setattr(provider, "_account_identity", lambda *args: "a" * 64)
     result = codex_readiness({"auth_revision": "test-only"})
     assert result["configured"] and result["auth_identity"] == "a" * 64
     assert "email" not in result
+
+
+def _fake_ready(monkeypatch, tmp_path):
+    import cvevidence_core.codex_provider as provider
+    source = tmp_path / "auth.json"
+    source.write_text("TEST_ONLY_AUTH_METADATA")
+    cli = tmp_path / "codex"
+    cli.write_bytes(b"TEST_ONLY_BINARY_METADATA")
+    calls = []
+    monkeypatch.setattr(provider, "_validate_config", lambda config: (str(cli), "model", "low", str(tmp_path)))
+
+    def run(argv, **kwargs):
+        calls.append(argv)
+        home = Path(kwargs["env"]["CODEX_HOME"])
+        assert home != tmp_path and (home / "auth.json").is_symlink()
+        assert not (home / "config.toml").exists()
+        return (0, CLI_VERSION.encode() if "--version" in argv else b"Logged in using ChatGPT", b"")
+
+    monkeypatch.setattr(provider, "_bounded_run", run)
+    monkeypatch.setattr(provider, "_account_identity", lambda *args: "a" * 64)
+    return provider, {"bin": str(cli), "codex_home": str(tmp_path), "model": "test-model", "auth_revision": "r1"}, calls
+
+
+def test_readiness_ttl_cache_is_copied_and_force_refresh_bypasses(monkeypatch, tmp_path):
+    provider, config, calls = _fake_ready(monkeypatch, tmp_path)
+    first = provider.codex_readiness(config)
+    first["configured"] = False
+    assert provider.codex_readiness(config)["configured"]
+    assert len(calls) == 2
+    assert provider.codex_readiness(config, force_refresh=True)["configured"]
+    assert len(calls) == 4
+    key, (timestamp, result) = next(iter(provider._READINESS_CACHE.items()))
+    provider._READINESS_CACHE[key] = (timestamp - provider.READINESS_TTL - 1, result)
+    assert provider.codex_readiness(config)["configured"]
+    assert len(calls) == 6
+
+
+@pytest.mark.parametrize("change", ["auth", "bin", "revision", "model"])
+def test_metadata_or_operator_config_change_invalidates_cache(monkeypatch, tmp_path, change):
+    provider, config, calls = _fake_ready(monkeypatch, tmp_path)
+    assert provider.codex_readiness(config)["configured"]
+    if change in {"auth", "bin"}:
+        path = tmp_path / ("auth.json" if change == "auth" else "codex")
+        replacement = tmp_path / "replacement"
+        replacement.write_text("TEST_ONLY_REPLACEMENT")
+        replacement.replace(path)
+    else:
+        config["auth_revision" if change == "revision" else "model"] = "r2"
+    assert provider.codex_readiness(config)["configured"]
+    assert len(calls) == 4
+
+
+def test_step_never_uses_ui_readiness_cache(monkeypatch, tmp_path):
+    import cvevidence_core.codex_provider as provider
+    monkeypatch.setattr(provider, "_validate_config", lambda config: ("/fake", "model", "low", str(tmp_path)))
+    observed = []
+    def readiness(config, **kwargs):
+        observed.append(kwargs)
+        return {"configured": False, "reason_code": "TEST_ONLY_STOP"}
+    monkeypatch.setattr(provider, "codex_readiness", readiness)
+    adapter = provider.CodexCLIAdapter({})
+    with pytest.raises(ProviderError):
+        adapter.step(instructions="test", packet={}, history=[], budget={}, timeout=1)
+    assert observed == [{"timeout": 1, "force_refresh": True}]
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Native Linux process supervision")

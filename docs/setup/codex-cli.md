@@ -36,6 +36,8 @@ config = {
 
 `codex_readiness(config)` 不呼叫模型：检查 ELF、版本、官方 `login status` 的 ChatGPT 模式，再經官方 app-server `account/read(refreshToken=false)` 核對身分。無法取得身分就不可用；不以讀 token、推測 email 或 API Key 替代。此結果不保證帳號仍有額度。
 
+UI readiness 使用 15 秒記憶體快取，鍵包含 CLI／auth.json 的連結與目標 stat 身分、操作者模型／認證 revision／目錄及政策版本；不讀取憑證內容。檔案原子替換或設定變更即失效，回傳副本避免 UI 改動污染快取。實際每個 `step` 使用 `force_refresh=True` 重新核對帳號，調查期間改變帳號時拒絕繼續。`--version`、`login status` 與 `account/read` 都使用臨時認證 home，不載入原 home 的 config／hooks。
+
 ## 執行限制
 
 每次 readiness 身分核對及每個調查步驟建立獨立臨時目錄。目錄內只放受控指令、schema、最小模型目錄及指向原 `auth.json` 的認證符號連結，由官方 CLI 讀取；Python 不開啟其內容。新 `CODEX_HOME` 不帶個人 config、MCP、插件、skills 或其他案件；finally 清理臨時狀態，原登入檔保留。
