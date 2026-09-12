@@ -83,3 +83,10 @@
 - 以上對應 V5 PC 條件分組、Replay 帶原時間、追加補件含取證角色與驗收材料；詳細字段見核心接線提案。
 
 本輪產品與 main 相容測試：119 passed、23 subtests，29.86 秒；另 49 項 AI／回流聚焦測試通過。新增使用者未交付入口的 Live／Replay 驗收腳本，待實際結果另記，不預填通過。
+
+## 14:25 接收 main 與補齊驗收
+
+- main 已到 `9d11d48`（PR #13），含正式 OFFLINE 工程工作台與補件／報告。已合回作者分支處理 README 衝突；main 的 Frankie 產品檔原樣保留，新的相容測試執行中。
+- 程式 `7479368`：使用者指出尚未交付的網路 gzip 入口，真實 Sol／medium 4 calls、36.449 秒 → ASK_USER／NEEDS_USER_INPUT；原已驗條件不變，整體 NEEDS_INVESTIGATION。補件列成品、source、build/link 和啟動材料，角色與核對目的在 finding；漏洞重現不是必要補件。一筆 S-ID 引用被拒並在原預算內修正，失敗紀錄保留。Live／Replay 原時間均核對通過。
+- 補齊 PC 分組與 Replay 時間的 `9f3ac28` 已用 pip 打包安裝；在 repo 外載入 site-packages，reviewed_sources.json 與 PC metadata 皆可用。後續 `7479368` 僅多一行最小補件提示。
+- D 指定版本的 QA 報告與重現程式已推分支 `codex/parallel-contract-qa`，固定交件 `754e6a3`。基本 JSON／錯誤隔離通過，原文 excerpts 顯示有兩個已知失敗；其舊 integration a47a1a3 的未接線狀態已被 main 新 OFFLINE 接線更新，不能沿用作最新結果。D 的測試針對固定舊 consumer，未合進預設最新產品測試以混算成效。

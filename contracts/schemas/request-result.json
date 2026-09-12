@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "RequestRun": {
+      "additionalProperties": false,
+      "properties": {
+        "cve_id": {
+          "title": "Cve Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "COLLECTED",
+            "COMPLETED",
+            "FAILED",
+            "TIMED_OUT"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cve_id",
+        "run_id",
+        "status"
+      ],
+      "title": "RequestRun",
+      "type": "object"
+    },
+    "RequestSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "parent_request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Request Id"
+        },
+        "symptom": {
+          "default": "",
+          "maxLength": 4000,
+          "title": "Symptom",
+          "type": "string"
+        },
+        "cves": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Cves",
+          "type": "array"
+        },
+        "archive_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Archive Sha256"
+        },
+        "manifest_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manifest Sha256"
+        }
+      },
+      "required": [
+        "request_id"
+      ],
+      "title": "RequestSpec",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "spec": {
+      "$ref": "#/$defs/RequestSpec"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "DRAFT",
+        "COLLECTED",
+        "PARTIAL",
+        "FAILED"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "runs": {
+      "items": {
+        "$ref": "#/$defs/RequestRun"
+      },
+      "maxItems": 5,
+      "title": "Runs",
+      "type": "array"
+    },
+    "discovery": {
+      "additionalProperties": true,
+      "title": "Discovery",
+      "type": "object"
+    }
+  },
+  "required": [
+    "spec",
+    "created_at",
+    "status"
+  ],
+  "title": "RequestResult",
+  "type": "object"
+}

@@ -22,8 +22,9 @@ def test_workspace_empty_and_history(tmp_path,monkeypatch):
     app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/"runner_app.py")).run()
     assert not app.exception
     app.session_state["selected_run"]=run.run_id
-    for page in ("02 資料確認與缺件","03 分析進度與結果","04 報告與後續行動"):
-        app.sidebar.radio[0].set_value(page).run()
+    app.run()
+    for page in ("02 資料確認與缺件","03 分析進度與結果","05 報告與後續行動"):
+        next(b for b in app.sidebar.button if b.label==page).click().run()
         assert not app.exception
     assert any("NOT_ASSESSED" in code.value for code in app.code)
 
@@ -33,7 +34,8 @@ def test_workspace_supplement_note(tmp_path,monkeypatch):
     parent=Runner(store).start(package(missing=True),"TEST","CVE-2014-0160")
     app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/"runner_app.py")).run()
     app.session_state["selected_run"]=parent.run_id
-    app.sidebar.radio[0].set_value("04 報告與後續行動").run()
+    app.run()
+    next(b for b in app.sidebar.button if b.label=="05 報告與後續行動").click().run()
     app.text_area[0].set_value("TEST ONLY: supplier statement").run()
     next(button for button in app.button if button.label=="保存補件並建立新 run").click().run()
     assert not app.exception

@@ -6,9 +6,11 @@
 
 展示輸入集中在 [demo-inputs](demo-inputs/README.md)：9 個初始包、3 個同 build 補件、中文上傳對照表、catalog 與 SHA256SUMS，已納入 main。主展示先選 `rom/03_rom.tar.gz`，再補 `rom/supplement_03_rom.tar.gz`；補件須由補件入口提交，保留原 run。
 
-Horace 的 Q1–Q5、Verifier、三個 CVE 規則、補件重判與 OpenAI 動態調查已實作。[PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9) 交付完整核心；核心 checkpoint `44efc7b` 的 75 項測試通過，九格工程與三組補件、四種 Live 情境及 30 次 OFFLINE 穩定性已有紀錄。這些核心驗收與網頁全流程分開，接線進度見 [Horace 同步](docs/sync/Horace.md)、[Frankie 同步](docs/sync/Frankie.md) 及 [整合計畫](docs/integration/plan.md)。
+Horace 的 Q1–Q5、Verifier、三個 CVE 規則、補件重判與 OpenAI 動態調查已實作。[PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9) 交付完整核心；已完成 main 基線的 119 項相容測試，九格工程與三組補件、四種 Live 情境及 30 次 OFFLINE 穩定性已有紀錄。這些核心驗收與網頁全流程分開，接線進度見 [Horace 同步](docs/sync/Horace.md)、[Frankie 同步](docs/sync/Frankie.md) 及 [整合計畫](docs/integration/plan.md)。
 
-Frankie 的共用 Runner、CLI、Streamlit 已接真實收件、原文操作與同 build delta；完整工程與 AI 顯示仍由整合端接入。`apps/web/` 是今日製作、使用者允許保留的模擬 UI；正式工作台入口是 `runner_app.py`。
+Frankie 的共用 Runner、CLI、Streamlit 已接真實收件、原文操作、OFFLINE 工程分析、同 build delta 與報告；Live 的正式工作台啟動與保存仍由整合端接入。`apps/web/` 是今日製作、使用者允許保留的模擬 UI；正式工作台入口是 `runner_app.py`。
+
+隊友可依 [測試情境手冊](docs/demo/test-scenarios.md) 試走；正式團隊服務的版本、登入與部署由 [整合紀錄](docs/integration/live-site.md) 管理。
 
 ## 規劃與分工
 
