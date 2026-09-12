@@ -1,0 +1,187 @@
+{
+  "scope": "三個主展示輸入各重跑 10 次，共 30 次 OFFLINE；不是九包各跑 10 次。",
+  "cases": [
+    {
+      "round": 1,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 2.203
+    },
+    {
+      "round": 1,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 1.595
+    },
+    {
+      "round": 1,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 10.43
+    },
+    {
+      "round": 2,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 1.065
+    },
+    {
+      "round": 2,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.769
+    },
+    {
+      "round": 2,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 11.149
+    },
+    {
+      "round": 3,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 1.742
+    },
+    {
+      "round": 3,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.538
+    },
+    {
+      "round": 3,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 12.924
+    },
+    {
+      "round": 4,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 3.917
+    },
+    {
+      "round": 4,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 1.062
+    },
+    {
+      "round": 4,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 13.671
+    },
+    {
+      "round": 5,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 1.796
+    },
+    {
+      "round": 5,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 1.097
+    },
+    {
+      "round": 5,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 14.567
+    },
+    {
+      "round": 6,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 1.64
+    },
+    {
+      "round": 6,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.918
+    },
+    {
+      "round": 6,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 12.189
+    },
+    {
+      "round": 7,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 0.817
+    },
+    {
+      "round": 7,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.41
+    },
+    {
+      "round": 7,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 12.634
+    },
+    {
+      "round": 8,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 0.963
+    },
+    {
+      "round": 8,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.644
+    },
+    {
+      "round": 8,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 15.552
+    },
+    {
+      "round": 9,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 0.705
+    },
+    {
+      "round": 9,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.373
+    },
+    {
+      "round": 9,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 11.531
+    },
+    {
+      "round": 10,
+      "package_id": "03_rom",
+      "pass": true,
+      "seconds": 0.866
+    },
+    {
+      "round": 10,
+      "package_id": "04_cmake",
+      "pass": true,
+      "seconds": 0.349
+    },
+    {
+      "round": 10,
+      "package_id": "09_curl",
+      "pass": true,
+      "seconds": 8.432
+    }
+  ],
+  "pass": true,
+  "seconds": 146.557
+}

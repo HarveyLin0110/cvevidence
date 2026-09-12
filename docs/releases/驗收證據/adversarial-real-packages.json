@@ -1,0 +1,30 @@
+[
+  {
+    "test": "changed_source",
+    "verdict": "NEEDS_INVESTIGATION",
+    "pass": true,
+    "conflicts": [
+      {
+        "query_id": "Q4_BINDING",
+        "message": "source/zlib/inflate.c"
+      }
+    ]
+  },
+  {
+    "test": "extra_binary",
+    "verdict": "NEEDS_INVESTIGATION",
+    "pass": true,
+    "conflicts": []
+  },
+  {
+    "test": "conflicting_build",
+    "verdict": "NEEDS_INVESTIGATION",
+    "pass": true,
+    "conflicts": [
+      {
+        "query_id": "Q2_BUILD",
+        "message": "build-record identity differs: build_id"
+      }
+    ]
+  }
+]

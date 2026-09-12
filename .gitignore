@@ -8,3 +8,5 @@
 !/.env.example
 /apps/web/dist/
 /apps/web/node_modules/
+/build/
+*.egg-info/

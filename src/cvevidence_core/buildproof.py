@@ -105,3 +105,53 @@ class BuildProof:
   else:
    check=self.check_record(links[0]);proof['missing']+=check['missing'];proof['conflicts']+=check['conflicts'];proof['source_ids']+=check['source_ids'];proof['valid'] &= check['valid']
   proof['source_ids'].append(library[1]['source_id']);return proof
+
+ def direct_shared_proof(self,library_path):
+  pair=self.context.by_path(library_path)
+  empty={'valid':False,'missing':[],'conflicts':[],'source_ids':[],'records':[]}
+  if not pair:return {**empty,'missing':[library_path]}
+  candidates=[r for r in self.output_records(sha256=pair[1]['sha256']) if '-shared' in r.get('argv',[])]
+  if not candidates:return {**empty,'missing':['shared link record for '+library_path]}
+  link=candidates[0];checked=self.check_record(link)
+  result={**checked,'source_ids':[pair[1]['source_id'],*checked['source_ids']],'records':[]}
+  objects=[i for i in link.get('inputs',[]) if i['path'].endswith('.o') and not i.get('external')]
+  if not objects:result['missing'].append('linked object inventory')
+  for item in objects:
+   records=self.output_records(path=item['path'],sha256=item['sha256'])
+   if not records:result['missing'].append('compiler record for '+item['path']);continue
+   check=self.check_record(records[0]);result['records'].append(records[0]);result['source_ids']+=check['source_ids'];result['missing']+=check['missing'];result['conflicts']+=check['conflicts']
+   if not records[0].get('dependency_capture',False):result['missing'].append('compiler header capture for '+item['path'])
+  result['valid']=bool(objects) and not result['missing'] and not result['conflicts']
+  result['source_ids']=list(dict.fromkeys(result['source_ids']));return result
+
+ def product_proof(self,product_path,source_path,library_path,library_needed=None):
+  result={'valid':False,'missing':[],'conflicts':[],'source_ids':[],'records':[]}
+  product=self.context.by_path(product_path);source=self.context.by_path(source_path);library=self.context.by_path(library_path)
+  for path,pair in [(product_path,product),(source_path,source),(library_path,library)]:
+   if not pair:result['missing'].append(path)
+  if result['missing']:return result
+  result['source_ids']=[product[1]['source_id'],source[1]['source_id'],library[1]['source_id']]
+  compiles=self.source_records(source_path);links=self.output_records(sha256=product[1]['sha256'])
+  matching=[]
+  for comp in compiles:
+   for link in links:
+    if any(o['sha256']==i['sha256'] for o in comp.get('outputs',[]) for i in link.get('inputs',[])):matching.append((comp,link))
+  if not matching:result['missing'].append('product source/object/link correspondence');return result
+  comp,link=matching[0]
+  for r in [comp,link]:
+   check=self.check_record(r);result['missing']+=check['missing'];result['conflicts']+=check['conflicts'];result['source_ids']+=check['source_ids']
+  if library_needed:
+   if library_needed not in elf_needed(self.context,product_path):result['conflicts'].append('product DT_NEEDED does not include '+library_needed)
+   if not any(i['sha256']==library[1]['sha256'] for i in link.get('inputs',[])):
+    # GCC -l resolution is corroborated by the actual linker map, not guessed.
+    map_pair=self.context.by_path('build/product.map')
+    if not map_pair:result['missing'].append('resolved product link map')
+    else:
+     text=map_pair[0].read_text(errors='replace');build_root=self.record.get('build_root','')
+     soname=pathlib.PurePosixPath(library_path).name
+     short=soname.split('.so')[0]+'.so'
+     expected=str(pathlib.PurePosixPath(build_root)/pathlib.PurePosixPath(library_path).parent/short)
+     if 'LOAD '+expected not in text:result['missing'].append('library resolution in product map')
+     result['source_ids'].append(map_pair[1]['source_id'])
+  elif not any(i['sha256']==library[1]['sha256'] for i in link.get('inputs',[])):result['conflicts'].append('static archive differs from actual product link input')
+  result['records']=[comp,link];result['valid']=not result['missing'] and not result['conflicts'];result['source_ids']=list(dict.fromkeys(result['source_ids']));return result
