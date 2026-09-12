@@ -14,7 +14,7 @@ def test_groups_preserve_unknown_and_reject_foreign_or_missing_conditions():
         'groups': [{'group_id': 'PC1', 'title': 'TEST_ONLY', 'condition_ids': ['test-condition']}]}
     before = deepcopy(payload)
     app = app_for(payload)
-    assert not app.exception and '尚待確認' in displayed(app)
+    assert not app.exception and '此項條件仍需確認' in displayed(app)
     assert condition_groups(entry)[1]['conditions'][0]['state'] == 'UNKNOWN'
     assert payload == before
     entry['condition_groups']['cve_id'] = 'CVE-2099-0002'

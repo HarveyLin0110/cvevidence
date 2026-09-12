@@ -26,3 +26,16 @@ def test_missing_and_conflict_are_not_hidden_by_completed_status():
     row=query_summaries(entry)[0]
     assert row["state"]=="存在矛盾，需覆核"
     assert row["missing"] and row["conflicts"]
+
+def test_dimensions_do_not_invent_reproduction_from_positive_engineering():
+    from cvevidence.result_summary import conclusion_dimensions, condition_interpretation
+    for verdict in ("AFFECTED", "NOT_AFFECTED", "NEEDS_INVESTIGATION", None):
+        entry={"assessment":{"verdict":verdict},"ai":{"finding":"TEST_ONLY vulnerability reproduced"}}
+        before=deepcopy(entry)
+        dimensions=conclusion_dimensions(entry)
+        assert "尚無獨立覆核" in dimensions[1]["本次結論"]
+        assert "尚無獨立覆核" in dimensions[2]["本次結論"]
+        assert entry==before
+    status, boundary=condition_interpretation({"condition_id":"trigger_prerequisites","state":"SUPPORTED"})
+    assert status=="支持此項工程條件" and "不代表已實際觸發" in boundary
+    assert condition_interpretation({"state":"UNKNOWN"})[0]=="此項條件仍需確認"

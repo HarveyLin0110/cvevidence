@@ -4,7 +4,7 @@ The caller must read a validated, user-scoped saved result. Scope checks here ar
 defence against displaying the wrong selection, not proof of evidence integrity.
 """
 import json
-from .result_summary import conclusion, query_summaries
+from .result_summary import conclusion, query_summaries, conclusion_dimensions, condition_interpretation
 
 QUERIES = {
     "Q1_COMPONENT": "元件與版本",
@@ -119,6 +119,11 @@ def render_engineering(st, entry, *, package=None):
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
     overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "五項工程查核", "證據與引用", "待補資料與覆核"])
     with overview:
+        st.subheader("這份結果能回答什麼")
+        for dimension in conclusion_dimensions(entry):
+            with st.container(border=True):
+                st.text(dimension["面向"] + "：" + dimension["本次結論"])
+                st.caption(dimension["解讀邊界"])
         st.subheader("五項查核告訴我們什麼")
         st.caption("下列統整來自本次保存的查核發現；「查核已完成」不是「產品安全」或「漏洞成立」。")
         for query_summary in query_summaries(entry):
@@ -143,8 +148,9 @@ def render_engineering(st, entry, *, package=None):
                 with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=False):
                     if group.get("meaning"): st.text(text(group["meaning"]))
                     for condition in group["conditions"]:
-                        state = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}.get(condition.get("state"), "尚待確認")
+                        state, boundary = condition_interpretation(condition)
                         st.text(text(condition.get("title")) + "：" + state)
+                        st.caption(boundary)
         else:
             st.caption("此保存紀錄未提供可核對的 PC 分組；以下保留原始條件，重新分析後可取得新版分組。")
         st.subheader("下一步可以做什麼")
@@ -159,8 +165,9 @@ def render_engineering(st, entry, *, package=None):
         if conditions:
             with st.expander("所有條件與詳細說明"):
                 st.dataframe([{"條件": text(c.get("title")),
-                               "狀態": states.get(c.get("state"), "未提供"),
-                               "說明": text(c.get("explanation"))} for c in conditions],
+                               "狀態": condition_interpretation(c)[0],
+                               "說明": text(c.get("explanation")),
+                               "尚不能據此認定": condition_interpretation(c)[1]} for c in conditions],
                              hide_index=True, use_container_width=True)
         else:
             st.info("未提供條件明細。")

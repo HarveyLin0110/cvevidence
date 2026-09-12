@@ -4,6 +4,7 @@ Callers supply authorized saved runs; this module does not load files or verify
 core evidence. Comparisons describe differences, never infer why verdicts changed.
 """
 from .analysis_view import QUERIES, VERDICTS, rows, select_analysis, text, condition_groups
+from .result_summary import conclusion_dimensions
 
 
 def previous_engineering_run(store, run):
@@ -29,6 +30,9 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
               "工程判定: " + VERDICTS.get(assessment.get("verdict"), "尚未產生有效判定"),
               "理由: " + text(assessment.get("reason")), "範圍: " + text(assessment.get("scope")),
               "工程初判須人工覆核；不代表實際部署暴露、已被利用或異常已歸因。"]
+    output += ["", "結論面向與證據邊界"]
+    for dimension in conclusion_dimensions(entry):
+        output += [dimension["面向"] + ": " + dimension["本次結論"], dimension["解讀邊界"]]
     for qid, title in QUERIES.items():
         matches = [q for q in rows(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
