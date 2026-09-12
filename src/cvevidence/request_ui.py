@@ -7,14 +7,15 @@ def reset_request(st):
     st.session_state.follow_parent=None
 
 def request_sidebar(st, runner):
+    panel=st.sidebar.expander("請求與 CVE 切換")
     st.session_state.setdefault("selected_request",None)
     requests,rejected=RequestStore(runner.store).history()
-    if rejected: st.sidebar.warning(f"{len(rejected)} 筆請求無法核對，原檔保留。")
+    if rejected: panel.warning(f"{len(rejected)} 筆請求無法核對，原檔保留。")
     if requests:
         records={r.spec.request_id:r for r in requests}
-        selected=st.sidebar.selectbox("請求歷史",["—"]+list(records),
+        selected=panel.selectbox("請求歷史",["—"]+list(records),
             format_func=lambda value:("—" if value=="—" else records[value].status+" · "+value[:8]))
-        if selected!="—" and st.sidebar.button("載入請求"):
+        if selected!="—" and panel.button("載入請求"):
             result=records[selected]
             st.session_state.selected_request=selected
             st.session_state.selected_run=result.runs[0].run_id if result.runs else None
@@ -22,16 +23,16 @@ def request_sidebar(st, runner):
     if not current: return None
     try: result=runner.read_request(current)
     except (ValueError,OSError):
-        st.sidebar.error("此請求無法核對，請重新選擇。")
+        panel.error("此請求無法核對，請重新選擇。")
         st.session_state.selected_request=None
         return None
-    st.sidebar.caption("目前請求："+current[:8]+" · "+result.status)
+    panel.caption("目前請求："+current[:8]+" · "+result.status)
     if result.runs:
         rows={r.run_id:r for r in result.runs}
-        child=st.sidebar.selectbox("此請求的 CVE 紀錄",list(rows),
+        child=panel.selectbox("此請求的 CVE 紀錄",list(rows),
             format_func=lambda value:(rows[value].cve_id or "元件候選探索")+" · "+rows[value].status,
             key="request-child-"+current)
-        if st.sidebar.button("開啟所選 CVE"):
+        if panel.button("開啟所選 CVE"):
             st.session_state.selected_run=child
     return result
 
