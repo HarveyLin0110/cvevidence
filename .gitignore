@@ -10,3 +10,6 @@ __pycache__/
 **/client_secret*.json
 node_modules/
 /apps/web/dist/
+/apps/web/node_modules/
+/build/
+*.egg-info/

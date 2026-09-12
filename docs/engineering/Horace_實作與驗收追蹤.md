@@ -12,12 +12,14 @@
 |---|---|---|
 | ROM 真實 on/off 兩次 build、SquashFS 打包/解包、TLS/備份還原 | 今日完整建置紀錄、解包 hash、正常功能實跑 | TCP 新版 r2 的兩次 build/正常連線/資料驗收完成 |
 | CMake zlib 1.2.12/1.2.13 靜態 build | link/map、正常 gzip/截短錯誤實跑、ELF | 兩版完成，資料 r2 通過 |
-| curl 8.3.0 官方修補前後 build | patch、source/object/library 綁定、正常本機 SOCKS5 下載 | 兩版 build/正常下載完成，正式 binding 規則仍待完成 |
+| curl 8.3.0 官方修補前後 build | patch、source/object/library 綁定、正常本機 SOCKS5 下載 | r2 兩版新建、正常下載、source/header/object/shared/tool 綁定完成 |
 | 九包與三組同次補件、不可變 catalog/壓縮包 | archive/hash/lineage 驗收 | 九包與三組補件通過；新版 ROM r2 另驗通過 |
-| 三種解析、Q1–Q5、原文工具、Evidence ID/Verifier | 真包驗收與篡改/混版/隔離測試 | 待完成 |
-| 三個 CVE profile/候選、確定性判定、Claim/缺口 | 九格實測；未知 CVE/多元件/衝突測試 | 待完成 |
-| AI 真實呼叫、動態工具/補件、引用驗證 | 至少三次 Live 紀錄；失敗/逾時/變體測試 | 待完成 |
-| 補件驗證/重新判定語意/摘要内容 | 三條補件及不同 build/文字聲明測試 | 資料合併語意與測試完成；重判/摘要未完成 |
-| Frankie Python 介面/CLI 驗收/交接包 | 從乾淨環境執行指令、schema 與真實範例 | 匯入/唯讀/補件初版已交；完整分析未完成 |
+| 三種解析、Q1–Q5、原文工具、Evidence ID/Verifier | 真包驗收與篡改/混版/隔離測試 | 已完成；31 項邊界測試，真包變體驗證 |
+| 三個 CVE profile/候選、確定性判定、Claim/缺口 | 九格實測；未知 CVE/多元件/衝突測試 | 九格 9/9；未知保留、未涵蓋 ELF 與衝突阻止安全判定 |
+| AI 真實呼叫、動態工具/補件、引用驗證 | 至少三次 Live 紀錄；失敗/逾時/變體測試 | 四個情境完成；一筆假 X-ID 拒絕保留；逾時/429/假引用/越權工具測試通過 |
+| 補件驗證/重新判定語意/摘要内容 | 三條補件及不同 build/文字聲明測試 | 三條補件重判通過；M-ID/Claim 與中文摘要完成 |
+| Frankie Python 介面/CLI 驗收/交接包 | 從乾淨環境執行指令、schema 與真實範例 | 完整分析入口、中文接線文件、Git demo-inputs 及乾淨安裝驗收完成；Frankie 前端映射待整合 |
 
 九格只填今日實測；建置、工程判定、Live AI 分開計數。分析器不執行匯入 binary、不讀 factory/test/validation/其他樣品或未提交補件。預期答案由獨立驗收端持有。
+
+最新交件：[完整核心與 Demo](../releases/Horace_完整核心與Demo交件.md)。穩定性為三個主展示輸入各 10 次，共 30 次 OFFLINE；不冒稱整個前端已验收。

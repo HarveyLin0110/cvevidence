@@ -1,0 +1,425 @@
+{
+  "description": "今日 demo 資料的真實 API/工具紀錄；API key 不在此輸出。",
+  "source_record": "var/validation/live-20260912T052311/curl_early_material.json",
+  "cve_id": "CVE-2023-38545",
+  "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a",
+  "engineering_verdict": "AFFECTED",
+  "ai": {
+    "schema_version": "1.0",
+    "mode": "LIVE",
+    "status": "COMPLETED",
+    "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a",
+    "engineering_assessment_id": "A-82f6591e35dab5956bd52d5a59f0e290ad284969ae6507da14ee5dde388b4a73",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "tasks": [
+      {
+        "task_id": "I-0442939c0310f726e12ad0a2",
+        "action": "READ",
+        "question": "現有提交檔是否能把 SOCKS5 遠端 DNS 與 limit-rate 設定，直接連結到同一正常測試的握手觀測，並判定該測試是否實際走到漏洞觸發所需的長 hostname／溢位情境？",
+        "reason": "核對設定、執行與觀測的一致性，並將受影響條件成立和正常測試重現漏洞分開。",
+        "term": "",
+        "source_ids": [
+          "S-a47df688c6df1a6cc04a29a1",
+          "S-181785d4820d5475a21004dc"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "TOOL_ERROR",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "error": "READ 需要一個 source_id"
+        }
+      },
+      {
+        "task_id": "I-0b954076e3bd447e614f33f2",
+        "action": "READ",
+        "question": "現有提交檔是否能把 SOCKS5 遠端 DNS 與 limit-rate 設定，直接連結到同一正常測試的握手觀測，並判定該測試是否實際走到漏洞觸發所需的長 hostname／溢位情境？",
+        "reason": "先核對 download.conf 內實際 DNS 與速率設定，再與 launcher 及握手觀測交叉比對。",
+        "term": "",
+        "source_ids": [
+          "S-a47df688c6df1a6cc04a29a1"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-3ade71a717de8b066a1b845b",
+          "source_id": "S-a47df688c6df1a6cc04a29a1",
+          "file_sha256": "0e8c9ac36f8db76080c28305359b1f927cd1f885389afb203eec367336c6d614",
+          "start_line": 1,
+          "end_line": 8,
+          "text": "socks5-hostname = \"127.0.0.1:36231\"\nlimit-rate = 16384\nnoproxy = \"\"\nlocation\nfail\nsilent\nshow-error\nmax-time = 10",
+          "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+        }
+      },
+      {
+        "task_id": "I-e06f96723b2aa4035534216f",
+        "action": "READ",
+        "question": "launcher 是否確實載入上述 download.conf，且其 URL／參數處理沒有把正常測試觀測誤當成漏洞重現？",
+        "reason": "建立設定檔與實際執行路徑的連結，確認可觀測行為的解讀範圍。",
+        "term": "",
+        "source_ids": [
+          "S-181785d4820d5475a21004dc"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-cb367a6fd58d841b64a59437",
+          "source_id": "S-181785d4820d5475a21004dc",
+          "file_sha256": "2ef56fadf97556a9684f52b6f2b46af490be586f5c543e6d9956943f8618f143",
+          "start_line": 1,
+          "end_line": 6,
+          "text": "#!/bin/sh\nset -eu\nbase=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nif [ \"$#\" -ne 1 ]; then echo 'usage: download-update.sh URL' >&2; exit 64; fi\nexport LD_LIBRARY_PATH=\"$base/lib\"\nexec \"$base/bin/curl\" --config \"$base/etc/download.conf\" --url \"$1\"",
+          "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+        }
+      },
+      {
+        "task_id": "I-99acb6c5691202ae45464f85",
+        "action": "READ",
+        "question": "正常 SOCKS5 觀測記錄了哪種 DNS 名稱編碼、hostname 長度、非阻塞握手進展與結果；是否出現截斷、溢位、崩潰或錯誤等漏洞重現證據？",
+        "reason": "直接區分「具備受影響設定／程式條件」與「這次正常測試已重現漏洞」。",
+        "term": "",
+        "source_ids": [
+          "S-56da92c4687c05c4a7eb590c"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-54e0794d2dd6d170abcbeb24",
+          "source_id": "S-56da92c4687c05c4a7eb590c",
+          "file_sha256": "44556a833264c7679633303ac2e7ec9fa77f5321b442df6b92988a38c6102582",
+          "start_line": 1,
+          "end_line": 16,
+          "text": "{\n  \"events\": [\n    {\n      \"atyp\": 3,\n      \"elapsed_seconds\": 0.15197633099887753,\n      \"event\": \"socks5_connect\",\n      \"greeting_delay_seconds\": 0.15,\n      \"hostname_length\": 9,\n      \"port\": 39991,\n      \"requested_hostname\": \"demo.test\"\n    }\n  ],\n  \"library_sha256\": \"ed2f1fdcd11c86f27939ac635e9a771391ec17837db88ca994880d96ba364020\",\n  \"product_sha256\": \"8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b\",\n  \"test_kind\": \"benign normal download; no long hostname or overflow execution\"\n}",
+          "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+        }
+      },
+      {
+        "task_id": "I-85b78959b56e288025d3a1d0",
+        "action": "READ",
+        "question": "正常測試的執行紀錄是否與觀測檔中的同一成品、launcher、短 hostname 及成功結果一致？",
+        "reason": "避免只依觀測摘要推論，補核對同一次正常測試的執行輸入與結果。",
+        "term": "",
+        "source_ids": [
+          "S-7a78b5e68ef0ef150e948519"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-7bf5a5d8ed625dff64f16f0f",
+          "source_id": "S-7a78b5e68ef0ef150e948519",
+          "file_sha256": "b3e1c8d3f2fb46a132740a0a774b85daa86b381da3e8563a11a2a1b28db51b34",
+          "start_line": 1,
+          "end_line": 12,
+          "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/curl-20260912T045600-d7ebd6/package/install/download-update.sh\",\n    \"http://demo.test:39991/update.bin\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/curl-20260912T045600-d7ebd6/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0004-normal-socks5-download.log\",\n  \"log_sha256\": \"b70272f3f9fff4c102416b8f6052e303e7b8198ba9e4a61a2a288a6e17a70303\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T05:00:56.564948+00:00\"\n}",
+          "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+        }
+      },
+      {
+        "task_id": "I-69584d54fd447d402627457c",
+        "action": "COMPLETE",
+        "question": "現有提交檔是否能把 SOCKS5 遠端 DNS 與 limit-rate 設定，直接連結到同一正常測試的握手觀測，並判定該測試是否實際走到漏洞觸發所需的長 hostname／溢位情境？",
+        "reason": "彙整設定、launcher、正常測試執行紀錄及握手觀測，分開陳述受影響條件與漏洞重現。",
+        "term": "",
+        "source_ids": [
+          "S-a47df688c6df1a6cc04a29a1",
+          "S-181785d4820d5475a21004dc",
+          "S-56da92c4687c05c4a7eb590c",
+          "S-7a78b5e68ef0ef150e948519"
+        ],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "download.conf 設定 socks5-hostname 與 limit-rate=16384，launcher 以該設定執行同一交付 curl；正常測試的 SOCKS5 請求使用網域型態 ATYP=3，但 hostname 僅 9 bytes（demo.test），且紀錄明示沒有長 hostname 或 overflow execution，程序回傳 0。因此，已審查工程證據支持程式具備 CVE 受影響條件，但這次正常測試只證明短名稱遠端 DNS 握手成功，未重現漏洞、溢位或利用。",
+        "citations": [
+          "X-3ade71a717de8b066a1b845b",
+          "X-cb367a6fd58d841b64a59437",
+          "X-54e0794d2dd6d170abcbeb24",
+          "X-7bf5a5d8ed625dff64f16f0f",
+          "E-9770c65c7657e28e317c653b5fa022a4fafa21aeeb92d54dcec28a44a0ffe803",
+          "E-0e6912c7c78b80a48e15a8c01a40e16497ce10d3a19fa86c45df821659bf96e0"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "summary": "download.conf 設定 socks5-hostname 與 limit-rate=16384，launcher 以該設定執行同一交付 curl；正常測試的 SOCKS5 請求使用網域型態 ATYP=3，但 hostname 僅 9 bytes（demo.test），且紀錄明示沒有長 hostname 或 overflow execution，程序回傳 0。因此，已審查工程證據支持程式具備 CVE 受影響條件，但這次正常測試只證明短名稱遠端 DNS 握手成功，未重現漏洞、溢位或利用。",
+          "citation_check": {
+            "valid": true,
+            "invalid_ids": [],
+            "meaning_verified": false,
+            "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+          }
+        }
+      }
+    ],
+    "excerpts": [
+      {
+        "excerpt_id": "X-cb4c65776c515cf298b84304",
+        "source_id": "S-cbc071b5743a15d8be21f3cc",
+        "file_sha256": "d6581154231c00d566ec24a748e65652f579c35def8e8935b9542908a02fe6dc",
+        "start_line": 586,
+        "end_line": 597,
+        "text": "            sx->hostname, sx->remote_port);\n\n    /* RFC1928 chapter 5 specifies max 255 chars for domain name in packet */\n    if(!socks5_resolve_local && hostname_len > 255) {\n      infof(data, \"SOCKS5: server resolving disabled for hostnames of \"\n            \"length > 255 [actual len=%zu]\", hostname_len);\n      socks5_resolve_local = TRUE;\n    }\n\n    if(auth & ~(CURLAUTH_BASIC | CURLAUTH_GSSAPI))\n      infof(data,\n            \"warning: unsupported value passed to CURLOPT_SOCKS5_AUTH: %u\",",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-bca784dbf7d4a96da51d71ce",
+        "source_id": "S-181785d4820d5475a21004dc",
+        "file_sha256": "2ef56fadf97556a9684f52b6f2b46af490be586f5c543e6d9956943f8618f143",
+        "start_line": 3,
+        "end_line": 6,
+        "text": "base=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nif [ \"$#\" -ne 1 ]; then echo 'usage: download-update.sh URL' >&2; exit 64; fi\nexport LD_LIBRARY_PATH=\"$base/lib\"\nexec \"$base/bin/curl\" --config \"$base/etc/download.conf\" --url \"$1\"",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-993ee8b939306fc3b1b3439e",
+        "source_id": "S-5f62190ef33cb65875d6bdd4",
+        "file_sha256": "89cc68f10e3e760d1b01ba03310c1d68f221b66691befcfab9b2d390624e91fc",
+        "start_line": 618,
+        "end_line": 629,
+        "text": "  return CURLUE_OK;\n}\n\nstatic CURLUcode hostname_check(struct Curl_URL *u, char *hostname,\n                                size_t hlen) /* length of hostname */\n{\n  size_t len;\n  DEBUGASSERT(hostname);\n\n  if(!hlen)\n    return CURLUE_NO_HOST;\n  else if(hostname[0] == '[')",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-39d3b0752d8de9a5ac291955",
+        "source_id": "S-b9c0c7393b0f7737f77fc4a6",
+        "file_sha256": "ba1272722ee9e91223c452ffb1b94f40a30116bc6d185ca2c3f6db67adc3a29e",
+        "start_line": 1316,
+        "end_line": 1327,
+        "text": "          else\n#endif\n          if(config->recvpersecond &&\n             (config->recvpersecond < BUFFER_SIZE))\n            /* use a smaller sized buffer for better sleeps */\n            my_setopt(curl, CURLOPT_BUFFERSIZE, (long)config->recvpersecond);\n          else\n            my_setopt(curl, CURLOPT_BUFFERSIZE, (long)BUFFER_SIZE);\n        }\n\n        my_setopt_str(curl, CURLOPT_URL, per->this_url);\n        my_setopt(curl, CURLOPT_NOPROGRESS,",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-f987c5cb92cb3f9020eaed3d",
+        "source_id": "S-cbc071b5743a15d8be21f3cc",
+        "file_sha256": "d6581154231c00d566ec24a748e65652f579c35def8e8935b9542908a02fe6dc",
+        "start_line": 455,
+        "end_line": 466,
+        "text": "    sxstate(sx, data, CONNECT_SOCKS_READ);\n\n    /* FALLTHROUGH */\n  case CONNECT_SOCKS_READ:\n    /* Receive response */\n    presult = socks_state_recv(cf, sx, data, CURLPX_RECV_CONNECT,\n                               \"connect request ack\");\n    if(CURLPX_OK != presult)\n      return presult;\n    else if(sx->outstanding) {\n      /* remain in reading state */\n      return CURLPX_OK;",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-3ade71a717de8b066a1b845b",
+        "source_id": "S-a47df688c6df1a6cc04a29a1",
+        "file_sha256": "0e8c9ac36f8db76080c28305359b1f927cd1f885389afb203eec367336c6d614",
+        "start_line": 1,
+        "end_line": 8,
+        "text": "socks5-hostname = \"127.0.0.1:36231\"\nlimit-rate = 16384\nnoproxy = \"\"\nlocation\nfail\nsilent\nshow-error\nmax-time = 10",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-cb367a6fd58d841b64a59437",
+        "source_id": "S-181785d4820d5475a21004dc",
+        "file_sha256": "2ef56fadf97556a9684f52b6f2b46af490be586f5c543e6d9956943f8618f143",
+        "start_line": 1,
+        "end_line": 6,
+        "text": "#!/bin/sh\nset -eu\nbase=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd)\nif [ \"$#\" -ne 1 ]; then echo 'usage: download-update.sh URL' >&2; exit 64; fi\nexport LD_LIBRARY_PATH=\"$base/lib\"\nexec \"$base/bin/curl\" --config \"$base/etc/download.conf\" --url \"$1\"",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-54e0794d2dd6d170abcbeb24",
+        "source_id": "S-56da92c4687c05c4a7eb590c",
+        "file_sha256": "44556a833264c7679633303ac2e7ec9fa77f5321b442df6b92988a38c6102582",
+        "start_line": 1,
+        "end_line": 16,
+        "text": "{\n  \"events\": [\n    {\n      \"atyp\": 3,\n      \"elapsed_seconds\": 0.15197633099887753,\n      \"event\": \"socks5_connect\",\n      \"greeting_delay_seconds\": 0.15,\n      \"hostname_length\": 9,\n      \"port\": 39991,\n      \"requested_hostname\": \"demo.test\"\n    }\n  ],\n  \"library_sha256\": \"ed2f1fdcd11c86f27939ac635e9a771391ec17837db88ca994880d96ba364020\",\n  \"product_sha256\": \"8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b\",\n  \"test_kind\": \"benign normal download; no long hostname or overflow execution\"\n}",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      },
+      {
+        "excerpt_id": "X-7bf5a5d8ed625dff64f16f0f",
+        "source_id": "S-7a78b5e68ef0ef150e948519",
+        "file_sha256": "b3e1c8d3f2fb46a132740a0a774b85daa86b381da3e8563a11a2a1b28db51b34",
+        "start_line": 1,
+        "end_line": 12,
+        "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/curl-20260912T045600-d7ebd6/package/install/download-update.sh\",\n    \"http://demo.test:39991/update.bin\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/curl-20260912T045600-d7ebd6/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0004-normal-socks5-download.log\",\n  \"log_sha256\": \"b70272f3f9fff4c102416b8f6052e303e7b8198ba9e4a61a2a288a6e17a70303\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T05:00:56.564948+00:00\"\n}",
+        "context_hash": "79479ffeab31eab93a0a09f4d8fe495ed5387420bdf8321d036ad1afb5ba799a"
+      }
+    ],
+    "calls": [
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1bb283087d082b7c214feacba40",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 2954,
+          "input_tokens_details": {
+            "cache_write_tokens": 2832,
+            "cached_tokens": 0
+          },
+          "output_tokens": 234,
+          "output_tokens_details": {
+            "reasoning_tokens": 49
+          },
+          "total_tokens": 3188
+        }
+      },
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1c1cdc887d0b11187daf68f6166",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3213,
+          "input_tokens_details": {
+            "cache_write_tokens": 259,
+            "cached_tokens": 2832
+          },
+          "output_tokens": 178,
+          "output_tokens_details": {
+            "reasoning_tokens": 11
+          },
+          "total_tokens": 3391
+        }
+      },
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1c8ced487d0a76e63cd0766c0dd",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3598,
+          "input_tokens_details": {
+            "cache_write_tokens": 385,
+            "cached_tokens": 3091
+          },
+          "output_tokens": 145,
+          "output_tokens_details": {
+            "reasoning_tokens": 12
+          },
+          "total_tokens": 3743
+        }
+      },
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1d5c3cc87d092b1e8ff17e1cc41",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3985,
+          "input_tokens_details": {
+            "cache_write_tokens": 387,
+            "cached_tokens": 3476
+          },
+          "output_tokens": 166,
+          "output_tokens_details": {
+            "reasoning_tokens": 8
+          },
+          "total_tokens": 4151
+        }
+      },
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1e0354887d09fd2744e62f6a6bf",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 4517,
+          "input_tokens_details": {
+            "cache_write_tokens": 532,
+            "cached_tokens": 3863
+          },
+          "output_tokens": 209,
+          "output_tokens_details": {
+            "reasoning_tokens": 81
+          },
+          "total_tokens": 4726
+        }
+      },
+      {
+        "response_id": "resp_062452729c8ec585016aa4e1e861cc87d0b9ad02c6fff7cd7d",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 5123,
+          "input_tokens_details": {
+            "cache_write_tokens": 606,
+            "cached_tokens": 4395
+          },
+          "output_tokens": 564,
+          "output_tokens_details": {
+            "reasoning_tokens": 53
+          },
+          "total_tokens": 5687
+        }
+      }
+    ],
+    "elapsed_seconds": 54.975,
+    "verified_ai_facts": [
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-3ade71a717de8b066a1b845b",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-cb367a6fd58d841b64a59437",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-54e0794d2dd6d170abcbeb24",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-7bf5a5d8ed625dff64f16f0f",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      }
+    ],
+    "note": "AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。",
+    "record_hash": "983458b44f771c3f7bd0532296b48af3999ba0aca39e1d4ab0de657f783cfc81"
+  }
+}

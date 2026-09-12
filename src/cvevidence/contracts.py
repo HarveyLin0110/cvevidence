@@ -72,8 +72,9 @@ class RunEnvelope(Model):
     input_package: InputPackage | None = None
     evidence: list[EvidenceRecord] = Field(default_factory=list)
     sources: list[SourceRecord] = Field(default_factory=list)
-    engineering_status: Literal["NOT_RUN"] = "NOT_RUN"
-    ai_status: Literal["NOT_RUN"] = "NOT_RUN"
+    engineering_status: Literal["NOT_RUN", "COMPLETED", "UNSUPPORTED_CVE"] = "NOT_RUN"
+    ai_status: Literal["NOT_RUN", "OFFLINE"] = "NOT_RUN"
+    engineering_payload_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     candidates: dict = Field(default_factory=dict)
     missing: list[str] = Field(default_factory=list)
     assessment: Assessment | None = None
@@ -114,6 +115,14 @@ class RunEnvelope(Model):
         if not set(refs) <= legal:
             raise ValueError("evidence reference outside run")
         failed = self.status in ("FAILED", "TIMED_OUT")
+        if self.engineering_payload_sha256:
+            if (self.status != "COMPLETED" or not self.cve_id or not self.parent_run_id
+                    or not self.input_package or not self.input_package.context_hash
+                    or self.mode != "OFFLINE" or self.assessment is not None
+                    or self.engineering_status == "NOT_RUN"):
+                raise ValueError("engineering payload requires scoped completed OFFLINE child")
+        elif self.engineering_status != "NOT_RUN" or self.ai_status != "NOT_RUN":
+            raise ValueError("engineering stages require saved payload")
         if failed != (self.error is not None):
             raise ValueError("execution failure must carry an error")
         if failed and (self.assessment is not None or self.evidence or self.sources or self.candidates):

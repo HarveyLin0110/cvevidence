@@ -9,6 +9,15 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def analyze_offline(self, parent_run_id, *, cve_id=None, symptom="", timeout=120):
+        from .core_service import CoreService
+        return CoreService(self.store).analyze_offline(parent_run_id,
+            cve_id=cve_id, symptom=symptom, timeout=timeout)
+
+    def read_engineering(self, run_id):
+        from .engineering import read_engineering
+        return read_engineering(self.store, run_id)
+
     def submit_request(self, **kwargs):
         from .requests import submit
         return submit(self, **kwargs)
@@ -105,7 +114,8 @@ class Runner:
             # A note is pending material, not new verified facts or a copied verdict.
             values = parent.model_dump()
             values.update(run_id=str(uuid4()), created_at=datetime.now(timezone.utc).isoformat(),
-                          status="COLLECTED", assessment=None, advice=None, mode="OFFLINE")
+                          status="COLLECTED", assessment=None, advice=None, mode="OFFLINE",
+                          engineering_payload_sha256=None, engineering_status="NOT_RUN", ai_status="NOT_RUN")
             values["limitations"] = list(parent.limitations) + ["Text supplement is unverified; no rules rerun."]
             run = RunEnvelope.model_validate(values)
         else:

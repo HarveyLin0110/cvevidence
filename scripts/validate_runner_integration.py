@@ -15,7 +15,7 @@ def validate(catalog_path, store_path):
     runs={}
     for name,item in entries.items():
         if item["kind"]!="initial": continue
-        run=runner.start_file(root/item["archive"]["relative_path"],
+        run=runner.start_file(root/item["archive"].get("repo_path",item["archive"]["relative_path"]),
             archive_sha256=item["archive"]["sha256"],manifest_sha256=item["manifest_sha256"])
         assert run.error is None, run.error
         assert run.input_package.product_id==item["product_id"]
@@ -25,24 +25,28 @@ def validate(catalog_path, store_path):
     supplement=next(item for item in entries.values() if item["kind"]=="supplement")
     parent=runs[supplement["base_package_id"]]
     before=runner.store._run_path(parent.run_id).read_bytes()
-    child=runner.supplement_file(parent.run_id,path=root/supplement["archive"]["relative_path"])
+    supplement_path=root/supplement["archive"].get("repo_path",supplement["archive"]["relative_path"])
+    child=runner.supplement_file(parent.run_id,path=supplement_path,
+        archive_sha256=supplement["archive"]["sha256"],manifest_sha256=supplement["manifest_sha256"])
     assert child.error is None, child.error
     diff=compare(parent,child)
     assert diff["added"] and not diff["removed"] and not diff["changed"]
     assert runner.store._run_path(parent.run_id).read_bytes()==before
     assert child.input_package.context_hash!=parent.input_package.context_hash
     assert child.parent_run_id==parent.run_id and child.assessment is None
-    source=next(s for s in child.sources if s.path=="source/update_reader.c")
+    family=parent.input_package.format
+    source_path={"cmake":"source/update_reader.c","rom":"source/device.c","curl":"install/download-update.sh"}[family]
+    source=next(s for s in child.sources if s.path==source_path)
     original=runner.source_tool(child.run_id,"excerpt",source_id=source.source_id,start_line=1,end_line=60)
     assert original["text"] and original["context_hash"]==child.input_package.context_hash
-    search=runner.source_tool(child.run_id,"search",term="inflate",limit=3)
+    search=runner.source_tool(child.run_id,"search",term={"cmake":"inflate","rom":"SSL","curl":"socks"}[family],limit=3)
     assert search["matches"]
-    listing=runner.source_tool(child.run_id,"list",contains="update_reader",limit=100)
+    listing=runner.source_tool(child.run_id,"list",contains=source_path,limit=100)
     assert listing["total"]>0
     comparison=runner.source_tool(child.run_id,"compare",left_id=source.source_id,right_id=source.source_id)
     assert comparison["identical_bytes"]
     invalid_parent=next(r for r in runs.values() if r.input_package.declared_build_id!=parent.input_package.declared_build_id)
-    rejected=runner.supplement_file(invalid_parent.run_id,path=root/supplement["archive"]["relative_path"])
+    rejected=runner.supplement_file(invalid_parent.run_id,path=supplement_path)
     assert rejected.error and rejected.assessment is None and not rejected.sources
     text=report(child)
     assert "NOT_ASSESSED" in text and source.sha256 in text
@@ -63,4 +67,3 @@ if __name__=="__main__":
     result=validate(a.catalog,a.store)
     Path(a.output).write_text(json.dumps(result,indent=2)+"\n")
     print(json.dumps(result,indent=2))
-

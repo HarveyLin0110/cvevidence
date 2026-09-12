@@ -1,0 +1,407 @@
+{
+  "description": "今日 demo 資料的真實 API/工具紀錄；API key 不在此輸出。",
+  "source_record": "var/validation/live-20260912T052347669484/cmake_symptom.json",
+  "cve_id": "CVE-2022-37434",
+  "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e",
+  "engineering_verdict": "AFFECTED",
+  "ai": {
+    "schema_version": "1.0",
+    "mode": "LIVE",
+    "status": "COMPLETED",
+    "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e",
+    "engineering_assessment_id": "A-9c58864e1e0f5230cc3a3ebc349c417f14664fa726726b67bf8429ad9918e010",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "tasks": [
+      {
+        "task_id": "I-7f2485c2dc06b28c1a434767",
+        "action": "READ",
+        "question": "正常與截短測試的實際輸出，是否顯示「gzip stream ended before trailer」只是一般截短輸入錯誤，而非 CVE-2022-37434 特有觸發或記憶體破壞證據？",
+        "reason": "將症狀原因與 CVE 適用性分開，核對截短測試的輸入、退出狀態與錯誤輸出。",
+        "term": "",
+        "source_ids": [
+          "S-d197252384e64c2f41677f31",
+          "S-3497418bbecaaaf7c0f4e2be"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "TOOL_ERROR",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "error": "READ 需要一個 source_id"
+        }
+      },
+      {
+        "task_id": "I-e0d75f772ff1a5163554fa52",
+        "action": "READ",
+        "question": "截短測試的執行紀錄是否能把「gzip stream ended before trailer」直接歸因於 CVE-2022-37434？",
+        "reason": "先核對截短測試的輸入身分、執行方式、退出狀態及紀錄關聯，再與正常測試比較。",
+        "term": "",
+        "source_ids": [
+          "S-d197252384e64c2f41677f31"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-d140afc93d84f2b5c24b9064",
+          "source_id": "S-d197252384e64c2f41677f31",
+          "file_sha256": "5ce28ed48a560319685f7ed93e7360465575da5205dc654ad5630bfacaa73ddf",
+          "start_line": 1,
+          "end_line": 12,
+          "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/product/update-reader\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/samples/truncated.gz\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package\",\n  \"expected_returncode\": 2,\n  \"log\": \"build/commands/0004-truncated-update.log\",\n  \"log_sha256\": \"8fa9b9123e71816afb9062353d9adb0ee3b2e45a5c84946ad30cd9ededb88cde\",\n  \"returncode\": 2,\n  \"started_at\": \"2026-09-12T04:20:06.750913+00:00\"\n}",
+          "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+        }
+      },
+      {
+        "task_id": "I-65567bab9fbf2c2a600c81d3",
+        "action": "READ",
+        "question": "截短測試的錯誤文字與程式行為，是否包含 CVE-2022-37434 特有的超長 gzip extra 欄位跨次複製或記憶體破壞跡象？",
+        "reason": "錯誤字串本身可能只表示 trailer 前輸入耗盡，需讀取實際日誌以避免把一般解析失敗當成漏洞重現。",
+        "term": "",
+        "source_ids": [
+          "S-3497418bbecaaaf7c0f4e2be"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-3ffa1d0de2bbfa691519560c",
+          "source_id": "S-3497418bbecaaaf7c0f4e2be",
+          "file_sha256": "8fa9b9123e71816afb9062353d9adb0ee3b2e45a5c84946ad30cd9ededb88cde",
+          "start_line": 1,
+          "end_line": 1,
+          "text": "update input incomplete: gzip stream ended before trailer",
+          "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+        }
+      },
+      {
+        "task_id": "I-efc83678843366c05778d128",
+        "action": "READ",
+        "question": "正常測試是否使用同一成品執行，且以成功退出作為對照？",
+        "reason": "建立同 build、同程式的正常基線，判斷截短錯誤是輸入完整性分支，而非單憑錯誤文字即可連結 CVE。",
+        "term": "",
+        "source_ids": [
+          "S-a97e3db1000093da966ee080"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-8971db68ae9151dde819b43f",
+          "source_id": "S-a97e3db1000093da966ee080",
+          "file_sha256": "fdf011a93e9103f72ad0fb89bad409b347e30bf00c616ee3ca5f0253d07f1e74",
+          "start_line": 1,
+          "end_line": 12,
+          "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/product/update-reader\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/samples/normal.gz\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0003-normal-update.log\",\n  \"log_sha256\": \"86158bee4841d189582693e15a626432cb96b69d78a14eeaaccffcf5c09c3e7b\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T04:20:06.737403+00:00\"\n}",
+          "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+        }
+      },
+      {
+        "task_id": "I-8174939852f30703e555c555",
+        "action": "READ",
+        "question": "正常 gzip 測試的輸出是否僅證明一般完整輸入可成功處理，而不構成 CVE 安全性證明？",
+        "reason": "完成正常與截短紀錄的直接比較，避免把正常測試或單一錯誤症狀過度解讀。",
+        "term": "",
+        "source_ids": [
+          "S-a8efa10fdb25e9a5075d883c"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-ecf71298791fbc2dbac48b18",
+          "source_id": "S-a8efa10fdb25e9a5075d883c",
+          "file_sha256": "86158bee4841d189582693e15a626432cb96b69d78a14eeaaccffcf5c09c3e7b",
+          "start_line": 1,
+          "end_line": 1,
+          "text": "update_read=ok zlib=1.2.12 extra_len=16 extra_capacity=32 chunk_bytes=8 output_bytes=240",
+          "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+        }
+      },
+      {
+        "task_id": "I-8502d73ad6c6edc312c40b48",
+        "action": "COMPLETE",
+        "question": "現有正常與截短測試紀錄，能否讓「gzip stream ended before trailer」直接歸因於 CVE-2022-37434？",
+        "reason": "彙整同一程式的正常基線與截短輸入結果，並將一般輸入不完整症狀和漏洞特有必要條件分開判讀。",
+        "term": "",
+        "source_ids": [
+          "S-a97e3db1000093da966ee080",
+          "S-a8efa10fdb25e9a5075d883c",
+          "S-d197252384e64c2f41677f31",
+          "S-3497418bbecaaaf7c0f4e2be"
+        ],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "不能直接歸因。正常檔以 returncode 0 完成，日誌顯示 extra_len=16、capacity=32；截短檔則按預期以 returncode 2 結束，唯一日誌是輸入在 trailer 前結束。現有截短紀錄未顯示超長 gzip extra 欄位跨次複製或記憶體破壞；它只支持輸入不完整。成品仍已由既有工程證據判定具備受影響實作與觸發必要條件，但該適用性結論不能反推此次錯誤就是 CVE 重現。",
+        "citations": [
+          "X-8971db68ae9151dde819b43f",
+          "X-ecf71298791fbc2dbac48b18",
+          "X-d140afc93d84f2b5c24b9064",
+          "X-3ffa1d0de2bbfa691519560c",
+          "E-b043a4d26c6bd0b7f8508aebab768b014611ce4a8a9bdcfaebb194e42c060562",
+          "E-81fefe8ff3630f2f0b5abfbf41ea158df18181dd3ed6b4ae22536ba0596910c5"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "summary": "不能直接歸因。正常檔以 returncode 0 完成，日誌顯示 extra_len=16、capacity=32；截短檔則按預期以 returncode 2 結束，唯一日誌是輸入在 trailer 前結束。現有截短紀錄未顯示超長 gzip extra 欄位跨次複製或記憶體破壞；它只支持輸入不完整。成品仍已由既有工程證據判定具備受影響實作與觸發必要條件，但該適用性結論不能反推此次錯誤就是 CVE 重現。",
+          "citation_check": {
+            "valid": true,
+            "invalid_ids": [],
+            "meaning_verified": false,
+            "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+          }
+        }
+      }
+    ],
+    "excerpts": [
+      {
+        "excerpt_id": "X-c7f1756dba8e02becc839aa0",
+        "source_id": "S-c58df667fc06f4056b6b3906",
+        "file_sha256": "a268c9231441898893c0e2212c5304625c88d12371f1c09fcd2b2a7a54d57d43",
+        "start_line": 758,
+        "end_line": 769,
+        "text": "                state->head->extra = Z_NULL;\n            state->mode = EXTRA;\n                /* fallthrough */\n        case EXTRA:\n            if (state->flags & 0x0400) {\n                copy = state->length;\n                if (copy > have) copy = have;\n                if (copy) {\n                    if (state->head != Z_NULL &&\n                        state->head->extra != Z_NULL) {\n                        len = state->head->extra_len - state->length;\n                        zmemcpy(state->head->extra + len, next,",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-3ccccacfc88e9872111c1e86",
+        "source_id": "S-116a98aa8212882c58f6f6d4",
+        "file_sha256": "b5b2ba73e5ab2340612172beeb7e438beac17fa8b8c1113d02cf78f5aa127783",
+        "start_line": 9,
+        "end_line": 20,
+        "text": "  unsigned char extra[32], chunk[8], output[256];\n  header.extra=extra;header.extra_max=sizeof(extra);\n  if(inflateInit2(&stream,31)!=Z_OK)return 70;\n  if(inflateGetHeader(&stream,&header)!=Z_OK)return 71;\n  int result=Z_OK;unsigned long produced=0;\n  while(result!=Z_STREAM_END) {\n    if(stream.avail_in==0) {\n      stream.avail_in=fread(chunk,1,sizeof(chunk),input);stream.next_in=chunk;\n      if(stream.avail_in==0){fprintf(stderr,\"update input incomplete: gzip stream ended before trailer\\n\");inflateEnd(&stream);fclose(input);return 2;}\n    }\n    stream.avail_out=sizeof(output);stream.next_out=output;\n    result=inflate(&stream,Z_NO_FLUSH);produced+=sizeof(output)-stream.avail_out;",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-a228b9830ba3555acdec199f",
+        "source_id": "S-116a98aa8212882c58f6f6d4",
+        "file_sha256": "b5b2ba73e5ab2340612172beeb7e438beac17fa8b8c1113d02cf78f5aa127783",
+        "start_line": 6,
+        "end_line": 17,
+        "text": "  if(argc!=2){fprintf(stderr,\"usage: update-reader update.gz\\n\");return 64;}\n  FILE *input=fopen(argv[1],\"rb\");if(!input){perror(\"open\");return 66;}\n  z_stream stream={0};gz_header header={0};\n  unsigned char extra[32], chunk[8], output[256];\n  header.extra=extra;header.extra_max=sizeof(extra);\n  if(inflateInit2(&stream,31)!=Z_OK)return 70;\n  if(inflateGetHeader(&stream,&header)!=Z_OK)return 71;\n  int result=Z_OK;unsigned long produced=0;\n  while(result!=Z_STREAM_END) {\n    if(stream.avail_in==0) {\n      stream.avail_in=fread(chunk,1,sizeof(chunk),input);stream.next_in=chunk;\n      if(stream.avail_in==0){fprintf(stderr,\"update input incomplete: gzip stream ended before trailer\\n\");inflateEnd(&stream);fclose(input);return 2;}",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-d140afc93d84f2b5c24b9064",
+        "source_id": "S-d197252384e64c2f41677f31",
+        "file_sha256": "5ce28ed48a560319685f7ed93e7360465575da5205dc654ad5630bfacaa73ddf",
+        "start_line": 1,
+        "end_line": 12,
+        "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/product/update-reader\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/samples/truncated.gz\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package\",\n  \"expected_returncode\": 2,\n  \"log\": \"build/commands/0004-truncated-update.log\",\n  \"log_sha256\": \"8fa9b9123e71816afb9062353d9adb0ee3b2e45a5c84946ad30cd9ededb88cde\",\n  \"returncode\": 2,\n  \"started_at\": \"2026-09-12T04:20:06.750913+00:00\"\n}",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-3ffa1d0de2bbfa691519560c",
+        "source_id": "S-3497418bbecaaaf7c0f4e2be",
+        "file_sha256": "8fa9b9123e71816afb9062353d9adb0ee3b2e45a5c84946ad30cd9ededb88cde",
+        "start_line": 1,
+        "end_line": 1,
+        "text": "update input incomplete: gzip stream ended before trailer",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-8971db68ae9151dde819b43f",
+        "source_id": "S-a97e3db1000093da966ee080",
+        "file_sha256": "fdf011a93e9103f72ad0fb89bad409b347e30bf00c616ee3ca5f0253d07f1e74",
+        "start_line": 1,
+        "end_line": 12,
+        "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/product/update-reader\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package/samples/normal.gz\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/cmake-20260912T041957-c54d2c/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0003-normal-update.log\",\n  \"log_sha256\": \"86158bee4841d189582693e15a626432cb96b69d78a14eeaaccffcf5c09c3e7b\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T04:20:06.737403+00:00\"\n}",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      },
+      {
+        "excerpt_id": "X-ecf71298791fbc2dbac48b18",
+        "source_id": "S-a8efa10fdb25e9a5075d883c",
+        "file_sha256": "86158bee4841d189582693e15a626432cb96b69d78a14eeaaccffcf5c09c3e7b",
+        "start_line": 1,
+        "end_line": 1,
+        "text": "update_read=ok zlib=1.2.12 extra_len=16 extra_capacity=32 chunk_bytes=8 output_bytes=240",
+        "context_hash": "66d1e3794976559915de61220c49578d864d642a28d3bb61e66dcc224796b37e"
+      }
+    ],
+    "calls": [
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1d435e487d0980961c757822353",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 2874,
+          "input_tokens_details": {
+            "cache_write_tokens": 2752,
+            "cached_tokens": 0
+          },
+          "output_tokens": 216,
+          "output_tokens_details": {
+            "reasoning_tokens": 35
+          },
+          "total_tokens": 3090
+        }
+      },
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1d9b69c87d0aa8b09ca496aa813",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3115,
+          "input_tokens_details": {
+            "cache_write_tokens": 241,
+            "cached_tokens": 2752
+          },
+          "output_tokens": 151,
+          "output_tokens_details": {
+            "reasoning_tokens": 14
+          },
+          "total_tokens": 3266
+        }
+      },
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1dcc1d087d0a949cb829ecfc307",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3672,
+          "input_tokens_details": {
+            "cache_write_tokens": 557,
+            "cached_tokens": 2993
+          },
+          "output_tokens": 170,
+          "output_tokens_details": {
+            "reasoning_tokens": 8
+          },
+          "total_tokens": 3842
+        }
+      },
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1e27e7087d08f563c99cd6007c0",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 4010,
+          "input_tokens_details": {
+            "cache_write_tokens": 338,
+            "cached_tokens": 3550
+          },
+          "output_tokens": 188,
+          "output_tokens_details": {
+            "reasoning_tokens": 56
+          },
+          "total_tokens": 4198
+        }
+      },
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1e8653087d0991be0a3da1d705a",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 4602,
+          "input_tokens_details": {
+            "cache_write_tokens": 592,
+            "cached_tokens": 3888
+          },
+          "output_tokens": 147,
+          "output_tokens_details": {
+            "reasoning_tokens": 13
+          },
+          "total_tokens": 4749
+        }
+      },
+      {
+        "response_id": "resp_0863e7ba7bb8ce6b016aa4e1ebec7c87d08eefa8e037c3d281",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 4933,
+          "input_tokens_details": {
+            "cache_write_tokens": 331,
+            "cached_tokens": 4480
+          },
+          "output_tokens": 503,
+          "output_tokens_details": {
+            "reasoning_tokens": 18
+          },
+          "total_tokens": 5436
+        }
+      }
+    ],
+    "elapsed_seconds": 30.922,
+    "verified_ai_facts": [
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-d140afc93d84f2b5c24b9064",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-3ffa1d0de2bbfa691519560c",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-8971db68ae9151dde819b43f",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-ecf71298791fbc2dbac48b18",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      }
+    ],
+    "note": "AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。",
+    "record_hash": "254783dbcd17167e2c9382cd2dbabd1a674ced5a0e06d83894f091124e7c2b42"
+  }
+}

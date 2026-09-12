@@ -30,6 +30,20 @@ def execute(req):
         if req.get("context_hash") and context.context_hash != req["context_hash"]:
             raise IntegrityError("Run context changed")
         op = req["operation"]
+        if op == "analyze_offline":
+            from datetime import datetime, timezone
+            from cvevidence_core.workflow import analyze_package
+            events = []
+            def record(event):
+                events.append(dict(event, at=datetime.now(timezone.utc).isoformat()))
+            result = analyze_package(context, requested_cves=[req["cve_id"]],
+                symptom=req.get("symptom", ""), statements=req.get("statements", []),
+                mode="OFFLINE", event_callback=record)
+            if file_hash(archive) != actual:
+                raise IntegrityError("Archive changed during analysis")
+            result["archive_sha256"] = actual
+            result["events"] = events
+            return result
         if op == "collect":
             result = context.public()
             result["archive_sha256"] = actual
@@ -49,8 +63,11 @@ def execute(req):
             return sources.compare_sources(context, **req["arguments"])
         if op != "delta":
             raise ValueError("Unsupported operation")
-        supplement, _ = checked_archive(req["supplement"])
+        supplement, _ = checked_archive(req["supplement"],req.get("supplement_sha256"))
         safe_extract(supplement, root / "supplement")
+        expected=req.get("supplement_manifest_sha256")
+        if expected and file_hash(root / "supplement/manifest.json")!=expected:
+            raise IntegrityError("Supplement catalog manifest hash mismatch")
         validation = validate_supplement(context, root / "supplement")
         if not validation["can_merge"]:
             raise IntegrityError("Supplement belongs to a different build")
