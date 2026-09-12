@@ -3,11 +3,12 @@
   "selected_datasets": [
     "fresh-rom-r2",
     "fresh-cmake-r2",
-    "fresh-curl-r1"
+    "fresh-curl-r2"
   ],
   "notes": [
-    "ROM r2 includes the freshly built localhost TCP TLS entry and validated archive/supplement roundtrip.",
-    "Archive locations are local until artifact delivery is configured.",
-    "Data validation is distinct from engineering verdict and Live AI gates."
+    "ROM r2 包含今日新建的 localhost TCP TLS 入口。",
+    "curl r2 補齊 libtool 編譯的標頭依賴紀錄，兩版均重新建置。",
+    "壓縮包目前位於本機，遠端 artifact 交付另行記錄。",
+    "資料完整性、工程判定與 Live AI 分開驗收。"
   ]
 }
