@@ -38,7 +38,7 @@ def test_real_analysis_ai_exit_report_and_supplement_reanalysis(tmp_path, monkey
     app.run()
     assert next(b for b in app.sidebar.button if b.label == "04 AI 查核與補件").disabled
     click(app, "03 分析進度與結果")
-    click(app, "執行 Q1–Q5 與正式判定")
+    click(app, "執行 Queries 與正式判定")
     first = runner.store.read(app.session_state.selected_run)
     assert first.parent_run_id == parent.run_id
     assert runner.read_engineering(first.run_id)["analyses"][0]["assessment"]["verdict"] == "NEEDS_INVESTIGATION"
@@ -52,7 +52,7 @@ def test_real_analysis_ai_exit_report_and_supplement_reanalysis(tmp_path, monkey
     supplemented = runner.store.read(app.session_state.selected_run)
     assert supplemented.parent_run_id == first.run_id and supplemented.engineering_payload_sha256 is None
     assert app.session_state.step == "03 分析進度與結果"
-    click(app, "執行 Q1–Q5 與正式判定")
+    click(app, "執行 Queries 與正式判定")
     final = runner.store.read(app.session_state.selected_run)
     assert runner.read_engineering(final.run_id)["analyses"][0]["assessment"]["verdict"] == "AFFECTED"
     click(app, "05 報告與後續行動")

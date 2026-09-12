@@ -1,4 +1,5 @@
 """Deterministic presentation of saved findings; does not infer a verdict."""
+from .query_display import query_ids, query_title, query_description
 QUERY_LABELS = {
     "Q1_COMPONENT": "Q1 元件與版本",
     "Q2_BUILD": "Q2 建置身分",
@@ -14,11 +15,10 @@ def query_summaries(entry):
     for item in objects(entry.get("evidence")):
         evidence.setdefault(item.get("evidence_id"), []).append(item)
     result = []
-    for qid, label in QUERY_LABELS.items():
+    for qid in query_ids(entry):
         matches = [q for q in objects(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
-        if isinstance(query.get("title"), str) and query["title"].strip():
-            label = qid.split("_", 1)[0] + " " + query["title"].strip()
+        label = query_title(query, qid)
         status = query.get("status")
         state = {"COMPLETED": "查核已完成", "COMPLETED_WITH_GAPS": "有缺件，尚未查清",
                  "CONFLICT": "存在矛盾，需覆核"}.get(status, "未提供可用結果")
@@ -32,7 +32,7 @@ def query_summaries(entry):
         conflicts = query.get("conflicts") if isinstance(query.get("conflicts"), list) else []
         if conflicts: state = "存在矛盾，需覆核"
         elif missing: state = "有缺件，尚未查清"
-        result.append({"query_id": qid, "label": label, "state": state, "findings": findings,
+        result.append({"query_id": qid, "label": label, "description": query_description(query), "pc_layer": query.get("pc_layer"), "state": state, "findings": findings,
                        "missing": missing, "conflicts": conflicts})
     return result
 

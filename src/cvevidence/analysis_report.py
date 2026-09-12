@@ -8,6 +8,7 @@ from .analysis_view import (
     query_title, scoped_followup_queries, runtime_summary, model_task_status,
 )
 from .result_summary import conclusion_dimensions, pc_summaries
+from .query_display import query_ids, query_description
 
 
 def previous_engineering_run(store, run):
@@ -39,11 +40,12 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
     output += ["", "PC 綜合說明（共用前提與各 PC 合計為全部條件；不是獨立 PC 判定）"]
     for group in pc_summaries(entry):
         output += [group["group_id"] + " · " + group["title"] + " · " + group["label"], group["summary"]]
-    for qid in QUERIES:
+    for qid in query_ids(entry):
         matches = [q for q in rows(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
         title = query_title(query, qid)
         output += ["", qid + " · " + title, "狀態: " + text(query.get("status"))]
+        output.append("用途: " + query_description(query))
         if len(matches) > 1:
             output.append("重複的查核結果，未選取其中任何一筆。")
         for field in ("description", "pc_layer", "query_plan_version", "metadata", "missing", "conflicts", "evidence_ids"):
