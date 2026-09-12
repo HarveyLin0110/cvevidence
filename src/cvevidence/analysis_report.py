@@ -9,6 +9,7 @@ from .analysis_view import (
 )
 from .result_summary import conclusion_dimensions, pc_summaries
 from .query_display import query_ids, query_description
+from .ai_presenter import attempt_metadata, metadata_lines, receipt_lines
 
 
 def previous_engineering_run(store, run):
@@ -79,13 +80,22 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
         for field in ("evidence_id", "value", "reason", "witnesses", "excerpts"):
             output.append(field + ": " + text(evidence.get(field)))
     output += ["", "AI 調查（不覆蓋工程判定）"]
+    attempt = entry.get("ai_attempt")
+    if isinstance(attempt, dict):
+        output += ["AI 獨立紀錄：" + text(attempt.get("ai_id")),
+                   "調查狀態：" + text(attempt.get("status"))] + metadata_lines(attempt)
     ai = entry.get("ai")
     if not isinstance(ai, dict):
-        output.append("尚無 AI 紀錄")
+        output.append("選取的調查沒有可顯示的 AI 結果。" if isinstance(attempt, dict) else "尚無 AI 紀錄")
     elif not assessment.get("assessment_id") or ai.get("context_hash") != context_hash or ai.get("cve_id") != cve_id or ai.get("engineering_assessment_id") != assessment.get("assessment_id"):
         output.append("AI_SCOPE_MISMATCH：未匯出不符目前判定的 AI 內容")
     else:
         output += ["模式: " + text(ai.get("mode")), "狀態: " + text(ai.get("status"))]
+        metadata = attempt if isinstance(attempt, dict) else attempt_metadata(ai)
+        if not isinstance(attempt, dict):
+            output += metadata_lines(metadata)
+        for call in rows(ai.get("calls")):
+            output += receipt_lines(call, metadata.get("provider"))
         if ai.get("mode") == "REPLAY": output.append("舊紀錄播放，本次未呼叫模型。")
         output.append("追加 Query 來源：MODEL；工具動作完成不代表 CVE 條件成立。")
         guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id,
