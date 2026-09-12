@@ -1,6 +1,6 @@
 # Horace 開發同步
 
-更新：2026-09-12 12:42（Asia/Taipei）
+更新：2026-09-12 12:50（Asia/Taipei）
 
 此檔由 Horace 的工作對話維護，供 Frankie 及其 Codex 讀取。每次形成決定、變更介面或交件後更新；只留影響協作的摘要，不保存完整聊天。Frankie 請自行維護 `docs/sync/Frankie.md`；雙方先讀對方最新內容再動共用介面，避免重做。
 
@@ -50,14 +50,14 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 - 六個 build、九個初始包、三組補件已完成。第一輪九包資料驗收 9/9、同 build 補件 3/3；正式工程與 Live AI 尚未驗收。
 - 匯入/來源清單/搜尋/原文/比較/補件驗證/候選初版已可獨立呼叫；15 項邊界測試通過。
-- ROM 正在增加真實 localhost TCP 服務入口並重新建置。舊版 socketpair 正常測試已過，新版要另外驗收。
+- ROM localhost TCP 入口的兩次新 build 與正常 client/server 測試已完成；fresh-rom-r2 已封裝，archive/補件新版資料驗收進行中。
 - curl 官方 patch 的產品程式 hunk 已成功套用；上游測試清單的 context 與 8.3.0 不同，保留失敗紀錄，精確提取官方 `lib/socks.c` hunk 重建後正常下載通過。
 - 未完成：Q1–Q5/正式 Verifier、規則與 Claim、AI、工程九格、Live AI。
 - API 設定：使用者會設定 OPENAI_API_KEY / OPENAI_MODEL，再通知；目前無 Live 成績。
 
 ## 交件與存放
 
-第一輪交件詳見 [資料與核心交件](../releases/Horace_第一輪資料與核心交件.md)：含已可呼叫的匯入/唯讀/補件介面、命令、真實驗收及限制。完整分析尚未可用，Frankie 可先接收件與原文操作。
+第一輪程式 commit：`f1d49f4`；分支 `codex/horace-fresh-core`；[Draft PR #2](https://github.com/HarveyLin0110/cvevidence/pull/2)。交件詳見該分支的 `docs/releases/Horace_第一輪資料與核心交件.md`：含已可呼叫的匯入/唯讀/補件介面、命令、真實驗收及限制。完整分析尚未可用，Frankie 可先接收件與原文操作。
 
 - 程式：`src/cvevidence_core/`；builder：`tools/demo-data/factory/`；格式：`contracts/`。
 - 小型資料索引：`data/catalogs/`，含 archive/hash/取得位置；完整包放 artifact storage/本機 `var/artifacts/`。
@@ -68,7 +68,7 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 ## 請 Frankie 在自己的同步檔回覆
 
 1. 已讀到 Frankie 確認責任及 Python/Streamlit；為避免檔名撞到 Frankie 的 sources.py/cli.py，Horace 核心改為獨立 `src/cvevidence_core/`，開發 CLI 用 `python -m cvevidence_core`。
-2. Horace 會提供 `CVEVIDENCE_CORE_MODULE=cvevidence_core.frankie_adapter`，先相容 v0.2 collect/read。這只接真實收件，不把 collect 當完整分析。
+2. Horace 已提供 `CVEVIDENCE_CORE_MODULE=cvevidence_core.frankie_adapter`，先相容 v0.2 collect/read；真實 CMake archive 已驗 409 個檔案收件及 1388 bytes 產品原文預覽。這只接真實收件，不把 collect 當完整分析。
 3. 請下一版契約加入 file-backed package reference（20 MiB 上限不足部分工程包）、source 與 fact 分開、condition 的 SUPPORTED/BLOCKED/UNKNOWN/衝突語意、動態 InvestigationTask（不限制三問）、獨立工程/AI 狀態、delta 補件合併及 context hash。Horace 不修改 Frankie 的 contracts/Runner。
 
 在收到回覆前，Horace 持續做不受介面差異影響的建置、取證與測試；不擅自宣告雙方已確認。
