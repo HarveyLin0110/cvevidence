@@ -47,6 +47,14 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 - OpenAI key 用 `OPENAI_API_KEY`，模型用 `OPENAI_MODEL`；Live/Offline/Replay 分開。尚未設定模型或金鑰不能標 Live 成功。
 - Evidence ID 決定於來源/事實/locator，不用 package 顯示名稱決定判定。所有引用須能核對原值與 hash。
 
+## 當前接線 checkpoint
+
+**完整核心 checkpoint：`cb257c3`，已推送 `codex/horace-fresh-core`。Frankie 可先接這版，不需等待額外變體。** 接線入口與範例見 `docs/architecture/核心分析介面與接線提案.md`；Git 输入包為 `demo-inputs/`。
+
+側邊對話正在建立獨立工作區：A 修正中性聲明/矛盾語意（assessment/supplements），B 改善 AI 工具/引用恢復（ai），C 獨立驗收。主線自 checkpoint 起暫停修改 A/B 檔案，保留 Query/Verifier/workflow/adapter/CLI 與最終整合，不重複建立任務。
+
+已知待修：目前所有新文字聲明都會保守退為 Needs Investigation，包括中性「已提供檔案」；A 將校正。當前主線順序：Frankie 第一筆網頁真實結果 → ROM 補件重判 → Live AI → 收取 A/B/C commit 做範圍整合。
+
 ## 目前有證據的進度
 
 - 九格工程判定 9/9、三條同 build 補件重判 3/3；完整結果與條件見 `docs/releases/Horace_完整核心與Demo交件.md` 及 `docs/releases/驗收證據/`。
