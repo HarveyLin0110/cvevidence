@@ -4,14 +4,16 @@
 
 - 固定核心基準：`44efc7bdcc533760ab167a2a005b0111b9758483`；已核對 HEAD 與分支。
 - 本輪工作區：`/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/parallel/ai-validation-r2`；分支 `codex/parallel-ai-validation-r2`。
-- 狀態：RUNNING。只新增／修改分配的 QA 腳本、測試、本同步檔與 `docs/releases/Parallel_AI_R2.md`，不修改產品程式。
+- 狀態：DONE_WITH_FINDING。本輪 4 個整合案例：模擬 2 PASS；正式 Live 1 PASS／1 FAIL，真實 API 共 10 次。只新增／修改分配的 QA 腳本、測試、本同步檔與 `docs/releases/Parallel_AI_R2.md`，不修改產品程式。
 - 目標：ROM 03 同 build 補件後，攜帶歷史中性聲明，走 `investigate_after_engineering`，保留正式工程 dict 並驗證追加原文／重判；另做明確模擬的 timeout、無效引用終止。
-- 最新程式讀取結果：中性說明目前保存在 `statement_context`，不是 `statement_reviews`；第一輪「中性聲明將被 AI 入站拒絕」警示不能沿用，待本輪實測。
+- 最新程式讀取結果：中性說明目前保存在 `statement_context`，不是 `statement_reviews`；第一輪「中性聲明將被 AI 入站拒絕」警示已由本輪 ROM Live 證實解除；完整中性歷史也保留到重判結果。
 - 首筆結果：PASS，ROM 補件完成後 `NOT_AFFECTED`，9 項工程／歷史綁定檢查全部通過；保留舊 context 的中性聲明且 statement_reviews 為空，已經通過 OFFLINE 的 AI 入站檢查。模擬 timeout、無效引用終止兩案已 PASS（25 項檢查）；第一個 Live FAIL：8 次 API／73.196 秒 AI，BUDGET_EXHAUSTED；正式工程 dict／已保存 JSON 均未變。原文 SEARCH 已取得、一次 COMPARE 用四個來源被 TOOL_ERROR 後修正，但沒有預算 COMPLETE；重判 NOT_RUN。
 - 首筆 JSON：`var/validation/parallel-ai-r2/20260912T060516180542-r2-mock-b924ca36/engineering-readiness.json`、同目錄 `engineering-saved.json`。Live run：`20260912T060523891384-r2-live-3f42af5f`。
 - 第一筆 Live 風險最小重現：上述 r2-live 命令，固定 8 次／90 秒。預期完成調查後重新核對原文並重判；實際工具順序 LIST、LIST、SEARCH、LIST、LIST、SEARCH、COMPARE(TOOL_ERROR)、COMPARE，未送出 COMPLETE。產品責任：AI 工具參數引導與剩餘預算收尾（`src/cvevidence_core/ai.py:182`、`:202`、`:208`）；`workflow.py:57` 正確跳過失败重判。本輪不改產品程式。
 - QA 也修正「只接受 READ 當原文」的檢查以接受 SEARCH matches；第一筆 Live 原始摘要保留不覆寫，另以閱讀核對註記其 SEARCH 原文確實保留。
-- 第二個且最後一個 Live 將聚焦同 ROM 的正常 TCP/TLS 原文；重用本輪已保存快照與工程 JSON，輸出另建 run，不重做補件工程驗證。
+- 第二個且最後一個 Live：PASS，2 次真實 API、AI 16.519 秒、延後入口 34.383 秒；READ→COMPLETE→追加 1 筆經核對的 SOURCE_OBSERVATION→REVERIFIED_AND_REASSESSED，15 項檢查全部通過。重判仍 NOT_AFFECTED，中性歷史與正式工程 dict／檔案 hash 均未變。結果：`var/validation/parallel-ai-r2/20260912T060851113341-r2-live-923b8523/`。
+- 最終 QA 程式 commit：`59b51c9a7279eea4eab66ad39545ae2d2b4e5bbb`；詳細交件、命令、FAIL 最小重現與 D 可讀 JSON 路徑見 `docs/releases/Parallel_AI_R2.md`。後續文件紀錄 commit 在交件訊息另列。
+- 沒有重跑既有 75 項單元測試或第一輪 CMake/curl Live；本輪没有產品 src／contracts 變更，`git diff --exit-code 44efc7bdcc533760ab167a2a005b0111b9758483 -- src contracts` 通過。
 - Mock 實測：總耗時 76.107 秒（含 ROM 解包／同 build 補件及前後工程取證）；timeout 案入口 11.637 秒、invalid-citation 案入口 14.172 秒。實際 API 0 次，模擬 transport 2／3 次。工程 dict 與已保存 JSON hash 均未變，先前 READ 保留，失敗不重判；無效引用兩次拒收均留下。
 - 首個 QA commit：`383c9929587a55b2a37aecbf5d90b7dee9825b8e`。
 - 已執行：`python3 scripts/validate_ai_reliability.py --mode r2-mock`；`python3 scripts/validate_ai_reliability.py --mode r2-live --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local`。不重跑已通過的 CMake／curl 或 75 項全套。
@@ -88,5 +90,5 @@ git diff --check
 - 引用存在／原文一致不等於語意推論正確，維持 `meaning_verified=false`。
 - 來源優先與避免重複索件需要人工核對 Live 問題與原文，不能只看 transport gate。
 - API timeout 與每次迴圈檢查提供有界預算；既有本機完整性掃描與同步 I/O 不是硬即時取消。遲到回應不接受為完成，已取得結果保留。
-- 【第一輪歷史風險；第二輪已發現中性聲明改存 statement_context，正在實測確認】未修改 assessment 的既有聲明判定相容檢查：`ai.investigate` 仍以「有 statement_reviews → NEEDS_INVESTIGATION」驗證輸入；若 A 分支允許中性聲明保留原 verdict，主對話必須協調這個既有入口條件，否则會在 AI 開始前拋 IntegrityError。此項屬 A/B 整合，尚未在本分支聲稱完成。
+- 【第一輪歷史風險；第二輪已發現中性聲明改存 statement_context，第二輪 ROM Live 已確認解除】未修改 assessment 的既有聲明判定相容檢查：`ai.investigate` 仍以「有 statement_reviews → NEEDS_INVESTIGATION」驗證輸入；若 A 分支允許中性聲明保留原 verdict，主對話必須協調這個既有入口條件，否则會在 AI 開始前拋 IntegrityError。此項屬 A/B 整合，尚未在本分支聲稱完成。
 - 本分支提交只代表可供主對話整合，未合入主線、未推送或部署。
