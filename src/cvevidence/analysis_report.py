@@ -35,6 +35,8 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
               "理由: " + text(assessment.get("reason")), "範圍: " + text(assessment.get("scope")),
               "工程初判須人工覆核；不代表實際部署暴露、已被利用或異常已歸因。"]
     output += ["", "結論面向與證據邊界"]
+    from .general_triage_view import summary_lines
+    output += summary_lines(entry)
     for dimension in conclusion_dimensions(entry):
         output += [dimension["面向"] + ": " + dimension["本次結論"], dimension["解讀邊界"]]
     output += ["", "PC 綜合說明（共用前提與各 PC 合計為全部條件；不是獨立 PC 判定）"]

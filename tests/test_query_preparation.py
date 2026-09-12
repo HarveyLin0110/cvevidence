@@ -12,7 +12,10 @@ def test_cve_specific_plan_uses_core_ids_and_never_claims_execution():
     assert 'heartbeat' in openssl['queries'][2]['description']
     assert 'EXTRA' in zlib['queries'][2]['description']
     assert openssl['queries']!=zlib['queries']
-    assert prepare_queries('CVE-2099-9999','rom')['queries']==[]
+    general=prepare_queries('CVE-2099-9999','rom')
+    assert general['status']=='GENERAL_TRIAGE'
+    assert len(general['queries'])==5
+    assert all(q['verification_status']=='NOT_RUN' for q in general['queries'])
     mismatch=prepare_queries('CVE-2014-0160','cmake')
     assert mismatch['status']=='FORMAT_GAP'
     assert [q['query_id'] for q in mismatch['queries'] if q['status']=='PLANNED']==['Q2_BUILD']
@@ -30,7 +33,8 @@ def test_input_switches_query_preview_without_creating_runs(tmp_path,monkeypatch
     assert not any('OPENSSL_NO_HEARTBEATS' in t.value for t in app.text)
     field.set_value('CVE-2099-9999').run()
     assert any('尚無已審查' in t.value for t in app.text)
-    assert not any(e.label.startswith('Q1_COMPONENT') for e in app.expander)
+    assert any(e.label.startswith('Q1_COMPONENT') for e in app.expander)
+    assert any('只送出 CVE ID' in t.value for t in app.caption)
     assert not list((tmp_path/'store'/'runs').glob('*.json'))
 
 def test_openssl_explanation_does_not_promote_unknown_or_legacy():

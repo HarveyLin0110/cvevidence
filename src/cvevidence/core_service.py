@@ -79,6 +79,8 @@ class CoreService:
         # Do not forward model keys / OAuth secrets into intake processes.
         env = {key: os.environ[key] for key in ("PATH", "SYSTEMROOT", "LANG") if key in os.environ}
         env["PYTHONPATH"] = source
+        if os.environ.get('CVEVIDENCE_PUBLIC_CVE_LOOKUP') == '0':
+            env['CVEVIDENCE_PUBLIC_CVE_LOOKUP'] = '0'
         result = subprocess.run([sys.executable, "-m", "cvevidence.core_worker"],
             input=json.dumps(request), text=True, capture_output=True, env=env, timeout=timeout)
         if result.returncode == 2:

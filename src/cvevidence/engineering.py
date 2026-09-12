@@ -33,6 +33,20 @@ def validate_payload(payload, package, cve_id):
         raise ValueError("Duplicate engineering evidence")
     refs = list(assessment.get("evidence_ids", []))
     conditions = assessment.get("conditions", [])
+    from cvevidence_core.catalog import CATALOG
+    if cve_id not in CATALOG and assessment.get('assessment_kind') != 'GENERAL_TRIAGE':
+        raise ValueError('Unreviewed CVE requires explicit general triage')
+    if assessment.get('assessment_kind') == 'GENERAL_TRIAGE':
+        from cvevidence_core.general_triage import PROFILE_VERSION
+        from cvevidence_core.public_cve import brief
+        if (cve_id in CATALOG or assessment.get('profile_version') != PROFILE_VERSION
+                or assessment.get('verdict') != 'NEEDS_INVESTIGATION'
+                or assessment.get('cve_condition_verification_status') != 'NOT_RUN'
+                or assessment.get('inventory_status') != 'COMPLETED'
+                or any(c.get('state') != 'UNKNOWN' for c in conditions)):
+            raise ValueError('General triage cannot claim a verified CVE condition')
+        if brief(entry.get('public_cve_record'))['cve_id'] != cve_id:
+            raise ValueError('Public CVE record scope mismatch')
     if not conditions or any(row.get("state") not in ("SUPPORTED", "BLOCKED", "UNKNOWN") for row in conditions):
         raise ValueError("Invalid condition state")
     for row in conditions:

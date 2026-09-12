@@ -65,12 +65,18 @@ def test_timeout_keeps_parent_and_no_partial_result(case, monkeypatch):
     assert failed.engineering_payload_sha256 is None and not failed.sources
     assert runner.store._run_path(parent.run_id).read_bytes() == before
 
-def test_unknown_cve_is_not_a_verdict(tmp_path):
+def test_unknown_cve_gets_general_triage_without_claiming_verification(tmp_path,monkeypatch):
+    monkeypatch.setenv('CVEVIDENCE_PUBLIC_CVE_LOOKUP','0')
     runner = Runner(RunStore(tmp_path))
     parent = runner.start_file(ROOT / "demo-inputs/runtime-v2/pc3_cmake_static.tar.gz", cve="CVE-2099-99999")
     child = runner.analyze_offline(parent.run_id)
-    assert child.engineering_status == "UNSUPPORTED_CVE" and child.ai_status == "NOT_RUN"
-    assert runner.read_engineering(child.run_id)["analyses"][0]["assessment"] is None
+    assert child.engineering_status == 'COMPLETED' and child.ai_status == 'OFFLINE'
+    entry=runner.read_engineering(child.run_id)['analyses'][0]
+    assert entry['assessment']['verdict']=='NEEDS_INVESTIGATION'
+    assert entry['assessment']['cve_condition_verification_status']=='NOT_RUN'
+    assert all(c['state']=='UNKNOWN' for c in entry['assessment']['conditions'])
+    assert entry['public_cve_record']['status']=='UNAVAILABLE'
+    assert len(entry['query_plan']['queries'])==5
 
 def test_statement_resets_result_and_requires_new_analysis(case):
     runner, parent = case
