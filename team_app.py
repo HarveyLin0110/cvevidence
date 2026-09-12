@@ -6,6 +6,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 import streamlit as st
 from cvevidence.web_access import principal, release_label
+from cvevidence.product_style import apply_style
+apply_style(st)
 
 try:
     policy = st.secrets["deployment"]
