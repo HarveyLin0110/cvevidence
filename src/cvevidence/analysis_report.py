@@ -3,7 +3,7 @@
 Callers supply authorized saved runs; this module does not load files or verify
 core evidence. Comparisons describe differences, never infer why verdicts changed.
 """
-from .analysis_view import QUERIES, VERDICTS, rows, select_analysis, text
+from .analysis_view import QUERIES, VERDICTS, rows, select_analysis, text, condition_groups
 
 
 def previous_engineering_run(store, run):
@@ -37,9 +37,10 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
             if query.get(field): output.append(field + ": " + text(query[field]))
     for field in ("conditions", "conflicts", "statement_reviews", "gaps", "next_steps"):
         output += ["", field + ":", text(assessment.get(field))]
+    output += ["", "PC 分組（僅呈現，不另推算判定）", text(condition_groups(entry))]
     output += ["", "證據原值（保存紀錄；此匯出沒有重新驗證原文）"]
     for evidence in rows(entry.get("evidence")):
-        for field in ("evidence_id", "value", "reason", "witnesses"):
+        for field in ("evidence_id", "value", "reason", "witnesses", "excerpts"):
             output.append(field + ": " + text(evidence.get(field)))
     output += ["", "AI 調查（不覆蓋工程判定）"]
     ai = entry.get("ai")
