@@ -203,6 +203,20 @@ def workspace(st):
         text=report(run)
         st.code(text,language=None)
         st.download_button("下載查核紀錄",text,file_name=run.run_id+".txt",mime="text/plain")
+        with st.expander("來源操作紀錄"):
+            try:
+                history=runner.tool_history(run.run_id)
+                if history["invalid_receipts"]:
+                    st.warning("部分操作紀錄無法核對，原檔保留。")
+                if history["events"]:
+                    st.dataframe([{k:e.get(k) for k in ("created_at","operation","status","event_id")}
+                        for e in history["events"]],hide_index=True)
+                else: st.caption("尚無手動來源查詢紀錄。")
+                st.caption("未保存搜尋詞或原文，只保留run/context與參數／結果摘要hash；缺少結束紀錄不算成功。")
+                import json
+                st.download_button("下載操作紀錄",json.dumps(history,ensure_ascii=False,indent=2),
+                    file_name=run.run_id+"-events.json",mime="application/json")
+            except (ValueError,OSError): st.error("操作紀錄無法讀取，沒有顯示未核對內容。")
         if run.parent_run_id:
             st.subheader("與父 run 比較")
             st.json(compare(store.read(run.parent_run_id),run))
