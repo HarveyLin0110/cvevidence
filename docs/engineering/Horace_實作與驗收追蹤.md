@@ -1,0 +1,23 @@
+# Horace 今日實作與驗收追蹤
+
+依據：Frankie 雙人分工確認 DOCX（2026-09-12）、Champion Product Plan V5、Demo 白話說明。分工以 Frankie 文件為準：Horace 也負責判定引擎與 AI 調查；Frankie 維護正式 Runner、共用 contracts、Web/CLI 與保存。
+
+## 來源邊界
+
+今日團隊程式、builder、測試及工程包全數重新撰寫/建置。舊 DOCX 只讀需求；不讀取、複製或執行舊 Demo factory、產品 source、工程包或結果。第三方 OSS 從官方 HTTPS 重新取得，下載紀錄保存 URL、SHA-256、取得時間、版本與授權。公有來源不是團隊原創。
+
+## 完成證據
+
+| 必須交付 | 證明方式 | 目前 |
+|---|---|---|
+| ROM 真實 on/off 兩次 build、SquashFS 打包/解包、TLS/備份還原 | 今日完整建置紀錄、解包 hash、正常功能實跑 | 第一版完成；TCP 新版建置中 |
+| CMake zlib 1.2.12/1.2.13 靜態 build | link/map、正常 gzip/截短錯誤實跑、ELF | 兩版完成，資料 r2 通過 |
+| curl 8.3.0 官方修補前後 build | patch、source/object/library 綁定、正常本機 SOCKS5 下載 | 兩版 build/正常下載完成，正式 binding 規則仍待完成 |
+| 九包與三組同次補件、不可變 catalog/壓縮包 | archive/hash/lineage 驗收 | 首輪九包與三組補件通過；新版 ROM 待驗 |
+| 三種解析、Q1–Q5、原文工具、Evidence ID/Verifier | 真包驗收與篡改/混版/隔離測試 | 待完成 |
+| 三個 CVE profile/候選、確定性判定、Claim/缺口 | 九格實測；未知 CVE/多元件/衝突測試 | 待完成 |
+| AI 真實呼叫、動態工具/補件、引用驗證 | 至少三次 Live 紀錄；失敗/逾時/變體測試 | 待完成 |
+| 補件驗證/重新判定語意/摘要内容 | 三條補件及不同 build/文字聲明測試 | 資料合併語意與測試完成；重判/摘要未完成 |
+| Frankie Python 介面/CLI 驗收/交接包 | 從乾淨環境執行指令、schema 與真實範例 | 匯入/唯讀/補件初版已交；完整分析未完成 |
+
+九格只填今日實測；建置、工程判定、Live AI 分開計數。分析器不執行匯入 binary、不讀 factory/test/validation/其他樣品或未提交補件。預期答案由獨立驗收端持有。
