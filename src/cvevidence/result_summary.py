@@ -1,0 +1,54 @@
+"""Deterministic presentation of saved findings; does not infer a verdict."""
+QUERY_LABELS = {
+    "Q1_COMPONENT": "Q1 元件與版本",
+    "Q2_BUILD": "Q2 建置身分",
+    "Q3_IMPLEMENTATION": "Q3 受影響實作",
+    "Q4_BINDING": "Q4 成品綁定與範圍",
+    "Q5_PATH": "Q5 輸入路徑與必要條件",
+}
+def objects(value):
+    return [x for x in value if isinstance(x, dict)] if isinstance(value, list) else []
+
+def query_summaries(entry):
+    evidence = {}
+    for item in objects(entry.get("evidence")):
+        evidence.setdefault(item.get("evidence_id"), []).append(item)
+    result = []
+    for qid, label in QUERY_LABELS.items():
+        matches = [q for q in objects(entry.get("queries")) if q.get("query_id") == qid]
+        query = matches[0] if len(matches) == 1 else {}
+        status = query.get("status")
+        state = {"COMPLETED": "查核已完成", "COMPLETED_WITH_GAPS": "有缺件，尚未查清",
+                 "CONFLICT": "存在矛盾，需覆核"}.get(status, "未提供可用結果")
+        if len(matches) > 1: state = "結果重複，需覆核"
+        findings = []
+        for eid in query.get("evidence_ids", []):
+            items = evidence.get(eid, [])
+            if len(items) == 1 and isinstance(items[0].get("reason"), str) and items[0]["reason"]:
+                if items[0]["reason"] not in findings: findings.append(items[0]["reason"])
+        missing = query.get("missing") if isinstance(query.get("missing"), list) else []
+        conflicts = query.get("conflicts") if isinstance(query.get("conflicts"), list) else []
+        if conflicts: state = "存在矛盾，需覆核"
+        elif missing: state = "有缺件，尚未查清"
+        result.append({"query_id": qid, "label": label, "state": state, "findings": findings,
+                       "missing": missing, "conflicts": conflicts})
+    return result
+
+def conclusion(entry):
+    assessment = entry.get("assessment") or {}
+    verdict = assessment.get("verdict")
+    conclusions = {
+        "AFFECTED": "本次成品被判定受此 CVE 影響。請優先安排修補或緩解，並由工程師覆核。",
+        "NOT_AFFECTED": "本次成品被判定不受此 CVE 影響。此結論只適用目前提交的成品、建置與查核範圍。",
+        "NEEDS_INVESTIGATION": "目前還不能確認本次成品是否受此 CVE 影響；需補齊或釐清關鍵證據後再判定。",
+    }
+    conditions = objects(assessment.get("conditions"))
+    relevant = [c for c in conditions if c.get("state") == ("BLOCKED" if verdict == "NOT_AFFECTED" else "UNKNOWN")]
+    titles = [c["title"] for c in relevant if isinstance(c.get("title"), str)]
+    detail = ""
+    if verdict == "NOT_AFFECTED" and titles:
+        detail = "判定依據中的阻斷條件：" + "、".join(titles) + "。"
+    elif verdict == "NEEDS_INVESTIGATION" and titles:
+        detail = "仍待確認：" + "、".join(titles) + "。"
+    return {"text": conclusions.get(verdict, "尚未提供有效判定，不能將此結果視為安全。"),
+            "reason": assessment.get("reason"), "detail": detail}
