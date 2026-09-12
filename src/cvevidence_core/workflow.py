@@ -1,4 +1,5 @@
 """Pure core stages. Runner owns run IDs, persistence, snapshots and deadlines."""
+from time import monotonic
 from .integrity import ingest_package,IntegrityError,UnsupportedError,InputPackage
 from .catalog import discover_candidates,CATALOG
 from .queries import collect_evidence
@@ -49,28 +50,57 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
             'discovery':discovery,'analyses':results,'engineering_status':'COMPLETED' if any(r.get('assessment') for r in results) else 'NOT_RUN',
             'ai_status':'NOT_RUN' if not executed else 'OFFLINE' if mode=='OFFLINE' else 'COMPLETED' if all(r['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for r in executed) else 'INCOMPLETE'}
 
-def investigate_after_engineering(package,engineering_result,user_context='',*,env_file=None,event_callback=None,analysis_depth='focused'):
+def investigate_after_engineering(package,engineering_result,user_context='',*,env_file=None,event_callback=None,analysis_depth='focused',provider=None,timeout_seconds=None):
     """Attach a later AI stage to saved engineering data, without replacing it."""
-    context=package if isinstance(package,InputPackage) else ingest_package(package)
-    context.assert_current()
-    if engineering_result.get('status')!='COMPLETED' or engineering_result.get('context_hash')!=context.context_hash:
-        raise IntegrityError('AI 階段不屬於已保存的工程快照')
-    results=[]
-    for entry in engineering_result.get('analyses',[]):
-        assessment=entry.get('assessment')
-        if not assessment:continue
-        collection={'schema_version':'1.0','cve_id':entry['cve_id'],'profile_version':assessment['profile_version'],
-                    'context_hash':context.context_hash,'queries':entry['queries'],'evidence':entry['evidence']}
-        for field in ('followup_queries','runtime_observation'):
-            if field in entry:collection[field]=entry[field]
-        verified=verify(context,collection)
-        if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
-        depth_options={'analysis_depth':'pc','max_calls':12,'timeout_seconds':145} if analysis_depth=='pc' else {}
+    started=monotonic()
+    delegated=False
+    try:
+        if timeout_seconds is not None and (isinstance(timeout_seconds,bool) or not isinstance(timeout_seconds,(int,float)) or not 0<timeout_seconds<=300):
+            raise ValueError('Invalid AI workflow deadline')
         if analysis_depth not in {'focused','pc'}:raise ValueError('Unknown AI analysis depth')
-        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file,**depth_options,
-                       **({'public_record':entry['public_cve_record']} if 'public_cve_record' in entry else {}))
-        if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
-        followup=reassess_after_investigation(context,assessment,ai) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
-        results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai,'investigation_verification':followup})
-    return {'schema_version':'1.0','context_hash':context.context_hash,'mode':'LIVE','analyses':results,
-            'status':'NOT_RUN' if not results else 'COMPLETED' if all(x['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for x in results) else 'INCOMPLETE'}
+        if provider is not None and timeout_seconds is None:
+            timeout_seconds=145 if analysis_depth=='pc' else 90
+        context=package if isinstance(package,InputPackage) else ingest_package(package)
+        context.assert_current()
+        if engineering_result.get('status')!='COMPLETED' or engineering_result.get('context_hash')!=context.context_hash:
+            raise IntegrityError('AI 階段不屬於已保存的工程快照')
+        if provider is not None and sum(bool(entry.get('assessment')) for entry in engineering_result.get('analyses',[]))!=1:
+            raise ValueError('An explicit provider belongs to exactly one engineering assessment')
+        results=[]
+        for entry in engineering_result.get('analyses',[]):
+            assessment=entry.get('assessment')
+            if not assessment:continue
+            collection={'schema_version':'1.0','cve_id':entry['cve_id'],'profile_version':assessment['profile_version'],
+                        'context_hash':context.context_hash,'queries':entry['queries'],'evidence':entry['evidence']}
+            for field in ('followup_queries','runtime_observation'):
+                if field in entry:collection[field]=entry[field]
+            verified=verify(context,collection)
+            if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
+            depth_options={'analysis_depth':'pc','max_calls':12,'timeout_seconds':145} if analysis_depth=='pc' else {}
+            if timeout_seconds is not None:
+                depth_options['timeout_seconds']=max(0 if provider is not None else 1e-9,
+                    min(depth_options.get('timeout_seconds',90),timeout_seconds-(monotonic()-started)))
+            delegated=True
+            ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file,**depth_options,
+                           **({'provider':provider} if provider is not None else {}),
+                           **({'public_record':entry['public_cve_record']} if 'public_cve_record' in entry else {}))
+            followup=reassess_after_investigation(context,assessment,ai) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
+            if provider is not None and monotonic()-started>=timeout_seconds:
+                from .integrity import digest
+                ai['status']='TIMED_OUT'
+                ai['errors'].append({'code':'INVESTIGATION_DEADLINE','stage':'WORKFLOW','call_number':len(ai['calls'])})
+                ai['elapsed_seconds']=round(monotonic()-started,3)
+                ai['record_hash']=digest({key:value for key,value in ai.items() if key!='record_hash'})
+                followup=None
+            if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
+            results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai,'investigation_verification':followup})
+        return {'schema_version':'2.0' if provider is not None else '1.0','context_hash':context.context_hash,
+                'mode':results[0]['ai']['mode'] if provider is not None else 'LIVE',
+                **({'provider':provider.provider_id,'auth_type':provider.auth_type} if provider is not None else {}),'analyses':results,
+                'status':'NOT_RUN' if not results else 'COMPLETED' if all(x['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for x in results) else 'INCOMPLETE'}
+    finally:
+        # investigate owns cleanup after delegation; validation failures before
+        # delegation must also release an explicitly constructed provider.
+        if provider is not None and not delegated:
+            try:provider.close()
+            except Exception:pass

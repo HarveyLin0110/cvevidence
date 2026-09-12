@@ -1,11 +1,13 @@
 """Bounded Responses API investigation, isolated from the engineering verdict."""
 from __future__ import annotations
 import json,os,pathlib,re,socket,time,urllib.error,urllib.request
+from copy import deepcopy
 from datetime import datetime,timezone
 from .integrity import IntegrityError,digest
 from .sources import list_sources,search_sources,read_excerpt,compare_sources,verify_excerpt
 from .verifier import require_verified,verify_citations
 from .collection_guidance import collection_guide
+from .providers import ProviderStep, ProviderError, responses_request, MAX_PROVIDER_INPUT_BYTES, MAX_PROVIDER_RECEIPT_BYTES
 
 SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律用繁體中文。
 先讀取 Q1–Q5 的實際狀態、事實與缺口，自行提出值得追加的具體問題，再使用 investigation_step。
@@ -103,18 +105,8 @@ def _request(config,items,timeout):
     if config.get('_analysis_depth')=='pc':instructions+='\n'+PC_REVIEW_INSTRUCTIONS
     if config.get('_investigation_budget'):
         instructions+='\n可信任執行器的 runtime_budget（不是上傳內容）：'+json.dumps(config['_investigation_budget'],ensure_ascii=False)
-    body={'model':config['OPENAI_MODEL'],'instructions':instructions,'input':items,'tools':[TOOL],
-          'tool_choice':'required','parallel_tool_calls':False,
-          'max_output_tokens':9000 if config.get('_analysis_depth')=='pc' else 3000,'store':False}
-    if config['OPENAI_MODEL'].startswith(('gpt-5','gpt-6','o3','o4')):
-        body['reasoning']={'effort':config.get('OPENAI_REASONING_EFFORT','medium')}
-        body['include']=['reasoning.encrypted_content']
-    req=urllib.request.Request('https://api.openai.com/v1/responses',data=json.dumps(body,ensure_ascii=False).encode(),
-        headers={'Authorization':'Bearer '+config['OPENAI_API_KEY'],'Content-Type':'application/json'})
-    with urllib.request.urlopen(req,timeout=timeout) as response:
-        data=response.read(2_000_001)
-        if len(data)>2_000_000:raise ValueError('API_RESPONSE_TOO_LARGE')
-        return json.loads(data)
+    return responses_request(config,items,timeout,instructions=instructions,tool=TOOL,
+                             max_output_tokens=9000 if config.get('_analysis_depth')=='pc' else 3000)
 
 def _validate_args(args):
     if not isinstance(args,dict) or set(args)!=set(PROPERTIES):raise ValueError('工具參數欄位不符')
@@ -135,7 +127,33 @@ def _proposal_text(args):
     return '\n'.join([args['question'],args['reason'],args['finding'],*args['required_files']])
 
 
-def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env_file=None,max_calls=8,timeout_seconds=90,transport=None,public_record=None,analysis_depth='focused'):
+def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env_file=None,max_calls=8,timeout_seconds=90,transport=None,public_record=None,analysis_depth='focused',provider=None):
+    """One investigation loop; explicit providers emit v2, legacy callers keep v1."""
+    started=time.monotonic();result=None
+    try:
+        if provider is not None and transport is not None:
+            raise ValueError('Choose a provider or a legacy test transport')
+        result=_investigate(context,verified,assessment,user_context,mode=mode,env_file=env_file,
+            max_calls=max_calls,timeout_seconds=timeout_seconds,transport=transport,public_record=public_record,
+            analysis_depth=analysis_depth,provider=provider,started=started)
+        return result
+    finally:
+        if provider is not None:
+            cleanup_error=None
+            try:provider.close()
+            except Exception:cleanup_error='PROVIDER_CLEANUP_FAILED'
+            if result is not None and result.get('mode')!='OFFLINE':
+                if cleanup_error or time.monotonic()-started>=timeout_seconds:
+                    result['status']='FAILED' if cleanup_error else 'TIMED_OUT'
+                    result['errors'].append({'code':cleanup_error or 'INVESTIGATION_DEADLINE',
+                                             'stage':'CLEANUP','call_number':len(result['calls'])})
+                result['elapsed_seconds']=round(time.monotonic()-started,3)
+                result['finished_at']=datetime.now(timezone.utc).isoformat()
+                result['record_hash']=digest({k:v for k,v in result.items() if k!='record_hash'})
+
+
+def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max_calls,timeout_seconds,transport,public_record,analysis_depth,provider,started):
+    start=started
     require_verified(context,verified)
     if assessment['context_hash']!=context.context_hash or assessment['verification_hash']!=verified.collection_hash:raise IntegrityError('AI 輸入 assessment 與目前證據不一致')
     from .assessment import assess
@@ -150,20 +168,30 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
         if public_brief['cve_id']!=verified.cve_id:raise IntegrityError('公開公告 CVE 不屬於目前調查')
     if mode not in {'LIVE','OFFLINE'}:raise ValueError('Replay 必須透過 replay_investigation 明確載入原紀錄')
     if analysis_depth not in {'focused','pc'}:raise ValueError('Unknown AI analysis depth')
-    if not 1<=max_calls<=12 or not 1<=timeout_seconds<=180:raise ValueError('AI 調查預算超出範圍')
+    if not 1<=max_calls<=12 or not (0<=timeout_seconds<=180 if provider is not None else 1<=timeout_seconds<=180):
+        raise ValueError('AI 調查預算超出範圍')
     result={'schema_version':'1.0','mode':mode,'status':'NOT_RUN','context_hash':context.context_hash,
             'cve_id':verified.cve_id,'profile_version':verified.profile_version,
             'engineering_assessment_id':assessment['assessment_id'],'model':None,'reasoning_effort':None,
             'tasks':[],'excerpts':[],'calls':[],'errors':[],'elapsed_seconds':0,'verified_ai_facts':[],
             'note':'AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。'}
+    if provider is not None:
+        if provider.provider_id not in {'openai_api','codex_cli'} or provider.mode not in {'LIVE','SIMULATED'}:
+            raise ValueError('Invalid provider identity or mode')
+        result.update(schema_version='2.0',provider=provider.provider_id,auth_type=provider.auth_type,
+                      adapter_version=provider.version,model=provider.model,reasoning_effort=provider.reasoning_effort)
     if mode=='OFFLINE':result['status']='OFFLINE';return result
-    try:config=settings(env_file)
-    except (OSError,UnicodeError):
-        result.update(status='CONFIG_REQUIRED',error='AI 設定無法讀取');return result
-    if not config.get('OPENAI_API_KEY') or not config.get('OPENAI_MODEL'):result['status']='CONFIG_REQUIRED';return result
-    result.update(model=config['OPENAI_MODEL'],reasoning_effort=config.get('OPENAI_REASONING_EFFORT','medium'),
-                  started_at=datetime.now(timezone.utc).isoformat())
-    if transport is not None:result.update(mode='SIMULATED',note='使用注入的測試 transport；本紀錄不可算 Live 驗收。')
+    if provider is None:
+        try:config=settings(env_file)
+        except (OSError,UnicodeError):
+            result.update(status='CONFIG_REQUIRED',error='AI 設定無法讀取');return result
+        if not config.get('OPENAI_API_KEY') or not config.get('OPENAI_MODEL'):result['status']='CONFIG_REQUIRED';return result
+        result.update(model=config['OPENAI_MODEL'],reasoning_effort=config.get('OPENAI_REASONING_EFFORT','medium'))
+        if transport is not None:result.update(mode='SIMULATED',note='使用注入的測試 transport；本紀錄不可算 Live 驗收。')
+    else:
+        config={};result['mode']=provider.mode
+        if provider.mode=='SIMULATED':result['note']='使用模擬 Provider；本紀錄不可算 Live 驗收。'
+    result['started_at']=datetime.now(timezone.utc).isoformat()
     excerpts={x['excerpt_id']:x for r in verified.records for x in r['excerpts']}
     packet=[]
     if analysis_depth=='pc':
@@ -192,7 +220,7 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
              'statement_context_truncated':len(history)>len(selected),
              'scope':assessment['scope'],'advisories':assessment['source_advisories'],'collection_guide':guide}
     items=[{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]
-    start=time.monotonic();request=transport or _request;repairs=0;attempt=None;stage='REQUEST'
+    request=transport or _request;repairs=0;attempt=None;stage='REQUEST';provider_history=[]
     def failure(status,code,**details):
         result.update(status=status)
         error={'code':code,'stage':stage,'call_number':len(result['calls']),**details}
@@ -220,26 +248,55 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
             stage='REQUEST'
             budget={'max_calls':max_calls,'remaining_calls_including_current':max_calls-number,
                     'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER'}
-            attempt={'call_number':number+1,'response_id':None,'model':config['OPENAI_MODEL'],'status':'STARTED','usage':None,'runtime_budget':budget}
+            attempt={'call_number':number+1,'model':result['model'],'status':'STARTED','usage':None,'runtime_budget':budget}
+            if provider is None:attempt['response_id']=None
+            else:attempt['provider']=provider.provider_id
             result['calls'].append(attempt)
-            response=request({**config,'_investigation_budget':budget,'_analysis_depth':analysis_depth},items,
-                             min(remaining,65 if analysis_depth=='pc' else 45))
-            stage='RESPONSE'
-            if not isinstance(response,dict):raise ValueError('API response must be an object')
-            attempt.update(response_id=response.get('id'),model=response.get('model'),status=response.get('status'),usage=response.get('usage'))
-            if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
-            if response.get('status')!='completed':
-                failure('INCOMPLETE','RESPONSE_NOT_COMPLETED');break
-            output=response.get('output',[])
-            if not isinstance(output,list) or any(not isinstance(x,dict) for x in output):raise ValueError('API output must be a list of objects')
-            calls=[x for x in output if x.get('type')=='function_call']
-            if len(calls)!=1 or calls[0].get('name')!='investigation_step':raise ValueError('Exactly one investigation_step is required')
-            call=calls[0];stage='ARGUMENTS'
-            if not isinstance(call.get('call_id'),str) or not call['call_id']:raise ValueError('Missing function call_id')
-            if not isinstance(call.get('arguments'),str):raise ValueError('Tool arguments must be JSON text')
-            # Preserve malformed proposals for inspection without copying API headers/config.
-            attempt['arguments']=call['arguments'][:16000]
-            args=json.loads(call['arguments']);_validate_args(args)
+            if provider is None:
+                response=request({**config,'_investigation_budget':budget,'_analysis_depth':analysis_depth},items,
+                                 min(remaining,65 if analysis_depth=='pc' else 45))
+                stage='RESPONSE'
+                if not isinstance(response,dict):raise ValueError('API response must be an object')
+                attempt.update(response_id=response.get('id'),model=response.get('model'),status=response.get('status'),usage=response.get('usage'))
+                if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+                if response.get('status')!='completed':
+                    failure('INCOMPLETE','RESPONSE_NOT_COMPLETED');break
+                output=response.get('output',[])
+                if not isinstance(output,list) or any(not isinstance(x,dict) for x in output):raise ValueError('API output must be a list of objects')
+                calls=[x for x in output if x.get('type')=='function_call']
+                if len(calls)!=1 or calls[0].get('name')!='investigation_step':raise ValueError('Exactly one investigation_step is required')
+                call=calls[0];stage='ARGUMENTS'
+                if not isinstance(call.get('call_id'),str) or not call['call_id']:raise ValueError('Missing function call_id')
+                if not isinstance(call.get('arguments'),str):raise ValueError('Tool arguments must be JSON text')
+                # Legacy diagnostics remain readable; no API headers/config are copied.
+                attempt['arguments']=call['arguments'][:16000]
+                args=json.loads(call['arguments'])
+            else:
+                if len(json.dumps([payload,provider_history],ensure_ascii=False,allow_nan=False).encode())>MAX_PROVIDER_INPUT_BYTES:
+                    raise ProviderError('BUDGET_EXHAUSTED','PROVIDER_INPUT_LIMIT')
+                remaining=timeout_seconds-(time.monotonic()-start)
+                if remaining<=0:raise ProviderError('TIMED_OUT','INVESTIGATION_DEADLINE')
+                budget['remaining_seconds']=round(remaining,3)
+                instructions=SYSTEM+('\n'+PC_REVIEW_INSTRUCTIONS if analysis_depth=='pc' else '')
+                instructions+='\n可信任執行器的 runtime_budget（不是上傳內容）：'+json.dumps(budget,ensure_ascii=False)
+                step=provider.step(instructions=instructions,packet=deepcopy(payload),history=deepcopy(provider_history),
+                                   budget=deepcopy(budget),timeout=min(remaining,65 if analysis_depth=='pc' else 45))
+                stage='RESPONSE'
+                if not isinstance(step,ProviderStep) or not isinstance(step.receipt,dict):
+                    raise ProviderError('INVALID_MODEL_OUTPUT','INVALID_PROVIDER_STEP')
+                if len(json.dumps(step.receipt,ensure_ascii=False,allow_nan=False).encode())>MAX_PROVIDER_RECEIPT_BYTES:
+                    raise ProviderError('BUDGET_EXHAUSTED','PROVIDER_RECEIPT_LIMIT')
+                if step.receipt.get('provider')!=provider.provider_id:
+                    raise ProviderError('INVALID_MODEL_OUTPUT','PROVIDER_RECEIPT_MISMATCH')
+                if (step.receipt.get('model') is not None and not isinstance(step.receipt['model'],str)
+                        or step.receipt.get('usage') is not None and not isinstance(step.receipt['usage'],dict)):
+                    raise ProviderError('INVALID_MODEL_OUTPUT','INVALID_PROVIDER_RECEIPT')
+                attempt.update(deepcopy(step.receipt),call_number=number+1,runtime_budget=budget)
+                if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+                if step.receipt.get('status')!='completed':
+                    failure('INCOMPLETE','RESPONSE_NOT_COMPLETED');break
+                args=deepcopy(step.decision);stage='ARGUMENTS'
+            _validate_args(args)
             action=args['action'];ids=args['source_ids'];stage='CITATIONS'
             citation_check=verify_citations(context,verified,args['citations'],list(excerpts.values()))
             known_hashes={r['sha256'] for r in context.sources.values()}|{context.context_hash,verified.collection_hash}
@@ -261,8 +318,11 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                              'valid_evidence_ids':[r['evidence_id'] for r in verified.records],'valid_excerpt_ids':list(excerpts)}
                 task['result']=tool_output
                 if repairs<1 and number+1<max_calls:
-                    repairs+=1;items.extend(output)
-                    items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)})
+                    repairs+=1
+                    if provider is None:
+                        items.extend(output)
+                        items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)})
+                    else:provider_history.append({'step_number':number+1,'decision':deepcopy(args),'result':deepcopy(tool_output)})
                     continue
                 failure('INVALID_CITATION' if not citation_check['valid'] else 'INVALID_MODEL_OUTPUT','PROPOSAL_REJECTED');break
             tool_output={};stage='TOOL'
@@ -300,13 +360,16 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                 task.update(status='INPUT_CHANGED_OR_INVALID',result={'error':str(exc)});raise
             except (ValueError,KeyError) as exc:
                 task.update(status='TOOL_ERROR',result={'error':str(exc)});tool_output=task['result']
-            items.extend(output)
-            items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)[:50000]})
+            if provider is None:
+                items.extend(output)
+                items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)[:50000]})
+            else:provider_history.append({'step_number':number+1,'decision':deepcopy(args),'result':deepcopy(tool_output)})
             if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             if result['status'] in {'COMPLETED','NEEDS_USER_INPUT'}:break
         else:result['status']='BUDGET_EXHAUSTED'
         stage='INPUT_CHECK';context.assert_current()
         if time.monotonic()-start>=timeout_seconds and result['status']!='TIMED_OUT':failure('TIMED_OUT','INVESTIGATION_DEADLINE')
+    except ProviderError as exc:failure(exc.status,exc.code)
     except (socket.timeout,TimeoutError):failure('TIMED_OUT','REQUEST_TIMEOUT')
     except urllib.error.HTTPError as exc:
         result['http_status']=exc.code;failure('API_ERROR','HTTP_ERROR',http_status=exc.code)
@@ -315,8 +378,12 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
         else:failure('CONNECTION_ERROR','CONNECTION_FAILED')
     except IntegrityError as exc:
         result['error']=str(exc);failure('INPUT_CHANGED_OR_INVALID','INPUT_INTEGRITY_ERROR',message=str(exc))
-    except (ValueError,KeyError,TypeError) as exc:failure('INVALID_MODEL_OUTPUT','INVALID_RESPONSE_OR_ARGUMENTS',message=str(exc))
+    except (ValueError,KeyError,TypeError) as exc:
+        failure('INVALID_MODEL_OUTPUT','INVALID_RESPONSE_OR_ARGUMENTS',**({'message':str(exc)} if provider is None else {}))
     except OSError:failure('CONNECTION_ERROR' if stage=='REQUEST' else 'INPUT_CHANGED_OR_INVALID','IO_ERROR')
+    except Exception:
+        if provider is None:raise
+        failure('FAILED','UNEXPECTED_PROVIDER_OR_CORE_ERROR')
     if result['tasks'] and result['tasks'][-1]['status']=='RUNNING':
         result['tasks'][-1].update(status=result['status'],result={'error':result['errors'][-1] if result['errors'] else result['status']})
     if attempt is not None and attempt['status']=='STARTED':attempt['status']=result['status']
