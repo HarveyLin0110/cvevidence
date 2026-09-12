@@ -2,19 +2,19 @@
 
 更新：2026-09-13。狀態：**開發中**。入口：[主規格](../../spec.md)。
 
-共用 Provider、OpenAIAdapter、v2 保存／worker 與來源選擇 UI 已實作；Codex 執行環境／Adapter、完整版本追溯與 M5 聯合驗收仍須完成整合。以下明確區分現有介面與交付要求；程式、模擬測試或既有 API 歷史紀錄不等於本次 Codex／API LIVE 驗收通過。
+共用 Provider、兩個 Adapter、v2 保存／worker、逐筆版本追溯與來源選擇 UI 已實作；M5 聯合驗收仍須完成。以下明確區分現有介面與交付要求；程式、模擬測試、最小 CLI probe 或既有 API 歷史紀錄不等於本次完整 Codex／API 調查驗收通過。
 
 ## 1. 目標與目前基線
 
 讓使用者在同一個 CVEvidence AI 調查功能中，選擇 `openai_api` 或 `codex_cli`，共用工程證據、受控調查工具、引用驗證與歷史紀錄。Codex CLI 路徑以後端已登入的 ChatGPT 帳號執行，不要求另外提供 OpenAI API Key。
 
-原始需求基線：Git `8e10efdaee1a814630e3d4c3cb5bdb0dcebf2092`。本次介面核對至整合 `f61c051`，驗收 harness 為 `2be563e`；後續實測版本與完整測試結果集中於 [驗收與發布紀錄](../releases/)。
+原始需求基線：Git `8e10efdaee1a814630e3d4c3cb5bdb0dcebf2092`。本次對照整合 `8d6ff50`、CLI `d7dab5d`／`89f260e` 及本輪 versions／launcher 變更；實測版本與完整測試結果集中於 [驗收與發布紀錄](../releases/)。
 
 | 位置 | 已實作介面 | 仍須驗收／補齊 |
 | --- | --- | --- |
-| [核心 AI](../../src/cvevidence_core/ai.py)／[providers](../../src/cvevidence_core/providers.py) | `ProviderStep`、`ProviderError`、OpenAIAdapter；兩來源接同一工具／引用循環 | Codex Adapter 整合、兩來源真實調查 |
-| [AIService](../../src/cvevidence/ai_service.py)／[worker](../../src/cvevidence/ai_worker.py) | 來源與 `config_id` 路由、白名單設定、v2 串流上限與期限 | 真實 CLI 子程序與環境限制 |
-| [AIStore](../../src/cvevidence/ai_store.py) | AIRequest v1.0／v2.0 分派、來源原生收據驗證、原子新建紀錄 | 每筆程式／prompt 版本關聯與聯合相容驗收 |
+| [核心 AI](../../src/cvevidence_core/ai.py)／[providers](../../src/cvevidence_core/providers.py)／[Codex Adapter](../../src/cvevidence_core/codex_provider.py) | `ProviderStep`、`ProviderError`、OpenAIAdapter／CodexCLIAdapter；兩來源接同一工具／引用循環 | 兩來源完整真實調查 |
+| [AIService](../../src/cvevidence/ai_service.py)／[worker](../../src/cvevidence/ai_worker.py) | 來源與 `config_id` 路由、白名單設定、v2 串流上限／期限、執行前後版本核對 | 整合版本的實際環境与程序驗收 |
+| [AIStore](../../src/cvevidence/ai_store.py) | AIRequest v1.0／v2.0 分派、每筆版本關聯、來源原生收據驗證、原子新建紀錄 | 聯合相容與歷史驗收 |
 | [AI 工作台](../../src/cvevidence/ai_workspace.py) | 來源選擇、readiness、同意失效、歷史／報告來源呈現 | 整合版本的實際 UI 與保存紀錄核對 |
 
 未傳 `provider` 的原入口維持 v1；既有 `transport` 或 OpenAIAdapter 的測試 transport 一律標示 SIMULATED，不能拿來假裝 LIVE 接線。
@@ -72,6 +72,8 @@ UI 在「AI 調查」區塊顯示來源、可用狀態、設定模型及以下�
 
 目前設定由 [ai_config.py](../../src/cvevidence/ai_config.py) 的 `operator_settings()` 讀取；指定環境變數優先於 `CVEVIDENCE_AI_ENV_FILE`。未指定檔案時不自動搜尋 `.env`。
 
+[Windows／WSL launcher](../setup/windows-wsl.md) 會在未明確指定 `CVEVIDENCE_AI_ENV_FILE` 時，使用存在的 `var/config/ai.env`；該檔被 Git 忽略。直接執行 Python 驗收腳本時，須明確匯出此變數。可直接使用的本機設定與登入操作見 [Codex CLI 設定](../setup/codex-cli.md)。
+
 | 設定 | 用途／預設 |
 | --- | --- |
 | `CVEVIDENCE_AI_ENABLED` | 必須為 `1` 才可啟動產品內 AI |
@@ -84,11 +86,11 @@ UI 在「AI 調查」區塊顯示來源、可用狀態、設定模型及以下�
 | `CVEVIDENCE_CODEX_MODEL`／`CVEVIDENCE_CODEX_REASONING_EFFORT` | Codex 專用模型與推理強度；推理強度預設 `medium` |
 | `CVEVIDENCE_AI_ENV_FILE` | 由啟動環境指定的可信設定檔路徑；不傳給模型或暴露成 UI 路徑參數 |
 
-WSL 執行使用者由服務啟動環境決定，不是網頁可切換的帳號參數。`provider_configuration(provider)` 回傳 `(private, public)`；只有 public 可交 UI，內容含 `configured`、`reason_code`、`model`、`reasoning_effort`、`auth_type`、`billing_label`、`version`、`mode` 與 `config_id`。`config_id` 為設定摘要識別，不是帳號憑證；後端在開始時重新比較，變更則回報 `CONSENT_REQUIRED / PROVIDER_CONFIGURATION_CHANGED`。
+WSL 執行使用者由服務啟動環境決定，不是網頁可切換的帳號參數。`provider_configuration(provider)` 回傳 `(private, public)`；只有 public 可交 UI，內容含 `configured`、`reason_code`、`model`、`reasoning_effort`、`auth_type`、`billing_label`、`version`、`mode`、`versions` 與 `config_id`。`config_id` 納入可信設定、認證身分與執行版本，不是帳號憑證；後端在開始時重新比較，變更則回報 `CONSENT_REQUIRED / PROVIDER_CONFIGURATION_CHANGED`。
 
 ChatGPT 登入與 API Key 是不同認證／計費來源；本版 Codex Adapter 須確認使用 ChatGPT 模式，不能因機器有 Key 而悄悄改走 API。登入交給官方 CLI 處理，不讀取或複製憑證內容至 prompt、UI、Git 或日誌。[OpenAI Docs：認證](https://learn.chatgpt.com/docs/auth)
 
-Windows Codex 已登入不等於 WSL 後端已登入。可用狀態只證明設定／必要能力已檢查，不保證帳號尚有額度或模型請求一定成功。一般狀態檢查不做模型呼叫；CLI 的短期限、快取及認證身分辨識由其 Adapter 交件確認，不能只靠手動修訂值宣稱能偵測所有帳號切換。實際連線驗證另由操作者明確啟動。
+Windows Codex 已登入不等於 WSL 後端已登入；本機使用原生 Linux CLI 配合操作者指定的既有登入目錄，官方 CLI 核對 ChatGPT 模式。可用狀態不保證帳號尚有額度。`codex_readiness(config, timeout=8, force_refresh=False)` 不呼叫模型，使用 15 秒 stat 身分快取；CLI／auth 檔案或相關設定變更使其失效。每次 `step` 強制重新核對認證身分，時間計入剩餘期限。官方身分資料無法區分的工作區／帳務範圍變更仍須操作者更新 `CVEVIDENCE_AI_AUTH_REVISION`；不宣稱能偵測所有帳號切換。
 
 模型及 CLI 路徑只能來自可信設定，不能由上傳材料、模型輸出或 UI 任意提供。兩個來源的模型各自配置，不假設模型名稱、可用性或輸出相同。
 
@@ -114,6 +116,8 @@ AI 工作台 → Runner → AIService／受限 worker
 
 `history` 格式為 `[{step_number, decision, result}]`；Adapter 只收到資料副本，不收到 `InputPackage`、來源根目錄或工具 callable。`OpenAIAdapter(config, *, transport=None)` 保存當次 Responses items／call_id 私有狀態，再把 Python 工具結果轉回原生 function call output。這些原生暫存不跨案件共享，close 後清除。
 
+`CodexCLIAdapter(config)` 使用相同 `step` 契約；由 ai_config 組合可信 `bin`、`codex_home`、`model`、`reasoning_effort`、`auth_revision` 與已核對的 `auth_identity`。此 dict 是內部介面；操作者使用第 5 節的環境變數設定。
+
 核心入口為 `investigate(..., provider=None)`，延後調查入口為 `investigate_after_engineering(..., provider=None, timeout_seconds=None)`。明確 Provider 路徑輸出 v2；未指定來源維持既有 v1 行為。明確 Provider 一次只綁定一筆工程 assessment，避免已關閉或跨案狀態被重用。
 
 Decision 沿用現有 `investigation_step` 的 action、question、reason、term、source_ids、行號、finding、citations、required_files 欄位與驗證規則。允許動作為 LIST、SEARCH、READ、COMPARE、VERIFY、ASK_USER、COMPLETE；VERIFY 仍由 Python 核心執行。不得新增任意 shell、URL 或 verdict 欄位。
@@ -132,7 +136,7 @@ Codex 可透過 `codex exec --json` 取得事件，透過 `--output-schema` 要�
 - 第一版可每步啟動獨立 CLI，重建有界的必要上下文；不使用不明的最近會話。之後若改為 resume／持續會話，須明確綁定案件與 ai_id 並重新驗收。
 - UI 整次期限先維持 180 秒，沿用核心 PC 路徑最多 12 次、145 秒的內層上限；由外層剩餘期限收緊。前處理、程序啟動、模型、工具與修正都扣相同總預算，不重置計時。
 - 引用／CLI 選項來源校核的修正最多一次，計入呼叫上限；工具參數錯誤的後續步驟也扣相同預算。保留一次呼叫收尾，資源不足如實回報，不捏造 COMPLETE。
-- 已實作上限見下表；CLI 原生事件、輸出與暫存的額外限制由其 Adapter 交件補齊，不假設與 API 回應相同。
+- 已實作上限見下表；CLI 使用原生 Linux **0.153.4**，不接受 Windows `codex.exe` interop，升級前須重驗工具目錄、事件與程序清理。
 - 用 scope＋source hash＋行號去重片段，明示截斷；先量測耗時、呼叫及可取得的用量，不宣稱已節省某比例 token。
 
 | 邊界 | 已實作上限／行為 |
@@ -145,6 +149,9 @@ Codex 可透過 `codex exec --json` 取得事件，透過 `--output-schema` 要�
 | 單筆 Provider receipt | JSON 編碼 64 KiB；超限 `BUDGET_EXHAUSTED / PROVIDER_RECEIPT_LIMIT` |
 | API HTTP response | 2,000,000 bytes；不把任意長度回應全部讀入 |
 | 模型輸出 token 上限 | API PC 模式 9,000、focused 模式 3,000；不推定 Codex 使用相同控制 |
+| Codex 原生輸入 | 256 KiB；較共用 packet／history 上限更嚴格，超限拒絕送出 |
+| Codex stdout＋stderr | 合計 2 MiB；串流讀取時限制 |
+| Codex 單一事件／最終訊息 | 事件行 256 KiB、最終訊息 128 KiB |
 
 `ai_process.run_worker()` 的 `finally` 清理所在 POSIX 程序群組；它不自動證明能清理跨 Windows interop 或自行脫離群組的程序，CLI 的實際終止測試仍為必要條件。`calls` 是調查呼叫嘗試紀錄，可能包含傳送前耗盡本機預算的項目，不能把筆數當成已送達或已計費次數。
 
@@ -154,13 +161,15 @@ Codex 可透過 `codex exec --json` 取得事件，透過 `--output-schema` 要�
 
 目前已保存：
 
-- request 保留 ai_id、parent_run_id、context_hash、CVE、assessment_id、工程／文字輸入 hash、同意、設定模型／推理強度與期限；v2 新增 `provider`、`auth_type`、`config_id`。
+- request 保留 ai_id、parent_run_id、context_hash、CVE、assessment_id、工程／文字輸入 hash、同意、設定模型／推理強度與期限；v2 新增 `provider`、`auth_type`、`config_id` 及必填 `versions`。
 - v2 wrapper 與 inner AI 均有 `schema_version="2.0"`；inner 保存來源、認證類型、設定模型及 `adapter_version`。實際回報模型與 usage 留在各筆 calls，允許未知。
 - 開始與結束時間、mode、status、安全錯誤碼、調查動作、引用核對與 record hash。
 - 成功 calls 必須有一致 provider、連續的 `call_number=1..N`、`status="completed"`。API 必須有非空 `response_id`。
 - Codex 成功收據的保存契約要求非空 `thread_id`、`exit_code=0`、`terminal_event="turn.completed"`、64 位小寫 hex `events_sha256`，並拒絕代造的 API response_id。這是儲存驗證要求，CLI 原生事件實测仍須另交證據；未提供的 turn ID 不補造。
 
-**版本追溯仍須補齊後才算交付完成**：每笔 AIRequestV2 必須關聯 code content SHA、prompt SHA 與契約版本；worker 必須比對此次執行版本，不能在程式改變後沿用舊同意。驗收 harness 已記錄程式清單／內容 hash、Git commit、prompt hash 與問題 hash；這不能取代一般產品 AI 紀錄的版本關聯。Adapter／CLI 版本由其實際回傳記錄，缺值保持未知。
+**逐筆版本追溯已實作**：`AIRequestV2.versions` 包含 `code_sha256`、`prompt_sha256`、`contract_version="2.0"`；兩個 SHA 為 64 位小寫 hex。程式 hash 依目前 `cvevidence`／`cvevidence_core` 內的 Python／JSON 檔案內容與相對名稱計算，prompt hash 包含 SYSTEM、PC 指令與工具 schema。worker 在調查前後核對，變更時回報 `INPUT_CHANGED_OR_INVALID / AI_IMPLEMENTATION_CHANGED`；回傳 payload 的 versions 必須與 request 一致。這些版本也納入 `config_id`，程式變更後不得沿用舊同意。原始碼／設定更新後需重啟服務，避免已載入模組與磁碟內容不同。
+
+驗收 harness 額外記錄程式清單／內容 hash、Git commit、prompt hash 與問題 hash；Adapter／CLI 版本由實際紀錄取得，缺值保持未知。舊 v1 原樣讀取；缺少必填 versions 的開發中 v2 紀錄不得補造版本或冒充完整 v2 成功。
 
 來源、mode 與 scope 在 request、payload 及收據間必須一致；provider-specific validator 驗證各自完成條件。缺少必要收據不能標示 LIVE 成功。原生 ID／本地 hash 僅支持格式、完整性與關聯檢查，無法單憑這些欄位辨識所有偽造資料；真實呼叫須有獨立 LIVE 執行證據，收據不能升格成供應商認證或 AI 結論正確。
 
@@ -170,7 +179,7 @@ Codex 可透過 `codex exec --json` 取得事件，透過 `--output-schema` 要�
 
 ## 9. 錯誤與失敗語意
 
-沿用現有 AIStatus；來源差異以 error_code 和安全文案呈現。以下為共用核心、OpenAIAdapter 與 v2 service 的已實作映射；CLI 特有原生錯誤碼仍須核對其交件：
+沿用現有 AIStatus；來源差異以 error_code 和安全文案呈現。以下為共用核心、Adapter 與 v2 service 的映射；CLI 設定／版本／身分原因在 readiness 顯示安全代碼：
 
 | 情境 | 狀態／處理 |
 | --- | --- |
@@ -182,6 +191,7 @@ Codex 可透過 `codex exec --json` 取得事件，透過 `--output-schema` 要�
 | 錯誤 JSON／欄位／動作 | INVALID_MODEL_OUTPUT；不把合法 JSON 等同合法 Decision |
 | 引用不存在、跨案件或原文不符 | INVALID_CITATION；不納入判定 |
 | 原輸入完整性變更 | INPUT_CHANGED_OR_INVALID；保留原紀錄 |
+| 調查前後程式／prompt 版本不符 | INPUT_CHANGED_OR_INVALID＋AI_IMPLEMENTATION_CHANGED；不保存成功 |
 | 斷線、API 錯誤、未知程序錯誤 | 對應 CONNECTION_ERROR／API_ERROR／FAILED，不能推定成功 |
 | 程序中斷或沒有結束收據 | 保持未完成／中斷可見；不重送、不偽造完成收據 |
 
@@ -216,6 +226,7 @@ PR 記錄受影響的 [D/R 規則](../ai/developer-guide.md)：設計／交付 D
 
 ```bash
 # 僅工程流程＋readiness；沒有 --consent 時模型呼叫為零。
+export CVEVIDENCE_AI_ENV_FILE="$PWD/var/config/ai.env"
 python scripts/validate_ai_providers.py --provider all --output-dir var/validation/aip-check-001
 
 # 操作者明確同意後，才加入 --consent 執行所選已配置來源。
@@ -239,8 +250,8 @@ python scripts/validate_ai_providers.py --provider codex_cli --output-dir var/va
 
 ## 12. 尚待完成的交付
 
-- M0／M3：固定 CLI 版本的工具、資料、認證身分與程序終止實測；核對原生事件及 CLI 專用大小上限，不從 read-only 或功能旗標推定隔離成立。
-- M1：每筆 AIRequestV2 的 code／prompt／contract 版本關聯與 worker 比對；一般 AI 紀錄不能只依賴獨立驗收摘要追版本。
+- M0／M3 的固定 CLI 政策、原生事件與大小上限已接線；實際工具／程序專項證據见 [CLI 設定與驗證](../setup/codex-cli.md)，不从 read-only 或單一旗標推定所有隔離成立。
+- M1 的逐筆 versions 與 worker 比對已接線；在最終整合版本重驗程式變更、舊同意拒絕與 v1／v2 讀取相容。
 - M5：兩來源真實調查、同版本完整 pytest／schema 檢查、UI／重開紀錄核對及人工語意覆核；帳號、模型或外送前提缺失時明記 NOT_RUN。
 
 本功能維持開發中；以上條件完成前，不把相鄰模組的測試、既有 API 歷史 Live 或 TEST_ONLY 收據宣稱為本次完整驗收。

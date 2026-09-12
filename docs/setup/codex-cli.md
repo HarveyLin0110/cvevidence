@@ -18,25 +18,45 @@
 
 ## 操作者設定
 
-Adapter 接受可信設定 dict；實際環境變數入口由 AIService／ai_config 統一管理，網頁不能傳任意 CLI 路徑或模型。
+設定入口是 AIService／ai_config 的環境變數，網頁不能傳任意 CLI 路徑或模型。在專案根目錄編輯忽略的 `var/config/ai.env`：
 
-```python
-config = {
-    "bin": "/home/harvey/.local/share/cvevidence/tools/codex-0.153.4/codex",
-    "codex_home": "/mnt/c/Users/ASUS/.codex",
-    "model": "gpt-5.6-sol",
-    "reasoning_effort": "low",
-    "auth_revision": "local-20260913",
-}
+```dotenv
+CVEVIDENCE_AI_ENABLED=1
+CVEVIDENCE_AI_PROVIDERS=openai_api,codex_cli
+CVEVIDENCE_AI_DEFAULT_PROVIDER=codex_cli
+CVEVIDENCE_AI_AUTH_REVISION=local-20260913
+CVEVIDENCE_CODEX_BIN=/home/harvey/.local/share/cvevidence/tools/codex-0.153.4/codex
+CVEVIDENCE_CODEX_HOME=/mnt/c/Users/ASUS/.codex
+CVEVIDENCE_CODEX_MODEL=gpt-5.6-sol
+CVEVIDENCE_CODEX_REASONING_EFFORT=low
 ```
 
-`codex_home` 指向操作者已有且可信的登入目錄。此本機的 Linux 預設 `~/.codex` 未登入；官方 Linux CLI 可以讀原有 Windows 登入目錄並確認 ChatGPT 模式，沒有複製或解析憑證。若另建個人 Linux 登入，透過官方 `codex login` 完成；本版身分核對要求官方 CLI 的檔案式認證入口。
+此範例沿用本機路徑；其他電腦須換成實際 Linux CLI 與操作者登入目錄。未填 `OPENAI_API_KEY`／`OPENAI_MODEL` 時，API 選項會不可用，不影響已配置的 Codex；只要 Codex 時也可將允許來源設為 `CVEVIDENCE_AI_PROVIDERS=codex_cli`。
 
-`auth_revision` 是操作者設定版本；更換登入 profile、ChatGPT 工作區或帳務範圍時更新並重新同意。官方 `account/read` 目前回報 type／email／planType，Adapter 只將其 SHA256 回傳後端作設定身分，不保存 email 或 token，也不把此 hash 顯示為官方 workspace ID。相同 email／plan 的工作區切換仍依操作者更新 revision。
+Windows launcher 會自動採用存在的 `var/config/ai.env`，明確指定的 `CVEVIDENCE_AI_ENV_FILE` 優先。直接在 WSL 執行 Python 或驗收腳本時先設定：
+
+```bash
+export CVEVIDENCE_AI_ENV_FILE="$PWD/var/config/ai.env"
+```
+
+修改後在 Windows PowerShell 執行 `.\scripts\workspace-windows.ps1 restart`，操作細節見 [Windows／WSL 啟動](windows-wsl.md)。服務環境中的同名設定會覆蓋設定檔；不要將設定檔或憑證放進 Git。
+
+`CVEVIDENCE_CODEX_HOME` 指向操作者已有且可信的登入目錄。此本機的 Linux 預設 `~/.codex` 未登入；官方 Linux CLI 可以讀原有 Windows 登入目錄並確認 ChatGPT 模式，沒有複製或解析憑證。若另建個人 Linux 登入，在 WSL 使用官方 CLI：
+
+```bash
+CODEX_HOME="$HOME/.codex" /home/harvey/.local/share/cvevidence/tools/codex-0.153.4/codex login
+CODEX_HOME="$HOME/.codex" /home/harvey/.local/share/cvevidence/tools/codex-0.153.4/codex login status
+```
+
+完成後將 `CVEVIDENCE_CODEX_HOME` 改為該目錄的實際絕對路徑；設定檔不執行 shell，也不展開 `$HOME`。本版身分核對要求官方 CLI 的檔案式認證入口。
+
+`CVEVIDENCE_AI_AUTH_REVISION` 是操作者設定版本；更換登入 profile、ChatGPT 工作區或帳務範圍時更新並重新同意。官方 `account/read` 目前回報 type／email／planType，Adapter 只將其 SHA256 回傳後端作設定身分，不保存 email 或 token，也不把此 hash 顯示為官方 workspace ID。相同 email／plan 的工作區切換仍依操作者更新 revision。
 
 `codex_readiness(config)` 不呼叫模型：检查 ELF、版本、官方 `login status` 的 ChatGPT 模式，再經官方 app-server `account/read(refreshToken=false)` 核對身分。無法取得身分就不可用；不以讀 token、推測 email 或 API Key 替代。此結果不保證帳號仍有額度。
 
-UI readiness 使用 15 秒記憶體快取，鍵包含 CLI／auth.json 的連結與目標 stat 身分、操作者模型／認證 revision／目錄及政策版本；不讀取憑證內容。檔案原子替換或設定變更即失效，回傳副本避免 UI 改動污染快取。實際每個 `step` 使用 `force_refresh=True` 重新核對帳號，調查期間改變帳號時拒絕繼續。`--version`、`login status` 與 `account/read` 都使用臨時認證 home，不載入原 home 的 config／hooks。
+UI readiness 使用 15 秒記憶體快取，鍵包含 CLI／auth.json 的連結與目標 stat 身分、操作者模型／認證 revision／目錄及政策版本；不讀取憑證內容。檔案原子替換或設定變更即失效，回傳副本避免 UI 改動污染快取。readiness 預設期限 8 秒；實際每個 `step` 使用 `force_refresh=True` 並受剩餘期限收緊，核對到身分變更時拒絕繼續。`--version`、`login status` 與 `account/read` 都使用臨時認證 home，不載入原 home 的 config／hooks。
+
+每筆 `AIRequestV2.versions` 必填 code SHA256、prompt SHA256 與 `contract_version="2.0"`。`config_id` 包含這些版本，worker 在調查前後重新核對，payload／request 必須一致；原始碼改變後請重啟服務、重新選擇並同意。這項檢查提供內容版本追溯，不是來源認證或模型結論正確的證明。
 
 ## 執行限制
 
@@ -55,8 +75,9 @@ Linux supervisor 使用 parent-death signal；deadline、輸出超限、正常�
 在 WSL 專案根目錄執行（使用已安裝相依套件的 Python）：
 
 ```bash
-python -m pytest -q tests/test_codex_provider.py tests/test_ai_provider_core.py
-python scripts/validate_codex_provider.py \
+export CVEVIDENCE_AI_ENV_FILE="$PWD/var/config/ai.env"
+.venv/bin/python -m pytest -q tests/test_codex_provider.py tests/test_ai_provider_core.py
+.venv/bin/python scripts/validate_codex_provider.py \
   --bin /home/harvey/.local/share/cvevidence/tools/codex-0.153.4/codex \
   --codex-home /mnt/c/Users/ASUS/.codex \
   --model gpt-5.6-sol --auth-revision local-20260913 \
@@ -68,3 +89,14 @@ python scripts/validate_codex_provider.py \
 2026-09-13 本機實測：本地 capture 取得 1 個請求，tools 空且未攜帶認證，PASS。隔離認證的真實 probe 收到 ASK_USER、原生 thread ID、turn.completed 與 exit code 0，input 402／output 176 tokens；實際模型名稱未出現在事件，收據保存 null，設定模型為 gpt-5.6-sol。執行紀錄只留忽略的 `var/codex-live-final.json`。
 
 原生事件包含未知工具、缺失終結事件、非法 JSON 或超限時均拒絕成功；不偽造 API response ID。測試捕捉的預期 HTTP 400／程序退出 1 是 TEST_ONLY 截取終止，不能稱 LIVE 成功。完整調查、引用、不可變保存與 UI 驗收由整合流程另外執行。
+
+兩個核准 Demo 的完整 Runner 驗收使用共同設定入口：
+
+```bash
+export CVEVIDENCE_AI_ENV_FILE="$PWD/var/config/ai.env"
+.venv/bin/python scripts/validate_ai_providers.py \
+  --provider codex_cli \
+  --output-dir "$HOME/.local/share/cvevidence/validation/aip-codex-001"
+```
+
+不加 `--consent` 時模型呼叫為零，AI 部分為 NOT_RUN。要執行真實調查，操作者須在上述指令加入 `--consent` 並使用新目錄；兩來源比較改為 `--provider all`。腳本的自動 PASS、FAIL、NOT_RUN 與人工覆核分開，calls 表示呼叫嘗試紀錄而非已計費保證；M5 的實測／人工結果由 [驗收與發布紀錄](../releases/) 留存。

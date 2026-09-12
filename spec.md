@@ -35,7 +35,9 @@
 - [README](README.md)：專案介紹、安裝與執行。
 - [AGENTS.md](AGENTS.md)：開發者及 coding agent 必須遵循的專案指引。
 - [Horace 同步](docs/sync/Horace.md)／[Frankie 同步](docs/sync/Frankie.md)：共享介面與責任背景；歷史完成狀態須對照其版本。
-- [現有契約](contracts/schemas/)：包含 AIRequest v1.0／v2.0；讀取版本分派、實作介面與待補項目見功能 spec。
+- [現有契約](contracts/schemas/)：包含 AIRequest v1.0／v2.0；v2 綁定程式、prompt 與契約版本，細節見功能 spec。
+- [Windows／WSL 啟動](docs/setup/windows-wsl.md)：服務啟停與忽略的本機 AI 設定檔。
+- [Codex CLI 設定](docs/setup/codex-cli.md)：原生 Linux CLI、ChatGPT 登入、環境變數與驗證入口。
 - [AI 驗收清單](docs/ai/acceptance.md)：共用案例與證據要求。
 - [驗收與發布紀錄](docs/releases/)：具名版本的實測結果與限制。
 
