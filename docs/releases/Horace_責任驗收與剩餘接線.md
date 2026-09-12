@@ -38,6 +38,7 @@
 - [新增入口 Live／Replay](驗收證據/新增入口Live與Replay摘要.json)、[延後 AI 保留歷史聲明](驗收證據/延後AI保留歷史聲明Live摘要.json)：後者 4 calls、31.198 秒，最小材料追問與既有工程保留。
 - [D 指定版本的 consumer QA](https://github.com/HarveyLin0110/cvevidence/blob/754e6a3/docs/releases/Parallel_Contract.md)：基本資料及 scope 隔離通過，兩個 excerpts 呈現失敗；當時舊 Runner 未接分析，不能套用為新 main 狀態。
 - [PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9)、[7b24110 CI](https://github.com/HarveyLin0110/cvevidence/actions/runs/34678280555)。更新 head 後以新 checks 為準。
+- [14:49–14:56 團隊 HTTPS 站 ROM 真實操作](團隊站_ROM_實測_2026-09-12.md)：部署 ea5e571，初判待查→同 build 補件→Not Affected→前後報告→重新載入取回舊結果；舊報告文字完全保留。這是 OFFLINE 工程流程，沒有網站 Live 或服務重啟驗收；第二份下載事件仍待確認。
 
 ## 還需要完成的聯合驗收
 
