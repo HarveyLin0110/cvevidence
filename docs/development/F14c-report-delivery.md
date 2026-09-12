@@ -14,3 +14,9 @@
 81 pytest passed；本批8個參數化案例涵蓋 AI timeout 報告、跨 AI scope、拒絕提案、同判定不同證據、產品／release／build／artifact 不同或缺失、重複條件。全為 TEST_ONLY 顯示資料，不算真實漏洞及同 build 補件驗收。
 
 對應 D01/D02/D07/D08/D09、R01/R05/R06/R07/R08/R11/R12。報告只描述核心保存结果；不以 AI 文字覆蓋工程判定，不由前後差異推論因果，不把 hash 當來源認證。
+
+## 接線後的重跑命令
+
+`python scripts/validate_analysis_ui.py --store PATH --run-id UUID`
+
+此腳本使用正式 Runner.read_engineering 讀回指定紀錄，再以 Streamlit AppTest 驗證結果、報告／補件導覽 callback 及文字報告 scope；輸出不包含原始材料。它不重新執行分析、不呼叫模型，也不取代真實瀏覽器／workspace 接線驗收。新增時已檢查 CLI help；真實保存 run 驗收待核心交付後另記。
