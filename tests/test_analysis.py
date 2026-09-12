@@ -50,6 +50,14 @@ class AnalysisTests(unittest.TestCase):
     def test_unknown_cve_is_preserved(self):
         r=analyze_package(self.root,['CVE-2099-99999'])
         self.assertIsNone(r['analyses'][0]['assessment']);self.assertEqual(r['ai_status'],'NOT_RUN')
+    def test_later_ai_stage_preserves_saved_engineering_on_failure(self):
+        from cvevidence_core.workflow import investigate_after_engineering
+        r=analyze_package(self.root,['CVE-2022-37434']);before=copy.deepcopy(r)
+        with patch('cvevidence_core.ai.settings',return_value={}):
+            later=investigate_after_engineering(self.context,r)
+        self.assertEqual(later['analyses'][0]['ai']['status'],'CONFIG_REQUIRED');self.assertEqual(r,before)
+        wrong={**r,'context_hash':'another'}
+        with self.assertRaises(IntegrityError):investigate_after_engineering(self.context,wrong)
     def test_no_files_symptom_returns_intake(self):
         r=analyze_package(None,symptom='突然斷線');self.assertEqual(r['status'],'AWAITING_INPUT');self.assertFalse(r['discovery']['candidates'])
     def test_api_timeout_is_distinct_from_engineering(self):

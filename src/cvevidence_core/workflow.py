@@ -35,3 +35,23 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
     return {'schema_version':'1.0','status':'COMPLETED','context_hash':context.context_hash,'input':context.public(),
             'discovery':discovery,'analyses':results,'engineering_status':'COMPLETED' if any(r.get('assessment') for r in results) else 'NOT_RUN',
             'ai_status':'NOT_RUN' if not executed else 'OFFLINE' if mode=='OFFLINE' else 'COMPLETED' if all(r['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for r in executed) else 'INCOMPLETE'}
+
+def investigate_after_engineering(package,engineering_result,user_context='',*,env_file=None,event_callback=None):
+    """Attach a later AI stage to saved engineering data, without replacing it."""
+    context=package if isinstance(package,InputPackage) else ingest_package(package)
+    context.assert_current()
+    if engineering_result.get('status')!='COMPLETED' or engineering_result.get('context_hash')!=context.context_hash:
+        raise IntegrityError('AI 階段不屬於已保存的工程快照')
+    results=[]
+    for entry in engineering_result.get('analyses',[]):
+        assessment=entry.get('assessment')
+        if not assessment:continue
+        collection={'schema_version':'1.0','cve_id':entry['cve_id'],'profile_version':assessment['profile_version'],
+                    'context_hash':context.context_hash,'queries':entry['queries'],'evidence':entry['evidence']}
+        verified=verify(context,collection)
+        if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
+        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file)
+        if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
+        results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai})
+    return {'schema_version':'1.0','context_hash':context.context_hash,'mode':'LIVE','analyses':results,
+            'status':'NOT_RUN' if not results else 'COMPLETED' if all(x['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for x in results) else 'INCOMPLETE'}
