@@ -20,6 +20,7 @@ VERDICTS = {
 }
 FOLLOWUP_STATES = {
     "WAITING_USER_INPUT": "等待用戶補件",
+    "WAITING_VERIFICATION": "材料已收到，等待交叉驗證",
     "VERIFIED": "核心已驗證",
     "REJECTED": "已拒絕",
 }

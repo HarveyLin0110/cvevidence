@@ -79,7 +79,7 @@ def test_static_pc2_cannot_fill_unknown_pc3_and_new_titles_follow_saved_queries(
     pc3 = next(e for e in app.expander if e.label.startswith("PC3 ·"))
     assert "entry_reachable" in " ".join(t.value for t in pc2.text)
     assert "entry_reachable" not in " ".join(t.value for t in pc3.text)
-    assert "TEST_ONLY 運作觀測：尚待確認" in displayed(app)
+    assert "TEST_ONLY 運作觀測：此項條件仍需確認" in displayed(app)
     assert "缺少實際運作證據（MISSING）" in displayed(app)
     assert "需要進一步調查" in displayed(app)
     assert "RULE_GAP" in displayed(app) and "runtime/observation.json" in displayed(app)
@@ -100,7 +100,7 @@ def test_runtime_summary_is_saved_status_not_an_extra_verdict(status):
         assert "（" + status + "）" in output
         assert "受控環境本機觀測" in output and "不代表實體客戶 FW 認證" in output
         assert "需要進一步調查" in output
-    assert "TEST_ONLY 運作觀測：尚待確認" in displayed(app)
+    assert "TEST_ONLY 運作觀測：此項條件仍需確認" in displayed(app)
     assert payload == before
 
 
@@ -170,6 +170,14 @@ def test_rejected_evidence_keeps_correction_request_visible():
     for output in (displayed(app), report(payload)):
         assert "runtime/corrected.log" in output
         assert "此證據未通過驗證" in output
+
+def test_received_material_does_not_claim_completed_content_verification():
+    payload=pc3_sample()
+    payload['analyses'][0]['followup_queries'][0]['status']='WAITING_VERIFICATION'
+    app=app_for(payload)
+    assert not app.exception and not app.error
+    assert any('材料已收到，等待交叉驗證' in e.label for e in app.expander)
+    assert 'WAITING_VERIFICATION' in report(payload)
 
 
 def test_model_ask_user_waits_while_tool_completion_is_not_condition_verification():

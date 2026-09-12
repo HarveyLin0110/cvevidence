@@ -1,0 +1,141 @@
+{
+  "code_commit": "ca553815b8e4642735bac3bd1b3127811b580744",
+  "cve_id": "CVE-2023-38545",
+  "before_run_id": "000065f1-e080-411d-ac57-a88599eaa25f",
+  "after_run_id": "4f0df0fd-1fd8-49f3-9ba8-c8a995a1b284",
+  "before_context": "0de1d278eec2641a73be51310bf6605ba9a1d8b6097467b9d57d38c80509ab65",
+  "after_context": "859892b64599ab3475123ab27d7040e1e60e86519b2d1378cbdf9cf2898f084d",
+  "primary_artifact": {
+    "path": "install/bin/curl",
+    "sha256": "8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b"
+  },
+  "same_artifact": true,
+  "before_verdict": "NEEDS_INVESTIGATION",
+  "after_verdict": "AFFECTED",
+  "ai_status": "NEEDS_USER_INPUT",
+  "mode": "LIVE",
+  "model": "gpt-5.6-sol",
+  "api_calls": 5,
+  "ai_id": "292263d2-f5df-43fc-a464-ea2ced0ed5f4",
+  "ai_record_hash": "d973858728ae34ad4e3489bac8f46d2db89f66bf288f834c728fd6aff1eb2510",
+  "tasks": [
+    {
+      "question": "目前快照中是否已提交可供核對的 runtime 運作觀測、收據或原始輸出檔案？",
+      "action": "LIST",
+      "status": "COMPLETED",
+      "required_files": []
+    },
+    {
+      "question": "除檔名含 runtime 者外，快照中是否有 observation、運作收據或觀測檔可供 PC3 核對？",
+      "action": "LIST",
+      "status": "COMPLETED",
+      "required_files": []
+    },
+    {
+      "question": "已提交的 launcher 實際如何呼叫交付 curl，是否固定或外部帶入代理、DNS 模式、buffer 或 URL 等運作參數？",
+      "action": "READ",
+      "status": "COMPLETED",
+      "required_files": []
+    },
+    {
+      "question": "launcher 引用的交付配置 download.conf 是否已提交，可否直接核對代理類型、DNS 模式與 buffer 等實際預設設定？",
+      "action": "LIST",
+      "status": "COMPLETED",
+      "required_files": []
+    },
+    {
+      "question": "請由部署／維運負責人提供同一交付成品的一次既有正常運作紀錄，並由建置／發行負責人提供該次實際載入的 download.conf；該紀錄能否核對實際代理類型、DNS 解析模式、buffer 設定、輸入 URL、執行結果及執行環境？",
+      "action": "ASK_USER",
+      "status": "COMPLETED",
+      "required_files": [
+        "runtime/observation.json",
+        "runtime/該收據引用的原始 stdout-stderr 或等價執行日誌",
+        "install/etc/download.conf"
+      ]
+    }
+  ],
+  "followup_query_changes": [
+    {
+      "query_id": "DQ-160500d09d1c9fa6ba1f",
+      "change": "UPDATED",
+      "before_status": "WAITING_USER_INPUT",
+      "after_status": "VERIFIED",
+      "before": {
+        "context_hash": "0de1d278eec2641a73be51310bf6605ba9a1d8b6097467b9d57d38c80509ab65",
+        "evidence_ids": [],
+        "origin": "RULE_GAP",
+        "query_id": "DQ-160500d09d1c9fa6ba1f",
+        "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+        "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+        "required_files": [
+          "runtime/observation.json"
+        ],
+        "status": "WAITING_USER_INPUT",
+        "target_condition_id": "runtime_observation"
+      },
+      "after": {
+        "context_hash": "859892b64599ab3475123ab27d7040e1e60e86519b2d1378cbdf9cf2898f084d",
+        "evidence_ids": [
+          "E-17d6304bb92f1781103c0b1b7e0189fe597c8bede05ca0237290c4c7c58892d2"
+        ],
+        "origin": "RULE_GAP",
+        "query_id": "DQ-160500d09d1c9fa6ba1f",
+        "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+        "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+        "required_files": [
+          "runtime/observation.json"
+        ],
+        "status": "VERIFIED",
+        "target_condition_id": "runtime_observation"
+      }
+    },
+    {
+      "query_id": "DQ-25c900c7490c6eda2b40",
+      "change": "ADDED",
+      "before_status": null,
+      "after_status": "VERIFIED",
+      "before": null,
+      "after": {
+        "context_hash": "859892b64599ab3475123ab27d7040e1e60e86519b2d1378cbdf9cf2898f084d",
+        "evidence_ids": [
+          "E-75c9507cd7d7ef63a834b1930ed855e80eb37bf022c1db720fc4da8180ab5bdb"
+        ],
+        "origin": "RULE_GAP",
+        "query_id": "DQ-25c900c7490c6eda2b40",
+        "question": "請核對新收到的運作收據所引用的 runtime/download.conf，確認原始內容是否支持必要條件。",
+        "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+        "required_files": [
+          "runtime/download.conf"
+        ],
+        "status": "VERIFIED",
+        "target_condition_id": "runtime_observation"
+      }
+    },
+    {
+      "query_id": "DQ-9923a08c07c71dc4e465",
+      "change": "ADDED",
+      "before_status": null,
+      "after_status": "VERIFIED",
+      "before": null,
+      "after": {
+        "context_hash": "859892b64599ab3475123ab27d7040e1e60e86519b2d1378cbdf9cf2898f084d",
+        "evidence_ids": [
+          "E-a7afb951d5b902697b2607b41fc8a831b0a3388bdd948c826bb1444676f42a18"
+        ],
+        "origin": "RULE_GAP",
+        "query_id": "DQ-9923a08c07c71dc4e465",
+        "question": "請核對新收到的運作收據所引用的 runtime/socks5-wire.json，確認原始內容是否支持必要條件。",
+        "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+        "required_files": [
+          "runtime/socks5-wire.json"
+        ],
+        "status": "VERIFIED",
+        "target_condition_id": "runtime_observation"
+      }
+    }
+  ],
+  "immutable_parent": true,
+  "reload_engineering_and_ai": true,
+  "seconds": 217.223,
+  "acceptance_scope": "Real Runner and LIVE at ca55381; later hardening commits separately tested. Controlled localhost evidence, not customer device or exploit proof."
+}

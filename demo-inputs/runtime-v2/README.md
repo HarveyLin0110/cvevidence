@@ -4,8 +4,8 @@
 
 | 展示 | 初始上傳 | 同成品補件 | CVE |
 |---|---|---|---|
-| curl，建議主展示 | pc3_curl_static.tar.gz | supplement_pc3_curl_runtime.tar.gz | CVE-2023-38545 |
-| CMake，較快的備援 | pc3_cmake_static.tar.gz | supplement_pc3_cmake_runtime.tar.gz | CVE-2022-37434 |
+| curl，網路配置對照 | pc3_curl_static.tar.gz | supplement_pc3_curl_runtime.tar.gz | CVE-2023-38545 |
+| CMake，建議主展示、處理較快 | pc3_cmake_static.tar.gz | supplement_pc3_cmake_runtime.tar.gz | CVE-2022-37434 |
 | ROM／TLS | pc3_rom_static.tar.gz | supplement_pc3_rom_runtime.tar.gz | CVE-2014-0160 |
 
 ## 網頁操作與講法
@@ -38,4 +38,4 @@
 - 三者皆為 CONTROLLED_LOCAL_OBSERVATION；不是客戶實體設備驗證、來源認證、漏洞利用重現或已證明異常原因。收據與 SHA-256 只能支持材料一致性。解析器不執行使用者上傳的任何命令或檔案。
 - 今天僅支援這三個已審查格式。通用 PCAP、截圖 OCR、任意 FW 指令自動理解留待後續；未支援材料保持未知並要求原始、可核對輸出。
 
-在此目錄執行 `sha256sum -c SHA256SUMS` 核對六包。產生器為 tools/demo-data/runtime_demo.py，僅供操作人員對今天可信任的 factory build 重收正常紀錄；現有输出不可覆寫。全套 archive 約 29 MB。
+在此目錄執行 `sha256sum -c SHA256SUMS` 核對六包。產生器為 tools/demo-data/runtime_demo.py，僅供操作人員對今天可信任的 factory build 重收正常紀錄；現有输出不可覆寫。全套 archive 約 32 MB。

@@ -102,9 +102,12 @@ def assess(context,verified,statements=()):
         'rom':'提供同一 ROM hash 的 SDK/source、libssl 每個 object 的編譯紀錄、heartbeat 旗標與預處理輸出、實際 linker map。',
         'cmake':'提供同次產品 source、CMake compile/link 紀錄、libz.a 與 linker map，核對 inflateGetHeader 及 extra/chunk 容量。',
         'curl':'提供同成品 hash 的 launcher/config、libcurl 與 compiler/link 紀錄，以及 SOCKS5 DNS/握手與 buffer 設定觀測。'}
+    next_steps = [playbook[context.manifest['format']]]
+    if guards and not reviews and not conflicts and all(states[k]=='SUPPORTED' for k in NECESSARY if k!='runtime_observation') and states['runtime_observation']=='UNKNOWN':
+        next_steps = ['PC2 工程證據已齊全；請補同成品 runtime/observation.json 及其引用的正常運作原始輸出／配置，或覆核不一致的材料。']
     result={'schema_version':'1.0','cve_id':verified.cve_id,'profile_version':verified.profile_version,'context_hash':context.context_hash,
             'verdict':verdict,'reason':reason,'conditions':conditions,'conflicts':conflicts,'statement_reviews':reviews,'gaps':gaps,
-            'next_steps':[playbook[context.manifest['format']]] if verdict=='NEEDS_INVESTIGATION' else ['由工程師覆核成品範圍、交付紀錄可信度與實際部署環境。'],
+            'next_steps':next_steps if verdict=='NEEDS_INVESTIGATION' else ['由工程師覆核成品範圍、交付紀錄可信度與實際部署環境。'],
             'blocked_conditions':blocked if guards else [],'evidence_ids':[r['evidence_id'] for r in verified.records],
             'source_advisories':CATALOG[verified.cve_id]['sources'],'human_review_required':True,'provenance_verified':False,
             'scope':'只涵蓋目前提交的成品與已審查程式路徑；未證明實際部署暴露、漏洞已被利用或異常由此 CVE 造成。',

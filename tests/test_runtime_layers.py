@@ -59,6 +59,7 @@ def test_same_artifact_pc2_unchanged_only_runtime_advances(real_cases,family):
     normalized=lambda entry:[{**r,'excerpts':[{k:v for k,v in x.items() if k!='context_hash'} for x in r['excerpts']]} for r in static(entry)]
     assert normalized(a)==normalized(b)
     assert a['runtime_observation']['status']=='MISSING'
+    assert any('runtime/observation.json' in step for step in a['assessment']['next_steps'])
     assert b['runtime_observation']['evidence_basis']=='CONTROLLED_LOCAL_OBSERVATION'
     assert not b['runtime_observation']['provenance_verified']
     assert len(a['queries'])==len(b['queries'])==5
@@ -99,6 +100,43 @@ def test_observation_claim_cannot_bypass_evidence_validation(real_cases,tmp_path
     assert entry['assessment']['verdict']=='NEEDS_INVESTIGATION'
     assert entry['assessment']['conflicts']
     assert not any(c['state']=='BLOCKED' for c in entry['assessment']['conditions'])
+    if mutation in ('misleading_text', 'wrong_program'):
+        assert all(q['status']=='REJECTED' for q in entry['followup_queries'])
+
+
+def test_present_raw_material_waits_for_missing_peer_before_content_verification(real_cases,tmp_path):
+    initial,complete,_,_=real_cases['cmake']
+    target=tmp_path/'partial';shutil.copytree(initial.root,target,symlinks=True)
+    (target/'runtime').mkdir()
+    for name in ('observation.json','normal.log'):
+        shutil.copyfile(complete.root/'runtime'/name,target/'runtime'/name)
+    entry=analyze_package(refresh(target),[CASES['cmake']])['analyses'][0]
+    assert [q['status'] for q in entry['followup_queries']]==['VERIFIED','WAITING_VERIFICATION','WAITING_USER_INPUT']
+    assert entry['assessment']['verdict']=='NEEDS_INVESTIGATION'
+
+
+@pytest.mark.parametrize('family,mutation',[
+    ('rom','unrelated_program'),('curl','unbound_config'),('cmake','unbound_sample'),
+    ('cmake','truncated'),('cmake','bad_crc'),('cmake','false_output_length')])
+def test_review_findings_commands_and_complete_normal_gzip(real_cases,family,mutation):
+    root=real_cases[family][1].root
+    receipt=json.loads((root/'runtime/observation.json').read_text())
+    names=['capture']+(['configuration'] if family=='curl' else ['sample'] if family=='cmake' else [])
+    materials={name:(root/receipt[name]['path']).read_bytes() for name in names}
+    paths={name:receipt[name]['path'] for name in names}
+    if mutation=='unrelated_program':receipt['command']['argv']=['echo','tcp_smoke.py']
+    elif mutation=='unbound_config':paths['configuration']='runtime/other.conf'
+    elif mutation=='unbound_sample':paths['sample']='runtime/other.gz'
+    elif mutation=='truncated':
+        length=int.from_bytes(materials['sample'][10:12],'little')
+        materials['sample']=materials['sample'][:12+length]
+    elif mutation=='bad_crc':
+        sample=bytearray(materials['sample']);sample[-8]^=1;materials['sample']=bytes(sample)
+    else:
+        import re
+        materials['capture']=re.sub(rb'output_bytes=\d+',b'output_bytes=999999',materials['capture'])
+    with pytest.raises(ValueError):
+        _validate_behavior(family,materials,receipt['command'],material_paths=paths)
 
 
 def test_followup_query_tampering_is_rejected_by_verifier(real_cases):

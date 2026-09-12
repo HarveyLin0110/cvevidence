@@ -8,6 +8,7 @@ import json
 import math
 import re
 import struct
+import zlib
 from pathlib import PurePosixPath
 from .integrity import digest
 
@@ -54,6 +55,8 @@ def collect_operational(b, cve):
     ids = []
     excerpts = []
     active_query = receipt_query
+    material_queries = []
+    behavior_started = False
     try:
         if not receipt_pair:
             b.gap('Q5_PATH', '請補 runtime/observation.json：同 build／成品、收集時間、執行命令及原始觀測檔案。')
@@ -99,6 +102,7 @@ def collect_operational(b, cve):
             if not path.startswith('runtime/') or '..' in PurePosixPath(path).parts or not re.fullmatch(r'[a-f0-9]{64}', ref.get('sha256', '')):
                 raise ValueError('觀測來源定位或 hash 無效')
             active_query = _query(b, cve, path, '請核對新收到的運作收據所引用的 ' + path + '，確認原始內容是否支持必要條件。')
+            material_queries.append(active_query)
             pair = c.by_path(path)
             if not pair:
                 missing = True
@@ -108,31 +112,42 @@ def collect_operational(b, cve):
                 raise ValueError('運作原始材料 hash／大小不符：' + path)
             materials[name] = pair[0].read_bytes()
             ids.append(pair[1]['source_id'])
-            active_query['status'] = 'VERIFIED'
+            active_query['status'] = 'WAITING_VERIFICATION'
             active_query['evidence_ids'] = [b.emit('Q5_PATH', 'runtime_material_' + name, True, [pair[1]['source_id']],
                 '收據引用與原始材料 bytes 一致；內容意義由後續格式規則核對。')['evidence_id']]
             excerpt = b.excerpt(path, '') if name != 'sample' else None
             if excerpt: excerpts.append(excerpt)
         if missing:
             return
+        behavior_started = True
         _validate_behavior(c.manifest['format'], materials, command,
-                           component_version=(facts.get('component') or {}).get('version'))
+                           component_version=(facts.get('component') or {}).get('version'),
+                           material_paths={name: receipt[name]['path'] for name in needed})
+        for query in material_queries:
+            query['status'] = 'VERIFIED'
         summary.update(status='VERIFIED', description='同成品正常運作紀錄與必要配置已由對應格式規則核對；不是漏洞重現或實體設備認證。')
     except (ValueError, KeyError, TypeError, UnicodeError, OverflowError, IndexError) as error:
         summary.update(status='REJECTED', description='運作證據不一致或不足，保留未知並要求覆核。')
         active_query['status'] = 'REJECTED'
+        if behavior_started:
+            # These records must agree as a set. Do not bless a bad capture while
+            # blaming whichever unrelated file happened to be visited last.
+            for query in b.followup_queries:
+                query['status'] = 'REJECTED'
+                query['reason'] = '收據、命令與原始材料的交叉驗證未通過；hash 一致仍不足以證明內容，請覆核此資料組合。'
         b.conflict('Q5_PATH', 'PC3 運作證據需覆核：' + str(error)[:240])
     finally:
         b.emit('Q5_PATH', 'runtime_observation', True if summary['status'] == 'VERIFIED' else None,
                ids, summary['description'], excerpts)
 
 
-def _validate_behavior(family, materials, command, component_version=None):
+def _validate_behavior(family, materials, command, component_version=None, material_paths=None):
+    material_paths = material_paths or {'configuration': 'runtime/download.conf', 'sample': 'runtime/normal.gz'}
     if family == 'rom':
         text = materials['capture'].decode('utf-8')
         markers = ('transport=TCP bind=127.0.0.1', 'tls_client_roundtrip=ok protocol=TLSv1.2 openssl=OpenSSL 1.0.1f',
                    'tls_server_receive=ok', 'normal_tcp_tls=ok no_attack_payload=true')
-        if not all(x in text for x in markers) or 'tcp_smoke.py' not in ' '.join(command['argv']):
+        if not all(x in text for x in markers) or command['argv'] != ['python3', 'tcp_smoke.py', 'unpacked/bin/device-management']:
             raise ValueError('未支持正常 TLS 入口運作；單純原碼或截圖不構成此格式的觀測')
     elif family == 'cmake':
         text = materials['capture'].decode('utf-8').strip()
@@ -145,7 +160,15 @@ def _validate_behavior(family, materials, command, component_version=None):
         length = struct.unpack('<H', sample[10:12])[0]
         if not 0 < length <= 32 or length != int(match[2]) or len(sample) < 12 + length or int(match[3]) <= 0:
             raise ValueError('gzip 樣本與正常操作輸出不一致')
-        if command['argv'][0] != SUBJECTS[family] or 'runtime/normal.gz' not in command['argv']:
+        try:
+            decoder = zlib.decompressobj(wbits=31)
+            output = decoder.decompress(sample, 1_000_001)
+            if (len(output) > 1_000_000 or not decoder.eof or decoder.unused_data
+                    or decoder.unconsumed_tail or len(output) != int(match[3])):
+                raise ValueError('gzip 不完整、超過正常樣本上限或輸出長度不符')
+        except zlib.error as error:
+            raise ValueError('gzip 壓縮資料或 CRC／trailer 未通過完整性驗證') from error
+        if command['argv'] != [SUBJECTS[family], material_paths['sample']]:
             raise ValueError('運作命令未指向此成品及樣本')
     else:
         trace = json.loads(materials['capture'])
@@ -166,7 +189,7 @@ def _validate_behavior(family, materials, command, component_version=None):
             values[key]=value.strip().strip('"')
         if not re.fullmatch(r'127\.0\.0\.1:\d+', values.get('socks5-hostname', '').strip()) or values.get('limit-rate', '').strip() != '16384' or values.get('noproxy', '').strip() != '':
             raise ValueError('本 profile 的 SOCKS5／buffer 配置未獲支持')
-        if len(command['argv']) != 5 or command['argv'][:4] != ['install/bin/curl', '--config', 'runtime/download.conf', '--url']:
+        if len(command['argv']) != 5 or command['argv'][:4] != ['install/bin/curl', '--config', material_paths['configuration'], '--url']:
             raise ValueError('命令未綁定已觀測配置')
         from urllib.parse import urlsplit
         target = urlsplit(command['argv'][command['argv'].index('--url') + 1])
