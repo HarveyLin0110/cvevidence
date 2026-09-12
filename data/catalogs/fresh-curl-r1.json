@@ -1,0 +1,100 @@
+{
+  "created_at": "2026-09-12T04:35:54.968791+00:00",
+  "dataset_version": "fresh-curl-r1",
+  "notes": [
+    "Fresh 2026-09-12 builds; expected verdicts are not distributed in this catalog.",
+    "Download location pending team artifact delivery.",
+    "Official OSS license files included in source trees."
+  ],
+  "packages": [
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "07_curl.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-curl-r1/07_curl.tar.gz",
+        "sha256": "cf66e7399e1b14fd4affac60eb5dddc7117a18e69794f5b5cff0a0c2937eecd9",
+        "size_bytes": 11902619
+      },
+      "base_package_id": null,
+      "build_id": "curl-20260912T042308-c3d8d9",
+      "file_count": 6250,
+      "format": "curl",
+      "kind": "initial",
+      "manifest_sha256": "224bbf77e1fecc0e4ae1680e01b4390879ba867ffcbdbb07ad3ac97f50c1ea1c",
+      "package_id": "07_curl",
+      "primary_artifact": {
+        "path": "install/bin/curl",
+        "sha256": "7042b54e3f656cf26d5c24333b56e1139dab855db49b510d90a136646cf590b8"
+      },
+      "product_id": "fresh-curl",
+      "release_id": "curl-20260912T042308-c3d8d9"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "08_curl.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-curl-r1/08_curl.tar.gz",
+        "sha256": "5623ee16d632586050b20140ee4e3b02db76c78a21983b1d20493e19a65aa64b",
+        "size_bytes": 11903714
+      },
+      "base_package_id": null,
+      "build_id": "curl-20260912T042915-c1d3fd",
+      "file_count": 6254,
+      "format": "curl",
+      "kind": "initial",
+      "manifest_sha256": "ac8a39593e6e78d49cbd9227b418f644da397f4db505ab8d99b37838d16c958a",
+      "package_id": "08_curl",
+      "primary_artifact": {
+        "path": "install/bin/curl",
+        "sha256": "ef4673ef7578d635676ce4e89d1e1c0dd97a19940ad049dd18c5380945bed311"
+      },
+      "product_id": "fresh-curl",
+      "release_id": "curl-20260912T042915-c1d3fd"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "09_curl.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-curl-r1/09_curl.tar.gz",
+        "sha256": "5b032bb5451e576dff9cca26796db4b9f1c1ce19fc71db82dc24519bb26f91a7",
+        "size_bytes": 11901046
+      },
+      "base_package_id": null,
+      "build_id": "curl-20260912T042308-c3d8d9",
+      "file_count": 6245,
+      "format": "curl",
+      "kind": "initial",
+      "manifest_sha256": "13414c29e438623984d2bc3b92a9263e2c19875190fccbc3ecac2b73d9f779a1",
+      "package_id": "09_curl",
+      "primary_artifact": {
+        "path": "install/bin/curl",
+        "sha256": "7042b54e3f656cf26d5c24333b56e1139dab855db49b510d90a136646cf590b8"
+      },
+      "product_id": "fresh-curl",
+      "release_id": "curl-20260912T042308-c3d8d9"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "supplement_09_curl.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-curl-r1/supplement_09_curl.tar.gz",
+        "sha256": "4c840b046aa215bee397f7a002feacc4b5e4ded070a8df9676f0604b19af6b41",
+        "size_bytes": 1842
+      },
+      "base_package_id": "09_curl",
+      "build_id": "curl-20260912T042308-c3d8d9",
+      "file_count": 5,
+      "format": "curl",
+      "kind": "supplement",
+      "manifest_sha256": "a5bf56150aa41336ba2661afd6dbd113be30ec50a879db4d5c39e705e720b0cb",
+      "package_id": "supplement_09_curl",
+      "primary_artifact": {
+        "path": "install/bin/curl",
+        "sha256": "7042b54e3f656cf26d5c24333b56e1139dab855db49b510d90a136646cf590b8"
+      },
+      "product_id": "fresh-curl",
+      "release_id": "curl-20260912T042308-c3d8d9"
+    }
+  ],
+  "schema_version": "1.0"
+}

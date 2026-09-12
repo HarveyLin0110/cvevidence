@@ -1,0 +1,219 @@
+"""Actual local source workspace; all collection/supplement calls share Runner."""
+import os
+from pathlib import Path
+from .runner import Runner
+from .storage import RunStore
+from .reports import report, compare, excerpt
+from .core_service import catalog_entries
+
+PAGES = ["01 產品與資料來源", "02 資料確認與缺件", "03 分析進度與結果", "04 報告與後續行動"]
+
+def controlled_path(value):
+    root = Path(os.environ.get("CVEVIDENCE_ARTIFACT_ROOT", "var/artifacts")).resolve()
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError("Use an artifact-root relative path")
+    path = (root / relative).resolve(strict=True)
+    if not path.is_relative_to(root) or not path.is_file():
+        raise ValueError("Archive outside configured root")
+    return path
+
+def navigate(st, page):
+    st.session_state.step = page
+
+def next_button(st, page, label="下一步", disabled=False):
+    st.button(label, disabled=disabled, on_click=navigate, args=(st,page))
+
+def source_viewer(st, runner, run):
+    st.subheader("來源檢視")
+    st.caption("直接讀取本次保存工程包；每次操作重新核對 archive、manifest 與 context hash。")
+    if not run.sources:
+        if run.evidence:
+            selected=st.selectbox("舊版來源", [e.evidence_id for e in run.evidence])
+            try: st.code(excerpt(runner.store,run.run_id,selected),language=None)
+            except (ValueError, OSError, RuntimeError): st.error("原文核對失敗。")
+        return
+    filter_text=st.text_input("依檔案路徑篩選",max_chars=200,key="filter-"+run.run_id)
+    choices=[s for s in run.sources if s.kind=="file" and filter_text.casefold() in s.path.casefold()]
+    st.caption(f"符合 {len(choices)} 個檔案；列表最多顯示 300 個，可用路徑縮小範圍。")
+    rows={s.source_id:s for s in choices[:300]}
+    if rows:
+        selected=st.selectbox("選擇原始檔案",list(rows),format_func=lambda sid:rows[sid].path,
+            key="source-"+run.run_id)
+        first=st.number_input("起始行",min_value=1,value=1,step=1)
+        if st.button("讀取並核對原文"):
+            try:
+                result=runner.source_tool(run.run_id,"excerpt",source_id=selected,
+                    start_line=int(first),end_line=int(first)+59)
+                st.caption(f'{result["excerpt_id"]} · {result["start_line"]}–{result["end_line"]}')
+                st.code(result["text"],language=None)
+            except (ValueError, OSError, RuntimeError): st.error("無法讀取：可能為二進位、超出文字／行範圍，或完整性失敗。")
+        if len(rows)>1:
+            right=st.selectbox("另一個來源（比較）",list(rows),format_func=lambda sid:rows[sid].path,
+                key="right-"+run.run_id)
+            if st.button("比較兩份原文"):
+                try: st.json(runner.source_tool(run.run_id,"compare",left_id=selected,right_id=right))
+                except (ValueError, OSError, RuntimeError): st.error("來源比較失敗，未顯示未核對內容。")
+    term=st.text_input("全文搜尋（字面比對）",max_chars=200,key="term-"+run.run_id)
+    if st.button("搜尋本次資料",disabled=not term.strip()):
+        try:
+            result=runner.source_tool(run.run_id,"search",term=term,limit=20)
+            st.caption(f'找到 {len(result["matches"])} 段；略過 {result["skipped_nontext_or_large"]} 個非文字／大型來源。')
+            for match in result["matches"]:
+                st.caption(match["source_id"]+" · "+str(match["start_line"]))
+                st.code(match["text"],language=None)
+            if result["truncated"]: st.info("已達結果上限，請縮小關鍵字範圍。")
+        except (ValueError, OSError, RuntimeError): st.error("搜尋失敗，未顯示部分結果。")
+
+def workspace(st):
+    st.set_page_config(page_title="CVEvidence · 工程查核",layout="wide")
+    store=RunStore(os.environ.get("CVEVIDENCE_STORE","var/runtime"))
+    runner=Runner(store)
+    st.title("CVEvidence · 工程查核")
+    st.caption("Horace 核心已接通：工程包匯入、候選、原文工具、同 build 補件。工程判定與 AI 尚未執行。")
+    st.session_state.setdefault("selected_run",None)
+    page=st.sidebar.radio("查核步驟",PAGES,key="step")
+    runs, rejected=store.inspect_history()
+    if rejected:
+        st.sidebar.warning(f"{len(rejected)} 筆歷史紀錄無法核對，已排除顯示；原檔保留。")
+        with st.sidebar.expander("歷史紀錄問題"):
+            st.json(rejected)
+    if runs:
+        labels={r.run_id:((r.input_package.package_id if r.input_package else "匯入失敗")+" · "+r.created_at[:19]+" · "+r.run_id[:8]) for r in runs}
+        chosen=st.sidebar.selectbox("保存的查核紀錄",["—"]+list(labels),
+            format_func=lambda value: labels.get(value,value),key="history_select")
+        if chosen!="—" and st.sidebar.button("載入查核紀錄"):
+            st.session_state.selected_run=chosen
+    run=None
+    if st.session_state.selected_run:
+        try:
+            run=store.read(st.session_state.selected_run)
+        except (ValueError,OSError):
+            st.error("選取紀錄不存在、版本不相容或已損壞。請重新選擇紀錄，原檔未修改。")
+            st.session_state.selected_run=None
+    st.sidebar.caption("01 匯入 → 02 確認 → 03 來源調查 → 04 匯出與補件。Q1–Q5／AI 尚未交付。")
+    entries=catalog_entries(Path(__file__).resolve().parents[2])
+    if page==PAGES[0]:
+        st.subheader("從產品與情境開始")
+        kind=st.radio("資料來源",["產品／版本樣品","上傳工程包","受控路徑"],horizontal=True)
+        available=[e for e in entries if e["available"] and e["kind"]=="initial"]
+        selected=None
+        upload=None
+        path=""
+        if kind=="產品／版本樣品":
+            if available:
+                index=st.selectbox("選擇已取得的產品／建置／資料包",range(len(available)),
+                    format_func=lambda i:available[i]["product_id"]+" · "+available[i]["package_id"]+" · "+available[i]["dataset"])
+                selected=available[index]
+                st.caption("Build: "+selected["build_id"])
+            else: st.info("索引已取得，工程包尚未下載至本機。請上傳或提供受控路徑。")
+            with st.expander("查看資料交付狀態"):
+                st.dataframe([{"資料版":e["dataset"],"資料包":e["package_id"],"可用":"已取得" if e["available"] else "等待資料交付"} for e in entries],hide_index=True)
+        elif kind=="上傳工程包":
+            upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
+        else:
+            st.caption("根目錄："+os.environ.get("CVEVIDENCE_ARTIFACT_ROOT","var/artifacts"))
+            path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
+        cve=st.text_input("CVE ID（選填，留白依實際元件探索）",placeholder="CVE-2022-37434")
+        symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
+        ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
+        if st.button("匯入並建立查核",type="primary",disabled=not ready):
+            try:
+                with st.spinner("核對工程包並建立不可變紀錄…"):
+                    kwargs=dict(cve=cve.strip().upper(),symptom=symptom)
+                    if selected:
+                        result=runner.start_file(selected["local_path"],archive_sha256=selected["archive"]["sha256"],
+                            manifest_sha256=selected["manifest_sha256"],**kwargs)
+                    elif upload:
+                        upload.seek(0)
+                        result=runner.start_file(stream=upload,**kwargs)
+                    else: result=runner.start_file(controlled_path(path),**kwargs)
+                st.session_state.selected_run=result.run_id
+                run=result
+                if result.error: st.error(result.error.code+"：收件失敗，沒有產生分析判定。")
+                else: st.success("已依 manifest 辨識產品／build、核對檔案並保存。")
+            except (ValueError,OSError): st.error("請檢查 CVE、工程包或受控路徑。")
+        next_button(st,PAGES[1],"下一步：確認資料",disabled=run is None or bool(run.error))
+        return
+    if run is None:
+        st.info("請先匯入工程包，或從側邊載入保存的紀錄。")
+        next_button(st,PAGES[0],"返回資料來源")
+        return
+    st.caption("Run: "+run.run_id+" · "+run.status)
+    if run.error:
+        st.error(run.error.code+"：本次操作失敗；父 run 與原始資料保留。")
+        if page!=PAGES[3]:
+            next_button(st,PAGES[3],"查看失敗紀錄")
+            return
+    if page==PAGES[1]:
+        st.subheader("資料確認與缺件")
+        if run.input_package:
+            p=run.input_package
+            cols=st.columns(3)
+            cols[0].metric("產品",p.product_id)
+            cols[1].metric("資料包",p.package_id)
+            cols[2].metric("已核對来源數",len(run.sources or run.evidence))
+            with st.expander("建置身分與完整性"): st.json(p.model_dump())
+        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠須等待 Q1–Q5 查核。")
+        if run.missing:
+            for item in run.missing: st.text(item)
+        st.subheader("候選 CVE")
+        candidates=run.candidates.get("candidates",[])
+        if candidates:
+            for item in candidates:
+                st.text(item["cve_id"]+" · "+item["status"])
+                with st.expander("查看候選來源 "+item["cve_id"]): st.json(item)
+        else: st.info("目前三項 profile 沒有候選命中，不代表沒有漏洞。")
+        st.caption("候選命中 ≠ 產品受影響 ≠ 異常原因。")
+        next_button(st,PAGES[2],"下一步：調查來源")
+    elif page==PAGES[2]:
+        st.subheader("分析進度")
+        st.dataframe([{"查核":q,"對應":pc,"狀態":"NOT_RUN · 等待 Horace 交付"} for q,pc in
+            [("Q1_COMPONENT","PC1"),("Q2_BUILD","PC2"),("Q3_IMPLEMENTATION","PC2"),
+             ("Q4_BINDING","PC3"),("Q5_PATH","PC3")]],hide_index=True)
+        st.button("執行 Q1–Q5 與正式判定（待核心交付）",disabled=True)
+        source_viewer(st,runner,run)
+        st.subheader("AI 查核建議")
+        st.info("AI NOT_RUN；沒有呼叫模型、沒有產生 AI 建議。可先補來源材料或工程師說明。")
+        next_button(st,PAGES[3],"下一步：查核紀錄與補件")
+    else:
+        st.subheader("查核紀錄與後續行動")
+        text=report(run)
+        st.code(text,language=None)
+        st.download_button("下載查核紀錄",text,file_name=run.run_id+".txt",mime="text/plain")
+        if run.parent_run_id:
+            st.subheader("與父 run 比較")
+            st.json(compare(store.read(run.parent_run_id),run))
+        if not run.error:
+            st.subheader("補充資料，保留前後紀錄")
+            real=bool(run.input_package and run.input_package.context_hash)
+            matching=[e for e in entries if real and e["available"] and e["kind"]=="supplement"
+                and e["base_package_id"]==run.input_package.package_id
+                and e["build_id"]==run.input_package.declared_build_id]
+            if matching:
+                selected_delta=st.selectbox("已取得的同 build 補件",range(len(matching)),
+                    format_func=lambda i:matching[i]["package_id"]+" · "+matching[i]["dataset"])
+                if st.button("套用已取得的補件並建立新 run"):
+                    with st.spinner("核心正在驗證補件…"):
+                        item=matching[selected_delta]
+                        child=runner.supplement_file(run.run_id,path=item["local_path"],
+                            archive_sha256=item["archive"]["sha256"],manifest_sha256=item["manifest_sha256"])
+                    st.session_state.selected_run=child.run_id
+                    st.rerun()
+            with st.form("supplement-"+run.run_id):
+                delta=st.file_uploader("同 build 增量補件 tar.gz / ZIP" if real else "完整替換快照 ZIP",
+                    type=["zip","gz","tar"],max_upload_size=512,key="replacement-"+run.run_id)
+                note=st.text_area("人工補充說明（待覆核）",max_chars=4000,key="note-"+run.run_id)
+                send=st.form_submit_button("保存補件並建立新 run")
+            st.caption("核心會核對產品／release／build／成品與既有檔案；不同 build 或衝突拒收，原 run 保留。文字不直接改判定。")
+            if send:
+                try:
+                    with st.spinner("驗證同 build 補件…"):
+                        if real:
+                            if delta: delta.seek(0)
+                            child=runner.supplement_file(run.run_id,stream=delta,note=note)
+                        else: child=runner.supplement(run.run_id,delta.getvalue() if delta else None,note)
+                    st.session_state.selected_run=child.run_id
+                    st.rerun()
+                except (ValueError,OSError): st.error("補件未保存，請提供資料或說明。")
+            next_button(st,PAGES[1],"回到資料確認")

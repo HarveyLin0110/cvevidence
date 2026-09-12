@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cvevidence-core"
+version = "0.1.0"
+description = "Evidence-grounded CVE engineering assessment core, freshly implemented 2026-09-12"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+cvevidence-core = "cvevidence_core.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

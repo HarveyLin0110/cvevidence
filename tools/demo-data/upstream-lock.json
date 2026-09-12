@@ -1,0 +1,52 @@
+{
+  "curl-8.3.0.tar.xz": {
+    "requested_url": "https://curl.se/download/curl-8.3.0.tar.xz",
+    "resolved_url": "https://curl.se/download/curl-8.3.0.tar.xz",
+    "version": "curl 8.3.0",
+    "license": "curl",
+    "sha256": "376d627767d6c4f05105ab6d497b0d9aba7111770dd9d995225478209c37ea63",
+    "size_bytes": 2641764,
+    "acquired_at": "2026-09-12T04:11:49.404472+00:00",
+    "origin": "fresh official upstream download"
+  },
+  "curl-socks5.patch": {
+    "requested_url": "https://github.com/curl/curl/commit/fb4415d8aee6c1.patch",
+    "resolved_url": "https://github.com/curl/curl/commit/fb4415d8aee6c1.patch",
+    "version": "curl official SOCKS5 fix",
+    "license": "curl",
+    "sha256": "ed2002abf86f10eba31604374f4c29e2077d0e7c284dbf8da037b9d3c86485c3",
+    "size_bytes": 4223,
+    "acquired_at": "2026-09-12T04:11:49.959371+00:00",
+    "origin": "fresh official upstream download"
+  },
+  "openssl-1.0.1f.tar.gz": {
+    "requested_url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/OpenSSL_1_0_1f",
+    "resolved_url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/OpenSSL_1_0_1f",
+    "version": "OpenSSL 1.0.1f",
+    "license": "OpenSSL/SSLeay",
+    "sha256": "3be4a1bbda8215d135b4403d84a06cafa2bcb88555e19d4db0930e187375bf9b",
+    "size_bytes": 4496270,
+    "acquired_at": "2026-09-12T04:11:43.993255+00:00",
+    "origin": "fresh official upstream download"
+  },
+  "zlib-1.2.12.tar.gz": {
+    "requested_url": "https://zlib.net/fossils/zlib-1.2.12.tar.gz",
+    "resolved_url": "https://zlib.net/fossils/zlib-1.2.12.tar.gz",
+    "version": "zlib 1.2.12",
+    "license": "Zlib",
+    "sha256": "91844808532e5ce316b3c010929493c0244f3d37593afd6de04f71821d5136d9",
+    "size_bytes": 1490071,
+    "acquired_at": "2026-09-12T04:11:46.552392+00:00",
+    "origin": "fresh official upstream download"
+  },
+  "zlib-1.2.13.tar.gz": {
+    "requested_url": "https://zlib.net/fossils/zlib-1.2.13.tar.gz",
+    "resolved_url": "https://zlib.net/fossils/zlib-1.2.13.tar.gz",
+    "version": "zlib 1.2.13",
+    "license": "Zlib",
+    "sha256": "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
+    "size_bytes": 1497445,
+    "acquired_at": "2026-09-12T04:11:48.376907+00:00",
+    "origin": "fresh official upstream download"
+  }
+}

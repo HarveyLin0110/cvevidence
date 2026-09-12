@@ -1,0 +1,69 @@
+{
+  "checked_at": "2026-09-12",
+  "horace_commit": "b71926f",
+  "archive_checks": "12/12",
+  "local_tests": 56,
+  "scope": "Intake, sources, delta, report only. Engineering and AI NOT_RUN.",
+  "datasets": [
+    {
+      "dataset": "fresh-rom-r2",
+      "initial_packages_passed": 3,
+      "parent_run_id": "f6ab3f63-e193-4fac-8ffd-aa8cda12a0a3",
+      "child_run_id": "27367d14-6a3c-4c21-ae8a-252b00856c98",
+      "sources_before": 432,
+      "sources_after": 4294,
+      "added": 3862,
+      "wrong_build_rejected": true,
+      "source_list_search_excerpt_compare": "PASS",
+      "report": "PASS",
+      "engineering": "NOT_RUN",
+      "AI": "NOT_RUN",
+      "archive_hashes": {
+        "01_rom": "62d3adf9c3fd1556bf8094e91e2dfae85e2a1c7c37815b78d028a6a26b6b2dcc",
+        "02_rom": "bdc9ce2b3b33002f299ef836f838c4bef8265b24d8fd503f32f47cde672a14d7",
+        "03_rom": "51a6edc8beb71530761eb486fba6f4c5cda029f65d12ed36c8a5a81dcf2bd7e0",
+        "supplement_03_rom": "fef8205ee05fdc6383725469fa85e4a550dd368b06c974bde2d3599b1e63749f"
+      }
+    },
+    {
+      "dataset": "fresh-cmake-r2",
+      "initial_packages_passed": 3,
+      "parent_run_id": "c9c0c129-1cae-403d-9cf8-20f7a53db4d4",
+      "child_run_id": "e6f62b62-40bb-4cc7-9d33-538865dc0295",
+      "sources_before": 260,
+      "sources_after": 409,
+      "added": 149,
+      "wrong_build_rejected": true,
+      "source_list_search_excerpt_compare": "PASS",
+      "report": "PASS",
+      "engineering": "NOT_RUN",
+      "AI": "NOT_RUN",
+      "archive_hashes": {
+        "04_cmake": "b9fb05eef063b53d85c29ebcb5076963cf7927a04ebeafdf1cf0b940bdaba5a0",
+        "05_cmake": "99aa904a483062627751a3b9adae7108a1443613e75421734fc004689feb8e60",
+        "06_cmake": "f49dce2610e68ddff8bf458173bcb15aaa4624d30ce9188f64e6d91feb061d54",
+        "supplement_06_cmake": "c7c962875303ef7ed258cbc29d46c513acef7d0df6033dc44c964f27122a8e3a"
+      }
+    },
+    {
+      "dataset": "fresh-curl-r2",
+      "initial_packages_passed": 3,
+      "parent_run_id": "9fc64451-8ad5-488a-aff3-6b3eefce3159",
+      "child_run_id": "ac6af55d-b9ca-4e12-a83d-df423ed38025",
+      "sources_before": 6245,
+      "sources_after": 6250,
+      "added": 5,
+      "wrong_build_rejected": true,
+      "source_list_search_excerpt_compare": "PASS",
+      "report": "PASS",
+      "engineering": "NOT_RUN",
+      "AI": "NOT_RUN",
+      "archive_hashes": {
+        "07_curl": "2626bec3dae8b9bfc4e245046cd4059dd22afad8d5dff8decdda680d1c5e0c57",
+        "08_curl": "4a9a34f41d0a0c997c64ddd19b68cd7da16b8ea656364d597b0dcb172a554f5f",
+        "09_curl": "54b22a5b2af4414d2edb805ffc3ba54c55584edba1b5f772e6f861c865ab161e",
+        "supplement_09_curl": "58b9cb30157708b05c5bf2660cf11a171efc3744a47a71f8fefe55b1e7f835f0"
+      }
+    }
+  ]
+}
