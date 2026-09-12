@@ -5,7 +5,7 @@ The next contract revision must add stages/facts/assessment/AI separately.
 """
 import hashlib,pathlib,tempfile
 from contextlib import contextmanager
-from .integrity import ingest_package,safe_extract,IntegrityError
+from .integrity import ingest_package,safe_extract,IntegrityError,file_hash
 
 @contextmanager
 def package_from_bytes(payload:bytes):
@@ -29,3 +29,24 @@ def read_evidence_for_runner(payload:bytes,record:dict)->bytes:
    if record.get(field)!=row[field]:raise IntegrityError('Evidence reference differs from this archive')
   if row['size']>1024*1024:raise IntegrityError('Preview exceeds 1 MiB; add a ranged source reference in the next contract')
   return path.read_bytes()
+
+def analyze_archive_for_runner(archive_path,options=None,*,expected_archive_sha256=None,expected_context_hash=None,
+                               temporary_root=None,env_file=None,event_callback=None):
+ """New stage proposal. File references/config are trusted Runner inputs, never AI tools."""
+ from .workflow import analyze_package
+ archive=pathlib.Path(archive_path)
+ if archive.is_symlink() or not archive.is_file() or not 0<archive.stat().st_size<=512*1024*1024:raise IntegrityError('無效的工程壓縮包')
+ actual=file_hash(archive)
+ if expected_archive_sha256 and actual!=expected_archive_sha256:raise IntegrityError('工程壓縮包 hash 不一致')
+ options=options or {}
+ if set(options)-{'requested_cves','symptom','statements','claims','mode'}:raise ValueError('不支援的分析選項')
+ temp=pathlib.Path(temporary_root) if temporary_root else pathlib.Path.cwd()/'var/intake-temporary'
+ temp.mkdir(parents=True,exist_ok=True)
+ with tempfile.TemporaryDirectory(prefix='analysis-',dir=temp) as folder:
+  destination=pathlib.Path(folder)/'package';safe_extract(archive,destination)
+  if file_hash(archive)!=actual:raise IntegrityError('收件時壓縮包發生變更')
+  context=ingest_package(destination)
+  if expected_context_hash and context.context_hash!=expected_context_hash:raise IntegrityError('分析快照與原 run 不一致')
+  result=analyze_package(context,**options,env_file=env_file,event_callback=event_callback)
+  result['archive_sha256']=actual
+  return result

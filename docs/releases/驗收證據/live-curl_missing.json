@@ -1,0 +1,622 @@
+{
+  "description": "今日 demo 資料的真實 API/工具紀錄；API key 不在此輸出。",
+  "source_record": "var/validation/live-20260912T052741643004/curl_missing.json",
+  "cve_id": "CVE-2023-38545",
+  "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708",
+  "engineering_verdict": "NEEDS_INVESTIGATION",
+  "ai": {
+    "schema_version": "1.0",
+    "mode": "LIVE",
+    "status": "NEEDS_USER_INPUT",
+    "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708",
+    "engineering_assessment_id": "A-9b809cb8cc4ea90b326e85f3779bab360eeff201d055e897989907a4792f3a21",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "tasks": [
+      {
+        "task_id": "I-2473d3ac87bcc06f998d2333",
+        "action": "LIST",
+        "question": "目前提交資料中有哪些同 build 的 launcher、下載腳本、curl 設定或 SOCKS5 執行觀測檔，可用來確認 DNS 解析位置、buffer 設定與非阻塞握手路徑？",
+        "reason": "先盤點實際可讀檔案，避免重複索取已提交資料，並聚焦補足 entry_reachable 與 trigger_prerequisites 的執行設定缺口。",
+        "term": "",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "sources": [
+            {
+              "path": "build/build-record.json",
+              "kind": "file",
+              "sha256": "57e44e12d75af1cec579b0092551ce2086fce00c7da23a706d5ab89ab37c98d7",
+              "size": 901,
+              "source_id": "S-170dce78783dc01a601872f4"
+            },
+            {
+              "path": "build/commands/0000-compiler-version.json",
+              "kind": "file",
+              "sha256": "3587cf8a23eef28cbf3f1ed40239a314c0925636d4be358449b4cfe593c2766d",
+              "size": 391,
+              "source_id": "S-daecd43aa548427679f2665b"
+            },
+            {
+              "path": "build/commands/0000-compiler-version.log",
+              "kind": "file",
+              "sha256": "8497f84b2b8334c413d9c6166bd39d009ba55d2ff60a8f23e66dfa5819c2b048",
+              "size": 246,
+              "source_id": "S-4bbccf7b365c8ea95199879b"
+            },
+            {
+              "path": "build/commands/0001-curl-configure.json",
+              "kind": "file",
+              "sha256": "46d3482880a7c99dd56bdcdae5e92ff7c472c250b3e6047b0443fe587928ad32",
+              "size": 745,
+              "source_id": "S-c4bb9dd2f98c93860f392160"
+            },
+            {
+              "path": "build/commands/0001-curl-configure.log",
+              "kind": "file",
+              "sha256": "1769dcbddfb2a71ad6c38918254c08b967b51c593441318bc8c0e626b618c266",
+              "size": 29670,
+              "source_id": "S-f66a32822d8d37c9dde032e3"
+            },
+            {
+              "path": "build/commands/0002-curl-build.json",
+              "kind": "file",
+              "sha256": "0e918db08876298b6e73eb5402ff8e0a1eb51fc42b2886b5d4c33cae65e9e9c9",
+              "size": 392,
+              "source_id": "S-433abf0bd12ef7e6c6e570e6"
+            },
+            {
+              "path": "build/commands/0002-curl-build.log",
+              "kind": "file",
+              "sha256": "b9024e43a2539cbfa439c7d463ad437fa25ee3f34f31c6b1b4a541cbe9f0d969",
+              "size": 9568,
+              "source_id": "S-39e04c65e3dc554066784dc2"
+            },
+            {
+              "path": "build/commands/0003-curl-install.json",
+              "kind": "file",
+              "sha256": "ac6243a6d7cd6c408bcb6f3ae22df3c39e9c91aa61b1bf39e696cb261bd343f1",
+              "size": 398,
+              "source_id": "S-b02a4aa24be33f6bc61a4a31"
+            },
+            {
+              "path": "build/commands/0003-curl-install.log",
+              "kind": "file",
+              "sha256": "aaea85687b27d44a9e97cc693fb835b5d36065d40e57a702a9344ec34c0f85e6",
+              "size": 27928,
+              "source_id": "S-7f41d8949ee9f75f1103ac89"
+            },
+            {
+              "path": "build/commands/0005-curl-version.json",
+              "kind": "file",
+              "sha256": "5e7a46c5466fa2e4a61aed7b2f61af1627c6028ec6830321165052849c558eca",
+              "size": 496,
+              "source_id": "S-654dc4525db959b91a7df14d"
+            },
+            {
+              "path": "build/commands/0005-curl-version.log",
+              "kind": "file",
+              "sha256": "3ad4c766bb7e720c5acdf611b8844774439790c5c35b2f7739235c72a19ddf1c",
+              "size": 226,
+              "source_id": "S-ae0a214d3fe465ab64d997dd"
+            },
+            {
+              "path": "build/commands/0006-curl-dynamic.json",
+              "kind": "file",
+              "sha256": "530c3c413405c9d6dd62c0a1f516ab945e9251f61ce3133a0dd7b35d5bf5aa9d",
+              "size": 504,
+              "source_id": "S-acdd04ff4520d7a1fa77c1e5"
+            },
+            {
+              "path": "build/commands/0006-curl-dynamic.log",
+              "kind": "file",
+              "sha256": "d8b74fe91f8dcff116d049a6b703a771d6ce8665af2ebe6d19a56a7fd49e4cd1",
+              "size": 1765,
+              "source_id": "S-90885b53768c993de3a90425"
+            },
+            {
+              "path": "build/commands/0007-libcurl-dynamic.json",
+              "kind": "file",
+              "sha256": "83f2148bfc458baf440d79bc51a6f6f3df5b9095c30a978319300ebb910c99fd",
+              "size": 519,
+              "source_id": "S-65338c744f20d8b676ea30fe"
+            },
+            {
+              "path": "build/commands/0007-libcurl-dynamic.log",
+              "kind": "file",
+              "sha256": "f41bf3ce73d3c64c84e4e51764ad55fc26626b882ade82cbbcc3a0ccf817e1ba",
+              "size": 1445,
+              "source_id": "S-fbe7b8ce8977cc5a98a9a07d"
+            },
+            {
+              "path": "build/compiler/00093c2bf88446a3b8de29e67d656297.json",
+              "kind": "file",
+              "sha256": "9b5435df92b0efa00611602edf8fe06bfe0db12b9ea0eb340b1c55f882d9b703",
+              "size": 31662,
+              "source_id": "S-ed7ca287395ef7db3e8e2771"
+            },
+            {
+              "path": "build/compiler/0033fac18759462b8a53123f8c8ffcb7.json",
+              "kind": "file",
+              "sha256": "d19ed972eb6cf738729bac314bfa0e16a2ea814806941cea3e1fc880a10959e4",
+              "size": 435,
+              "source_id": "S-c19a7b09a005f1c70cbf0fd1"
+            },
+            {
+              "path": "build/compiler/003cd0814d1f40378b06cdc0eefecf81.json",
+              "kind": "file",
+              "sha256": "5cdb02eddd33f1d3f8e6cb5641eb0dce86c9845d1d375d002b21188de69af1dc",
+              "size": 18298,
+              "source_id": "S-ee65fae3f1ad3f1664e35030"
+            },
+            {
+              "path": "build/compiler/0054d0ff08064f08854686539e5a07eb.json",
+              "kind": "file",
+              "sha256": "c9788d47dc5821a786b6eac0e7adaffe86499bb8e9aa4a921dd70abc3a41989d",
+              "size": 675,
+              "source_id": "S-3e4dabd16c719c01de98bd45"
+            },
+            {
+              "path": "build/compiler/0121fbca86494cfc99aa1d5b74e86046.json",
+              "kind": "file",
+              "sha256": "8db2061380b29740adc0e345c72666bf497dc19a7d82ea980259b8da266e2ce2",
+              "size": 440,
+              "source_id": "S-eab785ea263557a2efa2c5c2"
+            },
+            {
+              "path": "build/compiler/02d955c0336c49a7b9da361f622c6cdd.json",
+              "kind": "file",
+              "sha256": "af804d0f5a1ecf7fe4f5f6c4cde7beec5daef3bacfca4582c7f45e971b4e3c8c",
+              "size": 7616,
+              "source_id": "S-aef30239573ca01fd26e97d1"
+            },
+            {
+              "path": "build/compiler/031c8262fad5471a9e04ea9ba3f6e46c.json",
+              "kind": "file",
+              "sha256": "dd7638abac09f8984bff9ca6e364b6e23c3bb3f6268d97b7a48adf2ec1f0a9d0",
+              "size": 31681,
+              "source_id": "S-d2a68bdd0145e7eabef86f9d"
+            },
+            {
+              "path": "build/compiler/039d96ce0d544f02ac24479a72b57104.json",
+              "kind": "file",
+              "sha256": "d2e1b214e5b7f079a033c64c3786e9a8c66054868ca40696367cc3b5b59f9cc2",
+              "size": 24341,
+              "source_id": "S-9ea6e7516f81bc8e4e1a6422"
+            },
+            {
+              "path": "build/compiler/0456089dfa4443fb95d7fbf73077e336.json",
+              "kind": "file",
+              "sha256": "fd415ddfca680aef9cdf5277e3f66893f5abf6e4408f62a636d76732e1cd9dfd",
+              "size": 440,
+              "source_id": "S-251006f614de167b0ed4aa4b"
+            },
+            {
+              "path": "build/compiler/059da3d965ef487daca558a79f1325c2.json",
+              "kind": "file",
+              "sha256": "4b05b637e4e02bf7c1ac86d8600db80108a7820774d646512a50ff2b3803dd77",
+              "size": 559,
+              "source_id": "S-9edabd92fcb11c6b61718bac"
+            },
+            {
+              "path": "build/compiler/05d6d8d2fd7740d0bc37d191c7d85fde.json",
+              "kind": "file",
+              "sha256": "ff72859a6af4da232edf1b8e218d9be84832b925752e5194326d6ed6a0d41b46",
+              "size": 10108,
+              "source_id": "S-72da3496401286df6a1d0432"
+            },
+            {
+              "path": "build/compiler/05e247d1a954426aa9a5f03bd5bfd775.json",
+              "kind": "file",
+              "sha256": "318e3db4920aa9a8e617dc7bbf7b3a0948129c1d9d6d6fdf9c1e2af2405b4489",
+              "size": 852,
+              "source_id": "S-6feb94a812a8f2a2495d0323"
+            },
+            {
+              "path": "build/compiler/0696ce087c34496c9db5f07c1b347023.json",
+              "kind": "file",
+              "sha256": "f04b271b5e2848964e9c821cc6c0837772202ddf118d8e6eab7bf9514f0a1e97",
+              "size": 10269,
+              "source_id": "S-0ae57cd1cb8c3a97d731124f"
+            },
+            {
+              "path": "build/compiler/07d76916769f44dfbceb0588fb65dbb7.json",
+              "kind": "file",
+              "sha256": "013434a510c78c8387148f12af5988ec5a0de163ae9926efdbda0b0414775e17",
+              "size": 434,
+              "source_id": "S-0c66c6c34458784684de4368"
+            },
+            {
+              "path": "build/compiler/07df5a81f9c24934b9cc1ed2841d0a54.json",
+              "kind": "file",
+              "sha256": "034b007fd1e2b992bc532aebfb60e9eb7327b4e9a553da046e926d7fdc18c92f",
+              "size": 434,
+              "source_id": "S-cb26f753d32e048f95d87f61"
+            },
+            {
+              "path": "build/compiler/07eb3ef30fc849158fe30dcab60e3b59.json",
+              "kind": "file",
+              "sha256": "bb5e493f1a01276778622151d63634056f2acf964c703b4afed160aafec9608b",
+              "size": 27529,
+              "source_id": "S-f1adf47f37d7b8d86ab05b41"
+            },
+            {
+              "path": "build/compiler/0857b4748cf549b7b306d00a371cb837.json",
+              "kind": "file",
+              "sha256": "eb408591a40e7aa71f173d9836f343b902fcde0a01acc6b8f6d18ce1da1d753c",
+              "size": 29250,
+              "source_id": "S-12d77e186dcb1448b2b46490"
+            },
+            {
+              "path": "build/compiler/09233b2070134ffab0a833df61a79167.json",
+              "kind": "file",
+              "sha256": "6b91ae8a1ec66b110576f6c4a3c4c402ff16850dac9ada30b3d7c0cea45d0dac",
+              "size": 643,
+              "source_id": "S-f2fba42c9be854f3360dd8c6"
+            },
+            {
+              "path": "build/compiler/0a08facb01fd47f2bed4c69e1c3d7d42.json",
+              "kind": "file",
+              "sha256": "e577fcacf458274509222859e448c29c684563f8bbc8a0452fedb8d96ac49030",
+              "size": 675,
+              "source_id": "S-00a2334f4893f8e34a19ab01"
+            },
+            {
+              "path": "build/compiler/0a4100f25fb44063ad3590dde647e989.json",
+              "kind": "file",
+              "sha256": "d4d2d527543738e7acc116dd293bd2c62f8a106b649dabd0852faa99696aa64b",
+              "size": 276,
+              "source_id": "S-57f03b5c98d1a4f7dab7c3cc"
+            },
+            {
+              "path": "build/compiler/0a755b1149a5431db05d6f131fcf88b1.json",
+              "kind": "file",
+              "sha256": "6b116578141552fc2f8b261cbdae8229f4ccd06d64f7af874ea9a95fe522c2f2",
+              "size": 10253,
+              "source_id": "S-665083722e4cef8357a4cb4a"
+            },
+            {
+              "path": "build/compiler/0b76c303deef4166822ee21b6ccb3275.json",
+              "kind": "file",
+              "sha256": "e62a69d71ac91c45f7e15ffcd6ca48eeaa2a3f686e94fbd43fcf3c9f12858f6b",
+              "size": 460,
+              "source_id": "S-73a93a67e9340c4c197412ff"
+            },
+            {
+              "path": "build/compiler/0bcefba30e1b4322a13c16c5c07b79e4.json",
+              "kind": "file",
+              "sha256": "5ffdc2dac46fa753d3f5203467884b8e7b633ecbdbcbf7f5bce9f406ddb393d1",
+              "size": 19842,
+              "source_id": "S-bd1ee4c9dd8d64a4f086a797"
+            },
+            {
+              "path": "build/compiler/0cb4a9258cb34e508297dfee1d6e93bc.json",
+              "kind": "file",
+              "sha256": "cfe38d54ca407a4f459e848a5872c945b47c3442e3da4ae1e618dbd40fe91ffb",
+              "size": 788,
+              "source_id": "S-e18189cca755261df47f7519"
+            },
+            {
+              "path": "build/compiler/0df8fda9d1174cdc80175334fcf248c7.json",
+              "kind": "file",
+              "sha256": "1945fd3505d09e5b0d4be2136ffdeeea3ca3db5014cdf2540880e01a4f19762f",
+              "size": 675,
+              "source_id": "S-f3d97af1caa952358fbafeb5"
+            },
+            {
+              "path": "build/compiler/0f1190d9cf8e4c149f0c01816e0ffd2d.json",
+              "kind": "file",
+              "sha256": "5e4816889c025ac4cb0cf2399e98f094ad5889feea728c77fa4127d144e40ae6",
+              "size": 18308,
+              "source_id": "S-8100b1556b5a66242b67bc62"
+            },
+            {
+              "path": "build/compiler/0fff24c8ab1e448881827dea9f0d7c47.json",
+              "kind": "file",
+              "sha256": "98d01b0f7814d94733d1b5f9a7ac4887a16baa076fbb8c842e9bea00112fc533",
+              "size": 675,
+              "source_id": "S-7280f8fc786eb57878055906"
+            },
+            {
+              "path": "build/compiler/1012b047828b4bd8ba2d0a71c149e574.json",
+              "kind": "file",
+              "sha256": "34673519040dab8a1d59b967f705c15392627294abbfc6be8a0ce3e389f054cd",
+              "size": 30901,
+              "source_id": "S-76130bd6054da039d6c97ea7"
+            },
+            {
+              "path": "build/compiler/104352de86b947e0a487c543f1462c9d.json",
+              "kind": "file",
+              "sha256": "b3074d56a42d90dd7c22ae62da2159392b21fc1b0d4f9c4db60d573b369bce59",
+              "size": 30573,
+              "source_id": "S-87fc0ce96f92f618179f9a39"
+            },
+            {
+              "path": "build/compiler/113cede27d204664b57f0293bd64c1ac.json",
+              "kind": "file",
+              "sha256": "3bbe25c8d525b9eb5488fa39f3bab65fe53504d92d7fe5c27a4496a7fea53ae3",
+              "size": 30776,
+              "source_id": "S-55821a167cd548fe90612a03"
+            },
+            {
+              "path": "build/compiler/11951ac902ed4e64a6384d89f317c003.json",
+              "kind": "file",
+              "sha256": "f97fe47c457b47068c3d59164b032828babe2f88f4428291085b596499fa22c4",
+              "size": 559,
+              "source_id": "S-19182533a62c667e792232e1"
+            },
+            {
+              "path": "build/compiler/1209278d10d041ab8248427c241bdfcd.json",
+              "kind": "file",
+              "sha256": "dfb319ba5775814c3a8ba367d23c88d30438f06eeb8673ba724604ea0225fed7",
+              "size": 559,
+              "source_id": "S-2bb8a6a3e7959c8cb3b8fc90"
+            },
+            {
+              "path": "build/compiler/12b72dea7c394054bc79d4e1d12274e3.json",
+              "kind": "file",
+              "sha256": "7151dbea8dfde9156eca4ede93bbd75b46f4762fb145b97e5faca324f5bfc4a6",
+              "size": 440,
+              "source_id": "S-91f3c678335cc6bf35749f44"
+            },
+            {
+              "path": "build/compiler/1306c46cf7dd4f538313b08cdad06528.json",
+              "kind": "file",
+              "sha256": "112db33ad7b0371eee540164360bb46b913895fce2710639c896c233a730f282",
+              "size": 6960,
+              "source_id": "S-d83827a7302066c2fcf39ee3"
+            },
+            {
+              "path": "build/compiler/1391e072ddf44486bb80080fee7ebc47.json",
+              "kind": "file",
+              "sha256": "259bc11ed8baa0a7454494462ca4b3632e07d23f4c3b9e736778e63d4d03eafd",
+              "size": 11252,
+              "source_id": "S-f49f983a9ecc84f36f3f6401"
+            },
+            {
+              "path": "build/compiler/14a2c612065e45f2a4cd865cd23a820b.json",
+              "kind": "file",
+              "sha256": "294b45b6f1fce4788182d6d9f62aba97f5d583ea9e91e79e77e9fc682864155c",
+              "size": 18243,
+              "source_id": "S-c19a6a174871f2a43d7f3b7b"
+            },
+            {
+              "path": "build/compiler/14cb1c15bec7410eaeb608f7b454ebba.json",
+              "kind": "file",
+              "sha256": "c0982f3f91167e105adce232a758bd75227c179cbc98ab390f58dfaa22ff71af",
+              "size": 440,
+              "source_id": "S-902fd70fe41fd7bef750a36c"
+            },
+            {
+              "path": "build/compiler/14f07cc73204438294f0a06b2e3fe17f.json",
+              "kind": "file",
+              "sha256": "40951bd1c7ec297fa9fc476e3c6d0ed3eef57d1dbbfc44e71a6c9dcaac204a05",
+              "size": 434,
+              "source_id": "S-08de499abad8001a0cf73d84"
+            },
+            {
+              "path": "build/compiler/152dad8a58034976bd9d40c463a4b5a7.json",
+              "kind": "file",
+              "sha256": "47a3d0e11f5b11abc218a142c3a19ce048fdeb54f6c055dccc4dc0601491453a",
+              "size": 29578,
+              "source_id": "S-3f84762477ff90d3246ebb5e"
+            },
+            {
+              "path": "build/compiler/154f57298cff4ccca4acc91e32ae5b1f.json",
+              "kind": "file",
+              "sha256": "94be2a3fc26716447424b9cef3a524fcb45869448b9b0e9b3cf70dcf22f0cd6f",
+              "size": 603,
+              "source_id": "S-88939117874821b7fec47fa0"
+            },
+            {
+              "path": "build/compiler/1560b00358874ccba283a4cd2b0a2012.json",
+              "kind": "file",
+              "sha256": "b76b36da2e7bf449811f5cde6be0736596eb8e246bc2c2b8ca50c0f6c3c385da",
+              "size": 440,
+              "source_id": "S-539a90752b56fe4882b7e140"
+            },
+            {
+              "path": "build/compiler/15c9f860ed364f40b03d66fa0e2d465b.json",
+              "kind": "file",
+              "sha256": "478691c52060719049dd1afeb1988210d5dd0fc04f1bb82aca59a2347aabb3c6",
+              "size": 30316,
+              "source_id": "S-5564cfcf7ea75c11ac30de0d"
+            },
+            {
+              "path": "build/compiler/1634fe1c486b4f43b4b3cc01d809c2d9.json",
+              "kind": "file",
+              "sha256": "f788448b756ff360a16c7983e6a740cb63b34ee07e48f84cb07ef94d75210084",
+              "size": 24194,
+              "source_id": "S-1cfa3cefa96ae410967af3d7"
+            },
+            {
+              "path": "build/compiler/16436c90e5fe443cbbb56d1585c6cb87.json",
+              "kind": "file",
+              "sha256": "da489910ebca8be55488c4c0d6cd181d0be69eb1beddccc913e14d23104fbf92",
+              "size": 32153,
+              "source_id": "S-e562e16b5f27fc5129dd0b50"
+            },
+            {
+              "path": "build/compiler/1674e224be3b46c0858742d4105160ff.json",
+              "kind": "file",
+              "sha256": "deeea39ea4c97e715b53f703b01d5af4f9d13636d9dad149d4dfb371caba6213",
+              "size": 10253,
+              "source_id": "S-7b8bb319fcd704ef79a0b0a1"
+            }
+          ],
+          "total": 6245,
+          "truncated": true,
+          "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708"
+        }
+      },
+      {
+        "task_id": "I-4a92fff9be18d8a9d5940eac",
+        "action": "SEARCH",
+        "question": "提交資料是否包含 install/download-update.sh，或可直接顯示 SOCKS5 代理型態、DNS 解析模式與傳輸 buffer 設定的 launcher/config 內容？",
+        "reason": "使用者要確認 DNS 在哪裡解析；需先定位實際執行設定，而不能只由 curl 版本、漏洞實作或握手延遲推定。",
+        "term": "download-update.sh",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "matches": [],
+          "truncated": false,
+          "skipped_nontext_or_large": 239
+        }
+      },
+      {
+        "task_id": "I-f6cef8ee3ebd4d75da975d00",
+        "action": "ASK_USER",
+        "question": "請補交哪些同 build／同成品的執行資料，才能判定更新流程使用 SOCKS5 的本地 DNS 或 remote DNS，並確認是否具備此 CVE 的 buffer 與非阻塞握手必要條件？",
+        "reason": "現有可見來源只有建置資料；未定位到 download-update.sh，且正常或偶發慢握手不能證明 DNS 模式、buffer 大小或漏洞適用性。",
+        "term": "",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "",
+        "citations": [],
+        "required_files": [
+          "install/download-update.sh",
+          "實際部署使用的 launcher 與其載入的 curl config",
+          "啟動器／服務管理器的實際參數與環境設定（含代理相關設定，敏感憑證可遮蔽）",
+          "同成品一次正常及一次慢握手的 SOCKS5 連線觀測或詳細 curl 記錄（須能區分 DNS 請求發生於本機或代理端）"
+        ],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "required_files": [
+            "install/download-update.sh",
+            "實際部署使用的 launcher 與其載入的 curl config",
+            "啟動器／服務管理器的實際參數與環境設定（含代理相關設定，敏感憑證可遮蔽）",
+            "同成品一次正常及一次慢握手的 SOCKS5 連線觀測或詳細 curl 記錄（須能區分 DNS 請求發生於本機或代理端）"
+          ],
+          "same_build_required": true,
+          "build_id": "curl-20260912T045600-d7ebd6",
+          "artifact_sha256": "8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b"
+        }
+      }
+    ],
+    "excerpts": [
+      {
+        "excerpt_id": "X-cb4c65776c515cf298b84304",
+        "source_id": "S-cbc071b5743a15d8be21f3cc",
+        "file_sha256": "d6581154231c00d566ec24a748e65652f579c35def8e8935b9542908a02fe6dc",
+        "start_line": 586,
+        "end_line": 597,
+        "text": "            sx->hostname, sx->remote_port);\n\n    /* RFC1928 chapter 5 specifies max 255 chars for domain name in packet */\n    if(!socks5_resolve_local && hostname_len > 255) {\n      infof(data, \"SOCKS5: server resolving disabled for hostnames of \"\n            \"length > 255 [actual len=%zu]\", hostname_len);\n      socks5_resolve_local = TRUE;\n    }\n\n    if(auth & ~(CURLAUTH_BASIC | CURLAUTH_GSSAPI))\n      infof(data,\n            \"warning: unsupported value passed to CURLOPT_SOCKS5_AUTH: %u\",",
+        "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708"
+      },
+      {
+        "excerpt_id": "X-993ee8b939306fc3b1b3439e",
+        "source_id": "S-5f62190ef33cb65875d6bdd4",
+        "file_sha256": "89cc68f10e3e760d1b01ba03310c1d68f221b66691befcfab9b2d390624e91fc",
+        "start_line": 618,
+        "end_line": 629,
+        "text": "  return CURLUE_OK;\n}\n\nstatic CURLUcode hostname_check(struct Curl_URL *u, char *hostname,\n                                size_t hlen) /* length of hostname */\n{\n  size_t len;\n  DEBUGASSERT(hostname);\n\n  if(!hlen)\n    return CURLUE_NO_HOST;\n  else if(hostname[0] == '[')",
+        "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708"
+      },
+      {
+        "excerpt_id": "X-39d3b0752d8de9a5ac291955",
+        "source_id": "S-b9c0c7393b0f7737f77fc4a6",
+        "file_sha256": "ba1272722ee9e91223c452ffb1b94f40a30116bc6d185ca2c3f6db67adc3a29e",
+        "start_line": 1316,
+        "end_line": 1327,
+        "text": "          else\n#endif\n          if(config->recvpersecond &&\n             (config->recvpersecond < BUFFER_SIZE))\n            /* use a smaller sized buffer for better sleeps */\n            my_setopt(curl, CURLOPT_BUFFERSIZE, (long)config->recvpersecond);\n          else\n            my_setopt(curl, CURLOPT_BUFFERSIZE, (long)BUFFER_SIZE);\n        }\n\n        my_setopt_str(curl, CURLOPT_URL, per->this_url);\n        my_setopt(curl, CURLOPT_NOPROGRESS,",
+        "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708"
+      },
+      {
+        "excerpt_id": "X-f987c5cb92cb3f9020eaed3d",
+        "source_id": "S-cbc071b5743a15d8be21f3cc",
+        "file_sha256": "d6581154231c00d566ec24a748e65652f579c35def8e8935b9542908a02fe6dc",
+        "start_line": 455,
+        "end_line": 466,
+        "text": "    sxstate(sx, data, CONNECT_SOCKS_READ);\n\n    /* FALLTHROUGH */\n  case CONNECT_SOCKS_READ:\n    /* Receive response */\n    presult = socks_state_recv(cf, sx, data, CURLPX_RECV_CONNECT,\n                               \"connect request ack\");\n    if(CURLPX_OK != presult)\n      return presult;\n    else if(sx->outstanding) {\n      /* remain in reading state */\n      return CURLPX_OK;",
+        "context_hash": "2018754dd9a7abd6d1751c6fec88fe925e11333f61f5b9caa6abcf8f530ba708"
+      }
+    ],
+    "calls": [
+      {
+        "response_id": "resp_04bb12674241664f016aa4e2c97be487d0b513798c48825c66",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3013,
+          "input_tokens_details": {
+            "cache_write_tokens": 2891,
+            "cached_tokens": 0
+          },
+          "output_tokens": 190,
+          "output_tokens_details": {
+            "reasoning_tokens": 41
+          },
+          "total_tokens": 3203
+        }
+      },
+      {
+        "response_id": "resp_04bb12674241664f016aa4e2ced4b887d0bef38910b9ea7a1f",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 9391,
+          "input_tokens_details": {
+            "cache_write_tokens": 6378,
+            "cached_tokens": 2891
+          },
+          "output_tokens": 182,
+          "output_tokens_details": {
+            "reasoning_tokens": 44
+          },
+          "total_tokens": 9573
+        }
+      },
+      {
+        "response_id": "resp_04bb12674241664f016aa4e2dbbb3c87d09eb0d3be169032e4",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 9607,
+          "input_tokens_details": {
+            "cache_write_tokens": 216,
+            "cached_tokens": 9269
+          },
+          "output_tokens": 370,
+          "output_tokens_details": {
+            "reasoning_tokens": 121
+          },
+          "total_tokens": 9977
+        }
+      }
+    ],
+    "elapsed_seconds": 27.704,
+    "verified_ai_facts": [],
+    "note": "AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。",
+    "rejected_proposals": 0,
+    "record_hash": "c040ae28cba801c1a6911eaf846464b12e9b82b2da049b827838b919eba7c84f"
+  }
+}
