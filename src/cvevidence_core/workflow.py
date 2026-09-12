@@ -6,6 +6,7 @@ from .verifier import verify
 from .assessment import assess,check_claim,summarize
 from .ai import investigate
 from .supplements import interpret_statement
+from .investigation_evidence import reassess_after_investigation
 
 def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=(),mode='OFFLINE',env_file=None,event_callback=None):
     def event(stage,status,cve_id=None):
@@ -27,9 +28,10 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
         event('AI','STARTED',cve_id)
         ai=investigate(context,verified,assessment,symptom+'\n'+'\n'.join(x.get('text','') for x in notes),mode=mode,env_file=env_file)
         event('AI',ai['status'],cve_id)
+        followup=reassess_after_investigation(context,assessment,ai,notes) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
         results.append({'cve_id':cve_id,'status':'COMPLETED','queries':collection['queries'],'evidence':collection['evidence'],
                         'assessment':assessment,'claim_checks':[check_claim(context,assessment,c) for c in claims if c.get('cve_id')==cve_id],
-                        'ai':ai,'summary':summarize(assessment,ai)})
+                        'ai':ai,'investigation_verification':followup,'summary':summarize(assessment,ai)})
     context.assert_current()
     executed=[r for r in results if r.get('assessment')]
     return {'schema_version':'1.0','status':'COMPLETED','context_hash':context.context_hash,'input':context.public(),
@@ -52,6 +54,7 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
         if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
         ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file)
         if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
-        results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai})
+        followup=reassess_after_investigation(context,assessment,ai) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
+        results.append({'cve_id':entry['cve_id'],'engineering_assessment_id':assessment['assessment_id'],'ai':ai,'investigation_verification':followup})
     return {'schema_version':'1.0','context_hash':context.context_hash,'mode':'LIVE','analyses':results,
             'status':'NOT_RUN' if not results else 'COMPLETED' if all(x['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for x in results) else 'INCOMPLETE'}

@@ -71,6 +71,12 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 整合注意：B 的 AI 入站會重核 assessment 的 verdict／conditions；A 修改 statement_reviews 語意時，需一併確認 B 不再把任何中性 review 都推成 Needs Investigation。AI 新增原文只能先算 exact excerpt，升級工程條件必須經 profile 確定性提取與 Verifier，不採模型自由結論。
 
+## 後續協調授權
+
+使用者已透過側邊對話授權依需要持續並行，最多主線以外 3 個活躍實作／驗收對話；現有 A/B/C 占滿，不重複開工。不同任務才另開，已完成同範圍優先續派原對話；固定 commit、獨立 worktree、唯一檔案範圍及自己的同步 MD。事件到達即處理，heartbeat `cvevidence` 每 5 分鐘補巡檢，今日 17:35 結束；完成／叫停後停用。15:35 後新派工聚焦展示阻塞、整合驗收與排練。
+
+主線另補 AI 新原文 → E-ID 來源觀測 → collect/verify/assess 的回流，位於 `investigation_evidence.py` 與 workflow；不修改 A/B 檔案。只提升 exact bytes，不把模型推論當條件。CMake 真實 Live 紀錄已驗新觀測與重判、篡改新原文拒絕；待提交 SHA 記下一輪。
+
 ## 目前有證據的進度
 
 - 九格工程判定 9/9、三條同 build 補件重判 3/3；完整結果與條件見 `docs/releases/Horace_完整核心與Demo交件.md` 及 `docs/releases/驗收證據/`。
