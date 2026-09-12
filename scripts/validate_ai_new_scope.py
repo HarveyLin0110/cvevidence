@@ -1,5 +1,6 @@
 """Live acceptance: a new, unsubmitted product entry must remain unresolved."""
 import argparse
+import copy
 import datetime
 import json
 import pathlib
@@ -11,7 +12,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 from cvevidence_core.ai import replay_investigation
 from cvevidence_core.integrity import file_hash, ingest_package, safe_extract
-from cvevidence_core.workflow import analyze_package
+from cvevidence_core.workflow import analyze_package, investigate_after_engineering
 
 
 def main():
@@ -37,7 +38,7 @@ def main():
     save('provenance.json', {
         'tested_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
         'archive_sha256': entry['archive']['sha256'], 'context_hash': context.context_hash,
-        'statement': statement, 'mode': 'NATIVE_LIVE',
+        'statement': statement, 'mode': 'NATIVE_LIVE', 'route': 'SAVED_ENGINEERING_THEN_LIVE_WITH_EMPTY_USER_CONTEXT',
         'core_files': {p.name: file_hash(p) for p in sorted((ROOT / 'src/cvevidence_core').glob('*.py'))}})
     events = []
     def event(row):
@@ -46,17 +47,20 @@ def main():
         if row['stage'] == 'AI':
             print(json.dumps(row, ensure_ascii=False), flush=True)
     print(str(folder), flush=True)
-    result = analyze_package(context, [cve], symptom='請依我補充的另一個產品入口，判斷還需要調查什麼。',
-                             statements=[statement], mode='LIVE', env_file=args.env_file, event_callback=event)
-    save('result.json', result)
+    result = analyze_package(context, [cve], statements=[statement], mode='OFFLINE')
+    original = copy.deepcopy(result)
+    save('engineering-saved.json', result)
+    later = investigate_after_engineering(context, result, env_file=args.env_file, event_callback=event)
+    save('result.json', {'engineering': result, 'ai_stage': later})
     analysis = result['analyses'][0]
-    record = analysis['ai']
+    record = later['analyses'][0]['ai']
     replay = replay_investigation(context, record) if record.get('record_hash') else None
     save('replay.json', replay)
     grouping = analysis['condition_groups']
     grouped_ids = set(grouping['shared_prerequisite_ids'])
     grouped_ids.update(k for g in grouping['groups'] for k in g['condition_ids'])
     checks = {
+        'saved_engineering_unchanged': result == original,
         'baseline_not_affected': baseline['analyses'][0]['assessment']['verdict'] == 'NOT_AFFECTED',
         'new_scope_stays_unresolved': analysis['assessment']['verdict'] == 'NEEDS_INVESTIGATION',
         'verified_conditions_unchanged': analysis['assessment']['conditions'] == baseline['analyses'][0]['assessment']['conditions'],

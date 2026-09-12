@@ -320,6 +320,28 @@ class ReliabilityTests(unittest.TestCase):
         self.assertFalse(replay['original_time_available'])
         self.assertIsNone(replay['original_started_at'])
 
+    def test_later_ai_receives_saved_claim_without_user_repeating_it(self):
+        from cvevidence_core.workflow import investigate_after_engineering
+        statement = '另有尚未交付的網路入口。'
+        saved = analyze_package(self.context, ['CVE-2023-38545'], statements=[statement], mode='OFFLINE')
+        original = copy.deepcopy(saved)
+        received = []
+        def request(config, items, timeout):
+            payload = json.loads(items[0]['content'])
+            received.append(payload)
+            return response(arguments('ASK_USER', required_files=['新入口的同 build 原始工程材料']))
+        with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
+             patch('cvevidence_core.ai._request', side_effect=request):
+            later = investigate_after_engineering(self.context, saved)
+        self.assertEqual(received[0]['user_context'], '')
+        history = received[0]['statement_context']
+        self.assertEqual(history[0]['text'], statement)
+        self.assertTrue(history[0]['blocks_verdict'])
+        self.assertFalse(history[0]['verified_engineering_fact'])
+        self.assertEqual(saved, original)
+        self.assertEqual(later['analyses'][0]['ai']['status'], 'NEEDS_USER_INPUT')
+        self.assertEqual(later['analyses'][0]['investigation_verification']['assessment']['verdict'], 'NEEDS_INVESTIGATION')
+
     def test_workflow_keeps_engineering_assessment_on_bad_api_envelope(self):
         with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
              patch('cvevidence_core.ai._request', return_value=None):
