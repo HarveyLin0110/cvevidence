@@ -68,9 +68,9 @@ def source_viewer(st, runner, run):
             if result["truncated"]: st.info("已達結果上限，請縮小關鍵字範圍。")
         except (ValueError, OSError, RuntimeError): st.error("搜尋失敗，未顯示部分結果。")
 
-def workspace(st):
+def workspace(st, *, store_root=None):
     st.set_page_config(page_title="CVEvidence · 工程查核",layout="wide")
-    store=RunStore(os.environ.get("CVEVIDENCE_STORE","var/runtime"))
+    store=RunStore(store_root if store_root is not None else os.environ.get("CVEVIDENCE_STORE","var/runtime"))
     runner=Runner(store)
     st.title("CVEvidence · 工程查核")
     st.caption("Horace 核心已接通：工程包匯入、候選、原文工具、同 build 補件。工程判定與 AI 尚未執行。")
