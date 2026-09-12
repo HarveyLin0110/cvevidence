@@ -7,6 +7,7 @@
 - No verdict from file names, fixture mappings or AI output; unknown stays unknown.
 - Preserve immutable runs, scopes, parents, errors and review requirements.
 - Run python -m pytest -q and report real results. Do not claim synthetic adapter tests validate real CVEs.
-- Never commit secrets, runtime materials or large artifacts. Never force push or merge without review.
+- Never commit secrets, runtime materials or unapproved large artifacts. Today's approved demo-inputs are the documented exception. Never force push or merge without review.
+- The user authorized the integration session on 2026-09-12 to review and merge eligible milestones to main without repeated permission. Follow docs/integration/plan.md, exact-head checks, required CI/reviews and branch protections; do not claim human approval that did not occur.
 - For AI-related changes, read docs/ai/developer-guide.md and record the affected D/R rules and acceptance cases in the PR. Proposed controls are not implemented guarantees.
 - Keep runtime AI separate from coding assistance. Do not claim LIVE, semantic citation verification, provenance or real CVE results from synthetic tests.

@@ -6,7 +6,8 @@
 - 本機工作目錄：~/projects/cvevidence-integration。
 - Frankie 個人開發分支已確認：codex/frankie-feature-development；目錄 ~/projects/cvevidence-fresh，port8506。本整合目錄使用port8505，双方不操作對方服務。
 - 本 session 只做雙方 commit 接入、介面相容修正、整合測試、服務驗證與交接；不另寫 Query/判定/AI，也不擴寫多 CVE 或其他前端新功能。
-- 新功能交付請附分支/SHA、介面樣例、測試與變更範圍；整合端 fetch 後按 commit 核對，經 PR 交接，不自動 merge main。
+- 新功能交付請附分支/SHA、介面樣例、測試與變更範圍；使用者2026-09-12已授權整合端按 docs/integration/plan.md 門檻審查後主動透過PR合入main，不重問相同授權、不繞過保護。
+- 全部整合任務I00–I15與每15分鐘巡檢見 docs/integration/plan.md；本機heartbeat cvevidence-main已啟用。
 - Horace.md 僅由 Horace 維護；本 session 後續更新此檔，避免與另一個 Frankie 開發 session 同改 Frankie.md。
 
 ## 本次接收與結果
