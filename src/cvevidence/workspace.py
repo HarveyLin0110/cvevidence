@@ -12,6 +12,7 @@ from .workflow_navigation import PAGES, sidebar_steps
 from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
+from .ai_workspace import ai_workspace, selected_ai, with_ai_result
 
 def controlled_path(value):
     root = Path(os.environ.get("CVEVIDENCE_ARTIFACT_ROOT", "var/artifacts")).resolve()
@@ -219,13 +220,23 @@ def workspace(st, *, store_root=None):
     else:
         if page==PAGES[3] and payload:
             entry=payload["analyses"][0]
-            render_ai(st,entry.get("ai"),context_hash=run.input_package.context_hash,cve_id=run.cve_id,
-                assessment_id=(entry.get("assessment") or {}).get("assessment_id"))
-            st.info("LIVE 調查入口尚未接線；可依工程缺口補資料，或先下載本次工程報告。")
+            ai_workspace(st,runner,run,payload)
             next_button(st,PAGES[4],"查看目前報告")
             for gap in (entry.get("assessment") or {}).get("gaps",[]): st.text(str(gap.get("needed",gap)))
         st.subheader("查核紀錄與後續行動")
-        text=export_analysis(payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
+        ai_record=None
+        report_payload=payload
+        if payload:
+            try:
+                ai_record=selected_ai(st,runner,run)
+                report_payload=with_ai_result(payload,ai_record)
+            except (ValueError,OSError,KeyError,TypeError):
+                st.warning("選取的 AI 紀錄無法核對，報告只包含工程結果。")
+        text=export_analysis(report_payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
+        if ai_record:
+            metadata=ai_record["request"]
+            text="AI 獨立紀錄："+metadata["ai_id"]+" · "+metadata["created_at"]+" · "+ai_record["status"]+"\n原工程紀錄未覆寫。\n\n"+text
+            st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+ai_record["status"])
         if payload:
             assessment=payload["analyses"][0].get("assessment") or {}
             st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))

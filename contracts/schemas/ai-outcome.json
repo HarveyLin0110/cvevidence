@@ -1,0 +1,65 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "ai_id": {
+      "title": "Ai Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "COMPLETED",
+        "NEEDS_USER_INPUT",
+        "TIMED_OUT",
+        "API_ERROR",
+        "CONNECTION_ERROR",
+        "INCOMPLETE",
+        "INVALID_CITATION",
+        "BUDGET_EXHAUSTED",
+        "CONFIG_REQUIRED",
+        "CONSENT_REQUIRED",
+        "INPUT_CHANGED_OR_INVALID",
+        "INVALID_MODEL_OUTPUT",
+        "FAILED",
+        "NOT_RUN"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "completed_at": {
+      "title": "Completed At",
+      "type": "string"
+    },
+    "payload_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Payload Sha256"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    }
+  },
+  "required": [
+    "ai_id",
+    "status",
+    "completed_at"
+  ],
+  "title": "AIOutcome",
+  "type": "object"
+}
