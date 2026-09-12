@@ -36,7 +36,8 @@ def elf_needed(context:InputPackage,path:str)->list[str]:
  item=context.by_path(path)
  if not item:raise IntegrityError('ELF source missing')
  p,_=item
- if p.open('rb').read(4)!=b'\x7fELF':raise IntegrityError('Expected ELF artifact')
+ with p.open('rb') as handle:magic=handle.read(4)
+ if magic!=b'\x7fELF':raise IntegrityError('Expected ELF artifact')
  proc=subprocess.run(['/usr/bin/readelf','-d','--',str(p)],capture_output=True,text=True,timeout=5)
  if proc.returncode:raise IntegrityError('ELF dynamic section unreadable')
  import re
