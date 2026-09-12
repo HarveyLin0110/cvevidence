@@ -31,8 +31,12 @@ class Runner:
         return CoreService(self.store).start(path, **kwargs)
 
     def source_tool(self, run_id, operation, **arguments):
-        from .core_service import CoreService
-        return CoreService(self.store).tool(run_id, operation, **arguments)
+        from .events import invoke_with_receipt
+        return invoke_with_receipt(self, run_id, operation, arguments)
+
+    def tool_history(self, run_id):
+        from .events import EventStore
+        return EventStore(self.store).read(run_id)
 
     def supplement_file(self, parent_id, **kwargs):
         from .core_service import CoreService

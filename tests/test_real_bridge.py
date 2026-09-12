@@ -95,9 +95,10 @@ def test_ui_real_source_navigation_and_note(tmp_path,monkeypatch):
     monkeypatch.setenv("CVEVIDENCE_STORE",str(store.root))
     app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/"runner_app.py")).run()
     app.session_state["selected_run"]=run.run_id
-    app.sidebar.radio[0].set_value("02 資料確認與缺件").run()
+    app.run()
+    next(b for b in app.sidebar.button if b.label=="02 資料確認與缺件").click().run()
     next(b for b in app.button if b.label=="下一步：調查來源").click().run()
-    assert app.sidebar.radio[0].value=="03 分析進度與結果"
+    assert app.session_state.step=="03 分析進度與結果"
     assert next(b for b in app.button if "執行 Q1" in b.label).disabled
     app.selectbox(key="source-"+run.run_id).set_value(next(s.source_id for s in run.sources if s.path=="source.c")).run()
     next(b for b in app.button if b.label=="讀取並核對原文").click().run()
@@ -107,4 +108,3 @@ def test_ui_real_source_navigation_and_note(tmp_path,monkeypatch):
     next(b for b in app.button if b.label=="保存補件並建立新 run").click().run()
     assert not app.exception
     assert store.read(app.session_state["selected_run"]).parent_run_id==run.run_id
-

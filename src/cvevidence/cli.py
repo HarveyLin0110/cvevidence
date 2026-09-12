@@ -19,6 +19,8 @@ def main(argv=None):
     request.add_argument("--timeout",type=float,default=120)
     request_read=sub.add_parser("request-show")
     request_read.add_argument("request_id")
+    events=sub.add_parser("events",help="Read local manual source-tool receipts")
+    events.add_argument("run_id")
     intake=sub.add_parser("import",help="Real Horace file-backed intake")
     intake.add_argument("package",type=Path)
     intake.add_argument("--cve",default="")
@@ -45,7 +47,11 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         store=RunStore(args.store)
-        if args.command=="request":
+        if args.command=="events":
+            import json
+            print(json.dumps(Runner(store).tool_history(args.run_id),indent=2))
+            return 0
+        elif args.command=="request":
             from .requests import parse_cves
             result=Runner(store).submit_request(path=args.package,cves=parse_cves(args.cves),
                 symptom=args.symptom,request_id=args.request_id,parent_request_id=args.parent_request_id,

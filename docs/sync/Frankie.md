@@ -63,3 +63,15 @@
 - UI/CLI共用、草稿延續／請求歷史／JSON下載完成；不修改RunEnvelope或core_service/core_worker/catalog。
 - 63測試通過，Horace真實06包兩CVE各260來源驗收通過，瀏覽器DRAFT確認成功。詳見docs/development/F12-request-workflow.md。
 - 未做自動解鎖／中斷續跑；Q1/AI等依整合端與Horace交付，不冒稱完成。
+
+## F13 操作追蹤
+- 獨立codex/frankie-operation-history，基線39f922f。新增events.py，包裝Runner.source_tool並提供tool_history；報告頁/CLI可查看下載。
+- START/END分開原子新建，操作參數與結果只保存hash，不存搜尋詞/原文/例外文字；缺END不是成功，scope損壞收據排除並提示。
+- 68項測試通過。不修改core_service/core_worker；AI內部工具trace不在本批範圍。
+- 詳見docs/development/F13-operation-history.md；收到cb257c3核心已交付消息，下一階段先協調contracts/UI映射，不並改RunEnvelope。
+
+## F14b / F14c 個人功能交付（2026-09-12）
+- F14 設計 bec5368；唯讀分析與 AI 畫面 40802c8（PR #7）；文字報告與同 build 條件差異 5e7dc24（PR #8）。
+- 81 項 pytest 通過；F14b CI 通過。完整交付說明見 docs/development/F14b-renderer-delivery.md 與 F14c-report-delivery.md。
+- 不修改 RunEnvelope、worker、workspace 或部署入口；整合端明確確認先做獨立元件，正式保存格式／AI 入口就緒後才接線。
+- 真實工作台工程分析、獨立 AI 呼叫、補件後完整分析及正式報告連接尚未驗收；不以 TEST_ONLY UI 案例替代真實 CVE 驗收。
