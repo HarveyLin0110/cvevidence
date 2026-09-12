@@ -13,7 +13,8 @@
         "filename": "04_cmake.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-cmake-r2/04_cmake.tar.gz",
         "sha256": "b9fb05eef063b53d85c29ebcb5076963cf7927a04ebeafdf1cf0b940bdaba5a0",
-        "size_bytes": 2007960
+        "size_bytes": 2007960,
+        "repo_path": "demo-inputs/cmake/04_cmake.tar.gz"
       },
       "base_package_id": null,
       "build_id": "cmake-20260912T041957-c54d2c",
@@ -35,7 +36,8 @@
         "filename": "05_cmake.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-cmake-r2/05_cmake.tar.gz",
         "sha256": "99aa904a483062627751a3b9adae7108a1443613e75421734fc004689feb8e60",
-        "size_bytes": 2012708
+        "size_bytes": 2012708,
+        "repo_path": "demo-inputs/cmake/05_cmake.tar.gz"
       },
       "base_package_id": null,
       "build_id": "cmake-20260912T042158-1bfde7",
@@ -57,7 +59,8 @@
         "filename": "06_cmake.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-cmake-r2/06_cmake.tar.gz",
         "sha256": "f49dce2610e68ddff8bf458173bcb15aaa4624d30ce9188f64e6d91feb061d54",
-        "size_bytes": 1614940
+        "size_bytes": 1614940,
+        "repo_path": "demo-inputs/cmake/06_cmake.tar.gz"
       },
       "base_package_id": null,
       "build_id": "cmake-20260912T041957-c54d2c",
@@ -79,7 +82,8 @@
         "filename": "supplement_06_cmake.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-cmake-r2/supplement_06_cmake.tar.gz",
         "sha256": "c7c962875303ef7ed258cbc29d46c513acef7d0df6033dc44c964f27122a8e3a",
-        "size_bytes": 393901
+        "size_bytes": 393901,
+        "repo_path": "demo-inputs/cmake/supplement_06_cmake.tar.gz"
       },
       "base_package_id": "06_cmake",
       "build_id": "cmake-20260912T041957-c54d2c",

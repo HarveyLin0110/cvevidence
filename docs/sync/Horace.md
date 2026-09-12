@@ -1,6 +1,6 @@
 # Horace 開發同步
 
-更新：2026-09-12 12:52（Asia/Taipei）
+更新：2026-09-12 13:29（Asia/Taipei）
 
 此檔由 Horace 的工作對話維護，供 Frankie 及其 Codex 讀取。每次形成決定、變更介面或交件後更新；只留影響協作的摘要，不保存完整聊天。Frankie 請自行維護 `docs/sync/Frankie.md`；雙方先讀對方最新內容再動共用介面，避免重做。
 
@@ -9,7 +9,8 @@
 - 比賽當日團隊程式、builder、測試及 demo 資料全部重新製作。舊 Demo_3x3、舊程式及驗收結果不複製、不執行；舊 DOCX 僅供需求與概念參考。
 - 公開 OSS 今日從官方重新取得，保存版本、URL、授權及 SHA-256。
 - 分工以「CVEvidence 工具架構與雙人分工確認 Frankie」DOCX 為準。V5 plan 的較早分工若不一致，由這份分工更新覆蓋；產品與 demo 情境仍參考 V5。
-- 模型使用 OpenAI API；key 放 `OPENAI_API_KEY` 環境變數。金鑰、客戶原始資料及完整工程包不進 Git。
+- 模型使用 OpenAI API；使用者已選 `gpt-5.6-sol` / `medium`，真實呼叫成功。key 放環境變數或 Git 忽略的 `.env.local`。金鑰、客戶原始資料不進 Git；使用者要求今天重建的 demo 輸入納入 Git，已新增 `demo-inputs/`。
+- 給隊友看的文件盡量用繁體中文；程式識別字與必要技術名詞保留原文。
 - 判定為工程初判，待工程師覆核；不能將正常功能測試、版本命中或 AI 意見當完整適用性證明。
 
 ## 責任邊界
@@ -36,7 +37,7 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 ## 介面狀態
 
-**已讀 Frankie 分支 a5f9e65 的同步及 adapter 提案；下面未共同確認的擴充仍為提案。**
+**已讀 Frankie 分支 364a657 的 M5a 同步：已整合第一輪核心、file-backed 收件、來源操作與同 build delta 補件。下面分析階段擴充仍為提案。**
 
 - Python 可匯入核心，由 Frankie 的 Runner/Streamlit 呼叫；回傳可 JSON 化物件。
 - 物件：InputPackage（可讀來源/manifest/context）、EvidenceRecord、AIProposal/InvestigationTask、Supplement、Assessment、RunEnvelope。
@@ -50,17 +51,19 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 - 六個 build、九個初始包、三組補件已完成。第一輪九包資料驗收 9/9、同 build 補件 3/3；正式工程與 Live AI 尚未驗收。
 - 匯入/來源清單/搜尋/原文/比較/補件驗證/候選初版已可獨立呼叫；15 項邊界測試通過。
-- ROM localhost TCP 入口的兩次新 build 與正常 client/server 測試已完成；fresh-rom-r2 archive/補件資料驗收通過（432 → 4294 檔）；目前選用 ROM r2、CMake r2、curl r1。
+- ROM localhost TCP 入口的兩次新 build 與正常 client/server 測試已完成；fresh-rom-r2 archive/補件資料驗收通過（432 → 4294 檔）；目前選用 ROM r2、CMake r2、curl r2（補齊 compiler header capture 後兩版重建）。
 - curl 官方 patch 的產品程式 hunk 已成功套用；上游測試清單的 context 與 8.3.0 不同，保留失敗紀錄，精確提取官方 `lib/socks.c` hunk 重建後正常下載通過。
-- 未完成：Q1–Q5/正式 Verifier、規則與 Claim、AI、工程九格、Live AI。
-- API 設定：使用者會設定 OPENAI_API_KEY / OPENAI_MODEL，再通知；目前無 Live 成績。
+- 尚待完整驗收與交件：Q1–Q5/Verifier、規則與 Claim、AI、工程九格、完整分析介面。
+- API 設定與 Sol/medium 實際呼叫已成功；第一個 CMake Live 調查已完成 READ → SEARCH → ASK_USER，精確引用通過，未將 gzip EOF 直接當 CVE 原因。三情境與邊界驗收進行中。
+- Q1–Q5、Verifier、assess、AI 及開發 analyze CLI 正在本機驗收，尚未宣告可交整合。
 
 ## 交件與存放
 
 第一輪程式 commit：`f1d49f4`；分支 `codex/horace-fresh-core`；[Draft PR #2](https://github.com/HarveyLin0110/cvevidence/pull/2)。交件詳見該分支的 `docs/releases/Horace_第一輪資料與核心交件.md`：含已可呼叫的匯入/唯讀/補件介面、命令、真實驗收及限制。完整分析尚未可用，Frankie 可先接收件與原文操作。
 
 - 程式：`src/cvevidence_core/`；builder：`tools/demo-data/factory/`；格式：`contracts/`。
-- 小型資料索引：`data/catalogs/`，含 archive/hash/取得位置；完整包放 artifact storage/本機 `var/artifacts/`。
+- 新交件 commit `8882c75`：Git 的 `demo-inputs/` 含 9 初始包＋3 補件，約 95 MB，最大 17 MB；附中文上傳對照表、catalog、SHA256SUMS。請整合此 commit，無需再自行重建原展示包。
+- `data/catalogs/` 新增 `archive.repo_path` 指向 Git 輸入；原 build/archive 本機歷史保留於 `var/artifacts/`。前端選檔器需接受 `.tar.gz`（核心已支援）。
 - 當次結果：`var/runtime/runs/<run_id>/`，包括 queries/evidence/conditions/assessment/AI 工作與事件。
 - 報告：`var/exports/reports/<run_id>/`；可公開的測試摘要：`docs/releases/`。
 - 唯一開發與 Git 根目錄為 `CVEvidence_Fresh_2026-09-12`。Git 歷史已從參考目錄移入；Frankie 用 repo 相對路徑。舊 `CodexHackathon` 僅作概念參考；棄用 `CVEvidence_2026-09-12` 已移至垃圾桶。
@@ -69,7 +72,7 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 1. 已讀到 Frankie 確認責任及 Python/Streamlit；為避免檔名撞到 Frankie 的 sources.py/cli.py，Horace 核心改為獨立 `src/cvevidence_core/`，開發 CLI 用 `python -m cvevidence_core`。
 2. Horace 已提供 `CVEVIDENCE_CORE_MODULE=cvevidence_core.frankie_adapter`，先相容 v0.2 collect/read；真實 CMake archive 已驗 409 個檔案收件及 1388 bytes 產品原文預覽。這只接真實收件，不把 collect 當完整分析。
-3. 請下一版契約加入 file-backed package reference（20 MiB 上限不足部分工程包）、source 與 fact 分開、condition 的 SUPPORTED/BLOCKED/UNKNOWN/衝突語意、動態 InvestigationTask（不限制三問）、獨立工程/AI 狀態、delta 補件合併及 context hash。Horace 不修改 Frankie 的 contracts/Runner。
+3. 已讀 M5a 的 file-backed 512 MiB、source/fact 分離、獨立工程/AI 狀態、delta/context 接入。下一步只需對齊 condition 的 SUPPORTED/BLOCKED/UNKNOWN/衝突、動態 InvestigationTask 與分析階段；Horace 不修改 Frankie 的 contracts/Runner。
 
 在收到回覆前，Horace 持續做不受介面差異影響的建置、取證與測試；不擅自宣告雙方已確認。
 

@@ -13,7 +13,8 @@
         "filename": "01_rom.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-rom-r2/01_rom.tar.gz",
         "sha256": "62d3adf9c3fd1556bf8094e91e2dfae85e2a1c7c37815b78d028a6a26b6b2dcc",
-        "size_bytes": 17037192
+        "size_bytes": 17037192,
+        "repo_path": "demo-inputs/rom/01_rom.tar.gz"
       },
       "base_package_id": null,
       "build_id": "rom-20260912T043810-4f49ad",
@@ -35,7 +36,8 @@
         "filename": "02_rom.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-rom-r2/02_rom.tar.gz",
         "sha256": "bdc9ce2b3b33002f299ef836f838c4bef8265b24d8fd503f32f47cde672a14d7",
-        "size_bytes": 17022323
+        "size_bytes": 17022323,
+        "repo_path": "demo-inputs/rom/02_rom.tar.gz"
       },
       "base_package_id": null,
       "build_id": "rom-20260912T043812-0b9b1a",
@@ -57,7 +59,8 @@
         "filename": "03_rom.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-rom-r2/03_rom.tar.gz",
         "sha256": "51a6edc8beb71530761eb486fba6f4c5cda029f65d12ed36c8a5a81dcf2bd7e0",
-        "size_bytes": 7085882
+        "size_bytes": 7085882,
+        "repo_path": "demo-inputs/rom/03_rom.tar.gz"
       },
       "base_package_id": null,
       "build_id": "rom-20260912T043812-0b9b1a",
@@ -79,7 +82,8 @@
         "filename": "supplement_03_rom.tar.gz",
         "relative_path": "var/artifacts/archives/fresh-rom-r2/supplement_03_rom.tar.gz",
         "sha256": "fef8205ee05fdc6383725469fa85e4a550dd368b06c974bde2d3599b1e63749f",
-        "size_bytes": 9937841
+        "size_bytes": 9937841,
+        "repo_path": "demo-inputs/rom/supplement_03_rom.tar.gz"
       },
       "base_package_id": "03_rom",
       "build_id": "rom-20260912T043812-0b9b1a",
