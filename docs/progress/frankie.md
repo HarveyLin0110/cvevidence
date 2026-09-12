@@ -66,3 +66,6 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 
 ## F12：情境與多CVE請求
 已完成DRAFT、多CVE独立run、固定archive、重複與並發提交防護、CLI/UI/歷史下載。63測試通過＋真實06包與瀏覽器驗證。接口／限制／範例見../development/F12-request-workflow.md。8506功能端交付後由整合端合入8505，不在此合main。
+
+## F13：手動來源操作追蹤
+START/END收據、scope校驗、失敗分類、報告頁與CLI下載完成；68測試通過。基於F12另分支交付，詳見../development/F13-operation-history.md。

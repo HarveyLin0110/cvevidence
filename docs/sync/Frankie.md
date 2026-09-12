@@ -63,3 +63,9 @@
 - UI/CLI共用、草稿延續／請求歷史／JSON下載完成；不修改RunEnvelope或core_service/core_worker/catalog。
 - 63測試通過，Horace真實06包兩CVE各260來源驗收通過，瀏覽器DRAFT確認成功。詳見docs/development/F12-request-workflow.md。
 - 未做自動解鎖／中斷續跑；Q1/AI等依整合端與Horace交付，不冒稱完成。
+
+## F13 操作追蹤
+- 獨立codex/frankie-operation-history，基線39f922f。新增events.py，包裝Runner.source_tool並提供tool_history；報告頁/CLI可查看下載。
+- START/END分開原子新建，操作參數與結果只保存hash，不存搜尋詞/原文/例外文字；缺END不是成功，scope損壞收據排除並提示。
+- 68項測試通過。不修改core_service/core_worker；AI內部工具trace不在本批範圍。
+- 詳見docs/development/F13-operation-history.md；收到cb257c3核心已交付消息，下一階段先協調contracts/UI映射，不並改RunEnvelope。
