@@ -21,7 +21,7 @@
 Cloudflare named tunnel 可作 HTTPS 入口；Quick Tunnel 只適合短期測試，不能作最終固定網址或可靠性保證。
 
 ## 設定與啟動
-1. 在乾淨、獨立部署 checkout 固定欲發布 SHA，安裝專案與受測 Streamlit/Pydantic/Authlib。
+1. 在乾淨、獨立部署 checkout 固定欲發布 SHA，執行 python -m pip install -r deploy/requirements.txt 及 python -m pip install -e .。
 2. 將 deploy/secrets.example.toml 複製至該 checkout 的 .streamlit/secrets.toml，填專用 client、32字元以上隨機 cookie secret、HTTPS callback、三位受邀成員 email；權限600，不進Git。
 3. 設定 CVEVIDENCE_WEB_STORE 為部署專用持久目錄，CVEVIDENCE_RELEASE_SHA 為完整 commit；不要掛載本機 var/runtime 或開發者 home。
 4. 執行 python -m streamlit run team_app.py --server.address 127.0.0.1 --server.port 8507 --server.headless true。
