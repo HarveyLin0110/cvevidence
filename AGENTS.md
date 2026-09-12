@@ -8,3 +8,5 @@
 - Preserve immutable runs, scopes, parents, errors and review requirements.
 - Run python -m pytest -q and report real results. Do not claim synthetic adapter tests validate real CVEs.
 - Never commit secrets, runtime materials or large artifacts. Never force push or merge without review.
+- For AI-related changes, read docs/ai/developer-guide.md and record the affected D/R rules and acceptance cases in the PR. Proposed controls are not implemented guarantees.
+- Keep runtime AI separate from coding assistance. Do not claim LIVE, semantic citation verification, provenance or real CVE results from synthetic tests.

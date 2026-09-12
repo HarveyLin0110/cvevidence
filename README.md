@@ -2,6 +2,7 @@
 以 2026-09-12 新寫的模組串接證據核心。工程初判待工程師覆核。
 - [Frankie 同步](docs/sync/Frankie.md) / [Horace 同步](docs/sync/Horace.md)
 - [里程碑紀錄](docs/progress/frankie.md)
+- [AI 協作、安全邊界與亮點指南](docs/ai/README.md)
 - apps/web：今天製作、使用者確認可保留的模擬 UI；不是真實判定。
 - src/cvevidence：今天新寫的共用契約、Runner、保存、CLI 與 Streamlit 整合。
 - 不包含舊登入程式、舊 core.py、舊測試、舊 Demo 或任何工程包。

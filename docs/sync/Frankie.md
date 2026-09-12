@@ -33,3 +33,11 @@
 - 本機 Streamlit 已於 127.0.0.1:8505 啟動，health=ok；不公開資料服務。
 - 明確待辦：M5 真實核心接線、無 CVE 探索、多 CVE 子 run、完整來源 catalog、實際 Query/規則/AI/九格、多人授權。
 - 原本 apps/web 的公開網址仍是模擬介面，不會突然改成暴露本機資料的正式服務。
+
+## AI 安全與亮點統整
+- 新增 docs/ai/README.md、developer-guide.md、acceptance.md；README／AGENTS 已連結。
+- 分開開發時 AI 與產品內 AI；D01–D10、R01–R12 與 A01–A16 可供 PR／驗收引用。
+- 核對 OpenAI 官方 AGENTS.md／agent safety 及 Anthropic AI-native SDLC；不把官方建議當本系統安全認證。
+- 修正舊主線：ROM 03→02，補件後需由有效阻斷支持 Not Affected；舊程式／登入檢查不列今日成果。
+- 明確列出現有契約／Runner 測試證據，以及 LIVE、語意引用、provenance、隔離及多人授權缺口。
+- 不改 Horace 核心或同步文件；指南供共同採用，介面未定部分仍標提案。

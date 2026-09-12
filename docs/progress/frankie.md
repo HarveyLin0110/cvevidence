@@ -48,3 +48,8 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - CI https://github.com/HarveyLin0110/cvevidence/actions/runs/34673493112 在 d585826 成功，含依賴安裝、pytest、schema 一致性。
 - 正式分支沒有舊基線祖先，Horace.md 保持原樣；歷史草擬分支只留本機。
 - 本機工作台 localhost:8505，預設核心未接入；未進行真實漏洞驗收。
+
+## AI 開發者指南里程碑
+- 整理先前安全邊界、SDLC、競賽目標與最新官方資料，新增三份 docs/ai 文件。
+- 共 10 項開發規則、12 項 runtime 邊界、16 項驗收情境；已實作／待驗證分開。
+- 僅改文件與導覽，不變更 runtime 判定。既有 CI 在 a5f9e65 已通過。
