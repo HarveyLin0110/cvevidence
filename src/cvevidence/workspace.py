@@ -179,14 +179,8 @@ def workspace(st, *, store_root=None):
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠須等待 Q1–Q5 查核。")
         if run.missing:
             for item in run.missing: st.text(item)
-        st.subheader("候選 CVE")
-        candidates=run.candidates.get("candidates",[])
-        if candidates:
-            for item in candidates:
-                st.text(item["cve_id"]+" · "+item["status"])
-                with st.expander("查看候選來源 "+item["cve_id"]): st.json(item)
-        else: st.info("目前三項 profile 沒有候選命中，不代表沒有漏洞。")
-        st.caption("候選命中 ≠ 產品受影響 ≠ 異常原因。")
+        from .candidate_view import render_candidates
+        render_candidates(st, run.candidates.get("candidates", []), run.cve_id)
         next_button(st,PAGES[2],"下一步：調查來源")
     elif page==PAGES[2]:
         st.subheader("分析進度")
