@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "selected_datasets": [
+    "fresh-rom-r2",
+    "fresh-cmake-r2",
+    "fresh-curl-r1"
+  ],
+  "notes": [
+    "ROM r2 includes the freshly built localhost TCP TLS entry and validated archive/supplement roundtrip.",
+    "Archive locations are local until artifact delivery is configured.",
+    "Data validation is distinct from engineering verdict and Live AI gates."
+  ]
+}

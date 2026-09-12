@@ -1,0 +1,100 @@
+{
+  "created_at": "2026-09-12T04:28:25.582015+00:00",
+  "dataset_version": "fresh-rom-r1",
+  "notes": [
+    "Fresh 2026-09-12 builds; expected verdicts are not distributed in this catalog.",
+    "Download location pending team artifact delivery.",
+    "Official OSS license files included in source trees."
+  ],
+  "packages": [
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "01_rom.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-rom-r1/01_rom.tar.gz",
+        "sha256": "0348eefe6e1426adc0b45b193044d3a1cccc71c1ff99a80ecc9f2ba7631031f7",
+        "size_bytes": 17016753
+      },
+      "base_package_id": null,
+      "build_id": "rom-20260912T041444-f28903",
+      "file_count": 4291,
+      "format": "rom",
+      "kind": "initial",
+      "manifest_sha256": "cbe36375e6935b735c55b3bd3b0155764cd68c98e66014fa89c69d2dec4bb086",
+      "package_id": "01_rom",
+      "primary_artifact": {
+        "path": "images/device.rom",
+        "sha256": "86e61f9482ae0aa5fb4e733d9042918175f16677a3954944ffa6e8377e83455b"
+      },
+      "product_id": "fresh-rom",
+      "release_id": "rom-20260912T041444-f28903"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "02_rom.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-rom-r1/02_rom.tar.gz",
+        "sha256": "c58ec556cc5e6922f317a1380f4ac2b312c1dbae9b2f3548b7bdf485507b2983",
+        "size_bytes": 17012062
+      },
+      "base_package_id": null,
+      "build_id": "rom-20260912T041956-0c5704",
+      "file_count": 4291,
+      "format": "rom",
+      "kind": "initial",
+      "manifest_sha256": "163c3ae52b92e2d0d280252a060fbb6b34af13c03611938689df2037ab3990dc",
+      "package_id": "02_rom",
+      "primary_artifact": {
+        "path": "images/device.rom",
+        "sha256": "a0eb3ac0f904a852b796abd1bfa3e41b1980baac4f64ec454563e21140aaeca3"
+      },
+      "product_id": "fresh-rom",
+      "release_id": "rom-20260912T041956-0c5704"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "03_rom.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-rom-r1/03_rom.tar.gz",
+        "sha256": "97bb9a9f6096d9a9a20d2362585db5b0b411d93fcd8d3c88b0856e8c24b3c606",
+        "size_bytes": 7069528
+      },
+      "base_package_id": null,
+      "build_id": "rom-20260912T041956-0c5704",
+      "file_count": 429,
+      "format": "rom",
+      "kind": "initial",
+      "manifest_sha256": "4405e2ac52e5b1b23c248bb56c70eb069630bbc666d54dba2c9977a52c138aa3",
+      "package_id": "03_rom",
+      "primary_artifact": {
+        "path": "images/device.rom",
+        "sha256": "a0eb3ac0f904a852b796abd1bfa3e41b1980baac4f64ec454563e21140aaeca3"
+      },
+      "product_id": "fresh-rom",
+      "release_id": "rom-20260912T041956-0c5704"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "supplement_03_rom.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-rom-r1/supplement_03_rom.tar.gz",
+        "sha256": "afe3b59bdd54a574c51c610b3718c3164621818ed8fbc958f11f80b50c0d4163",
+        "size_bytes": 9944125
+      },
+      "base_package_id": "03_rom",
+      "build_id": "rom-20260912T041956-0c5704",
+      "file_count": 3862,
+      "format": "rom",
+      "kind": "supplement",
+      "manifest_sha256": "c27b3af70a11dda84bfe6526b01b319daf7c75d02ce9611350c3d052208549de",
+      "package_id": "supplement_03_rom",
+      "primary_artifact": {
+        "path": "images/device.rom",
+        "sha256": "a0eb3ac0f904a852b796abd1bfa3e41b1980baac4f64ec454563e21140aaeca3"
+      },
+      "product_id": "fresh-rom",
+      "release_id": "rom-20260912T041956-0c5704"
+    }
+  ],
+  "schema_version": "1.0"
+}

@@ -1,0 +1,100 @@
+{
+  "created_at": "2026-09-12T04:35:41.605997+00:00",
+  "dataset_version": "fresh-cmake-r2",
+  "notes": [
+    "Fresh 2026-09-12 builds; expected verdicts are not distributed in this catalog.",
+    "Download location pending team artifact delivery.",
+    "Official OSS license files included in source trees."
+  ],
+  "packages": [
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "04_cmake.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-cmake-r2/04_cmake.tar.gz",
+        "sha256": "b9fb05eef063b53d85c29ebcb5076963cf7927a04ebeafdf1cf0b940bdaba5a0",
+        "size_bytes": 2007960
+      },
+      "base_package_id": null,
+      "build_id": "cmake-20260912T041957-c54d2c",
+      "file_count": 409,
+      "format": "cmake",
+      "kind": "initial",
+      "manifest_sha256": "73684533a93390e9d8b0b3d51a2a88d37229cba2c7a6ea69e101cd979d607e33",
+      "package_id": "04_cmake",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+      },
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T041957-c54d2c"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "05_cmake.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-cmake-r2/05_cmake.tar.gz",
+        "sha256": "99aa904a483062627751a3b9adae7108a1443613e75421734fc004689feb8e60",
+        "size_bytes": 2012708
+      },
+      "base_package_id": null,
+      "build_id": "cmake-20260912T042158-1bfde7",
+      "file_count": 410,
+      "format": "cmake",
+      "kind": "initial",
+      "manifest_sha256": "d1584ba91aff475a641c6e0af8e91e7bff81cbd764f382fbc540924653bc1e7a",
+      "package_id": "05_cmake",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "88f19303f4a44c88bf9dca26eae83e38dd7146a301ba88c8833bee483aeb0b22"
+      },
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T042158-1bfde7"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "06_cmake.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-cmake-r2/06_cmake.tar.gz",
+        "sha256": "f49dce2610e68ddff8bf458173bcb15aaa4624d30ce9188f64e6d91feb061d54",
+        "size_bytes": 1614940
+      },
+      "base_package_id": null,
+      "build_id": "cmake-20260912T041957-c54d2c",
+      "file_count": 260,
+      "format": "cmake",
+      "kind": "initial",
+      "manifest_sha256": "16c2800cbad45989f3eadcd1f632076352cf37af615662702866e6df72cfa365",
+      "package_id": "06_cmake",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+      },
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T041957-c54d2c"
+    },
+    {
+      "archive": {
+        "download_url": null,
+        "filename": "supplement_06_cmake.tar.gz",
+        "relative_path": "var/artifacts/archives/fresh-cmake-r2/supplement_06_cmake.tar.gz",
+        "sha256": "c7c962875303ef7ed258cbc29d46c513acef7d0df6033dc44c964f27122a8e3a",
+        "size_bytes": 393901
+      },
+      "base_package_id": "06_cmake",
+      "build_id": "cmake-20260912T041957-c54d2c",
+      "file_count": 149,
+      "format": "cmake",
+      "kind": "supplement",
+      "manifest_sha256": "4b671e07323f2ed1b50dd5e3e4624e8c03b531d8129f8612061bee971582cdf5",
+      "package_id": "supplement_06_cmake",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+      },
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T041957-c54d2c"
+    }
+  ],
+  "schema_version": "1.0"
+}
