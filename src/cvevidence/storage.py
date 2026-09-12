@@ -71,3 +71,13 @@ class RunStore:
     def list_runs(self):
         return sorted((self.read(p.stem) for p in (self.root/"runs").glob("*.json")),
                       key=lambda r: r.created_at, reverse=True)
+
+    def inspect_history(self):
+        """List valid runs and visible failures without weakening direct reads."""
+        valid, rejected = [], []
+        for path in (self.root/"runs").glob("*.json"):
+            try:
+                valid.append(self.read(path.stem))
+            except (ValueError, OSError):
+                rejected.append({"file": path.name, "status": "UNREADABLE_OR_INCOMPATIBLE"})
+        return sorted(valid, key=lambda r: r.created_at, reverse=True), rejected

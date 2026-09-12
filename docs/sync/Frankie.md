@@ -50,3 +50,9 @@
 - 原交付包未有 download_url；使用 Horace 今日 builder 新建 frankie-cmake-integration-20260912，並非冒稱取得原 binary。三包收件、06 補件260→409、四種來源工具／報告／錯build拒收成功。
 - 本機51項測試通過；詳細驗收及限制：docs/releases/Frankie-core-integration-20260912.md。
 - 仍等待 Q1–Q5/Verifier/assess/investigate，以及原 ROM/cmake/curl artifact 交付；M5b/M6 未完成。
+
+## M5a.1 服務恢復與歷史容錯
+- 使用者回報8505錯誤；實際瀏覽器確認服務仍載舊Pydantic模型，讀新sources/DELTA紀錄時崩潰。已重啟並確認新版頁面正常。
+- 新增程式指紋防護，程式改動後要求重啟，不混用快取模型；scripts/workspace_service.py提供start/restart/stop/status。
+- 單筆壞紀錄可見地排除歷史列表，直接讀取仍嚴格拒絕，原檔保留。不存在的已選run可以恢復。
+- 54項測試通過；接續多CVE／情境入口、操作追蹤與ROM/curl實包整合驗收，沒有另寫Horace判定／AI。

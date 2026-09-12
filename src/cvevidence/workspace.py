@@ -73,14 +73,24 @@ def workspace(st):
     st.caption("Horace 核心已接通：工程包匯入、候選、原文工具、同 build 補件。工程判定與 AI 尚未執行。")
     st.session_state.setdefault("selected_run",None)
     page=st.sidebar.radio("查核步驟",PAGES,key="step")
-    runs=store.list_runs()
+    runs, rejected=store.inspect_history()
+    if rejected:
+        st.sidebar.warning(f"{len(rejected)} 筆歷史紀錄無法核對，已排除顯示；原檔保留。")
+        with st.sidebar.expander("歷史紀錄問題"):
+            st.json(rejected)
     if runs:
         labels={r.run_id:((r.input_package.package_id if r.input_package else "匯入失敗")+" · "+r.created_at[:19]+" · "+r.run_id[:8]) for r in runs}
         chosen=st.sidebar.selectbox("保存的查核紀錄",["—"]+list(labels),
             format_func=lambda value: labels.get(value,value),key="history_select")
         if chosen!="—" and st.sidebar.button("載入查核紀錄"):
             st.session_state.selected_run=chosen
-    run=store.read(st.session_state.selected_run) if st.session_state.selected_run else None
+    run=None
+    if st.session_state.selected_run:
+        try:
+            run=store.read(st.session_state.selected_run)
+        except (ValueError,OSError):
+            st.error("選取紀錄不存在、版本不相容或已損壞。請重新選擇紀錄，原檔未修改。")
+            st.session_state.selected_run=None
     st.sidebar.caption("01 匯入 → 02 確認 → 03 來源調查 → 04 匯出與補件。Q1–Q5／AI 尚未交付。")
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
