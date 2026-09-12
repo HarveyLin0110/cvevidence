@@ -141,6 +141,36 @@ class CoreService:
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError("Source operation timed out") from exc
 
+    def analyze_offline(self, parent_id, *, cve_id=None, symptom="", timeout=120):
+        from .engineering import validate_payload
+        parent = self.store.read(parent_id)
+        package = parent.input_package
+        cve = parent.cve_id if cve_id is None else cve_id
+        if not isinstance(cve, str) or not re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
+            raise ValueError("Select one CVE before analysis")
+        if parent.cve_id and cve != parent.cve_id:
+            raise ValueError("CVE differs from parent; create a separate request")
+        if parent.status != "COLLECTED" or parent.error or not package or not package.context_hash:
+            raise ValueError("A real collected snapshot is required")
+        if not 0 < timeout <= 300 or not isinstance(symptom, str) or len(symptom) > 4000:
+            raise ValueError("Invalid deadline or symptom")
+        try:
+            payload = self.invoke("analyze_offline", package.archive_sha256, package.context_hash,
+                timeout=timeout, cve_id=cve, symptom=symptom,
+                statements=[parent.supplement.note] if parent.supplement and parent.supplement.note.strip() else [])
+            engineering, ai = validate_payload(payload, package, cve)
+            digest = self.store.put_blob(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode())
+            run = RunEnvelope(run_id=str(uuid4()), parent_run_id=parent_id,
+                created_at=datetime.now(timezone.utc).isoformat(), cve_id=cve, status="COMPLETED",
+                input_package=package.model_copy(deep=True), sources=parent.sources,
+                engineering_status=engineering, ai_status=ai, engineering_payload_sha256=digest,
+                limitations=["Core queries, verification and assessment executed in one worker; saved JSON is not a Verifier certificate.",
+                    "OFFLINE: no model API call. Engineering result requires human review; provenance remains unverified."])
+        except (ValueError, KeyError, TypeError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+            run = self.failed(cve, exc, parent_id)
+        self.store.save(run)
+        return run
+
     def supplement(self, parent_id, path=None, stream=None, note="", timeout=120,
                    archive_sha256=None, manifest_sha256=None):
         if not 0 < timeout <= 300:
@@ -174,6 +204,10 @@ class CoreService:
                 child.created_at = datetime.now(timezone.utc).isoformat()
                 child.assessment = None
                 child.advice = None
+                child.status = "COLLECTED"
+                child.engineering_payload_sha256 = None
+                child.engineering_status = "NOT_RUN"
+                child.ai_status = "NOT_RUN"
             if note.strip():
                 from cvevidence_core.supplements import interpret_statement
                 interpret_statement(note, parent.input_package.context_hash)
