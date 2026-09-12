@@ -1,0 +1,801 @@
+{
+  "candidate": "PREVIEW_UNCOMMITTED_PC3_CORE_WITH_PR20",
+  "mode": "REAL_RUNNER_OFFLINE",
+  "started_at": "2026-09-12T07:33:44.266901+00:00",
+  "checks": [
+    {
+      "name": "六個明確配對的第二版輸入",
+      "pass": true
+    },
+    {
+      "name": "rom 補件維持同成品",
+      "pass": true
+    },
+    {
+      "name": "rom 補件明確指向原包",
+      "pass": true
+    },
+    {
+      "name": "rom 只新增運作材料",
+      "pass": true
+    },
+    {
+      "name": "rom 新 profile 版本",
+      "pass": true
+    },
+    {
+      "name": "rom 缺運作材料保留待查",
+      "pass": true
+    },
+    {
+      "name": "rom 五 Query 重新分層",
+      "pass": true
+    },
+    {
+      "name": "rom PC2 不因補運作資料改寫",
+      "pass": true
+    },
+    {
+      "name": "rom 運作原文驗證後才重判",
+      "pass": true
+    },
+    {
+      "name": "rom 追加 Query 維持身分並增加材料查核",
+      "pass": true
+    },
+    {
+      "name": "rom 新快照與原成品",
+      "pass": true
+    },
+    {
+      "name": "rom 原工程與檔案不改寫",
+      "pass": true
+    },
+    {
+      "name": "rom 重開 Runner 保留原情境",
+      "pass": true
+    },
+    {
+      "name": "rom 不冒稱設備认证或漏洞重現",
+      "pass": true
+    },
+    {
+      "name": "cmake 補件維持同成品",
+      "pass": true
+    },
+    {
+      "name": "cmake 補件明確指向原包",
+      "pass": true
+    },
+    {
+      "name": "cmake 只新增運作材料",
+      "pass": true
+    },
+    {
+      "name": "cmake 新 profile 版本",
+      "pass": true
+    },
+    {
+      "name": "cmake 缺運作材料保留待查",
+      "pass": true
+    },
+    {
+      "name": "cmake 五 Query 重新分層",
+      "pass": true
+    },
+    {
+      "name": "cmake PC2 不因補運作資料改寫",
+      "pass": true
+    },
+    {
+      "name": "cmake 運作原文驗證後才重判",
+      "pass": true
+    },
+    {
+      "name": "cmake 追加 Query 維持身分並增加材料查核",
+      "pass": true
+    },
+    {
+      "name": "cmake 新快照與原成品",
+      "pass": true
+    },
+    {
+      "name": "cmake 原工程與檔案不改寫",
+      "pass": true
+    },
+    {
+      "name": "cmake 重開 Runner 保留原情境",
+      "pass": true
+    },
+    {
+      "name": "cmake 不冒稱設備认证或漏洞重現",
+      "pass": true
+    },
+    {
+      "name": "新 PC3 補件仍保留未交付入口",
+      "pass": true
+    },
+    {
+      "name": "新增範圍文字不更改已驗條件",
+      "pass": true
+    },
+    {
+      "name": "curl 補件維持同成品",
+      "pass": true
+    },
+    {
+      "name": "curl 補件明確指向原包",
+      "pass": true
+    },
+    {
+      "name": "curl 只新增運作材料",
+      "pass": true
+    },
+    {
+      "name": "curl 新 profile 版本",
+      "pass": true
+    },
+    {
+      "name": "curl 缺運作材料保留待查",
+      "pass": true
+    },
+    {
+      "name": "curl 五 Query 重新分層",
+      "pass": true
+    },
+    {
+      "name": "curl PC2 不因補運作資料改寫",
+      "pass": true
+    },
+    {
+      "name": "curl 運作原文驗證後才重判",
+      "pass": true
+    },
+    {
+      "name": "curl 追加 Query 維持身分並增加材料查核",
+      "pass": true
+    },
+    {
+      "name": "curl 新快照與原成品",
+      "pass": true
+    },
+    {
+      "name": "curl 原工程與檔案不改寫",
+      "pass": true
+    },
+    {
+      "name": "curl 重開 Runner 保留原情境",
+      "pass": true
+    },
+    {
+      "name": "curl 不冒稱設備认证或漏洞重現",
+      "pass": true
+    },
+    {
+      "name": "驗收期間程式未變動",
+      "pass": true
+    }
+  ],
+  "finished_at": "2026-09-12T07:37:09.454293+00:00",
+  "elapsed_seconds": 205.187,
+  "pass": true,
+  "scope": "已核對組合的真 Runner OFFLINE 驗收；不是整個第二版網站、Live 或原始設備認證。",
+  "core_commit": "3ddb6dcfbe1bd877157d5aef10aea2a9c6a3c65d",
+  "runner_commit": "30719a37b8077f4184dd5565653f995b4637460b",
+  "matching_fixed_core_files": true,
+  "matched_file_count": 27,
+  "source_files": {
+    "src/cvevidence/__init__.py": "4e722b96dddce84ec7e176d1e6238c79f5b2feec8ffd4e63255a26e7a4f5acca",
+    "src/cvevidence/adapters.py": "876e702183fbd04d82ee4bf9426501120e1023f9340d8ede89e5ea14b03c1083",
+    "src/cvevidence/ai_service.py": "d132f8646c0c61a831e11a9a9e8d8ee19a216892c7972e0702c8a971f0fc5261",
+    "src/cvevidence/ai_store.py": "69cd402b677b07b80f482543b2911104d77b57172f677188b45072a6c84dfc01",
+    "src/cvevidence/ai_worker.py": "1e5cd29edf34c6b88214ec4d9c4dc160cb8444a26c62625fddbb1933608ce558",
+    "src/cvevidence/ai_workspace.py": "8565c3f9f72b8b6ad91b037feb0c49f5d9543ecaf9ea2071a5a600873d304ac9",
+    "src/cvevidence/analysis_context.py": "9c5f6d6f377bdad92c796edbb8acea318f9489841961f1d7112ee399634fced4",
+    "src/cvevidence/analysis_report.py": "360dae78cb075d267a08a2615425f97492ac18b63799ae259fe5943ce2cc5777",
+    "src/cvevidence/analysis_view.py": "554a2de766320bfb929eee82a5df951d844a5ac608a202fd97ba0643881cb2f6",
+    "src/cvevidence/candidate_view.py": "5d37f4ce1506934cd758e626a3d6553e76fc132adf00a2c90405506db0af52f8",
+    "src/cvevidence/cli.py": "f760501c6c6a772340a624e5eb24aeb2f14ffc22dbf62c124d6b4dd00c4a0ffd",
+    "src/cvevidence/contracts.py": "efb54a0643f2e76c6a5e3624ca0cecc79904ccfe3c30eb2e3a646460166229ea",
+    "src/cvevidence/core_service.py": "51f1516700ae8c4b2440efc49aeb86a0c193781002f86c7665260847102e1603",
+    "src/cvevidence/core_worker.py": "aa6f23aa9e134c222c7bc9085cf57967f0893a526f78940cd6b44860d9739c05",
+    "src/cvevidence/engineering.py": "8fa68c29003e595f608401f17c81a1e12a4f6d620ad871ef7dd4974b44a0dc66",
+    "src/cvevidence/events.py": "af67077a0dabef471e65586d366dc9c841906ad198073cf1e950dfa53ff30093",
+    "src/cvevidence/product_style.py": "b3d999941060134ddf4e666376db6f2965e16bc0bfd4df1b7e33236476a3fc07",
+    "src/cvevidence/reports.py": "6008c7e7cd2adc98f7ac0480556243371b33e64e836b7632b26092d9d9b1f405",
+    "src/cvevidence/request_contracts.py": "b0019ee4dd237014ed9dd4d1108e399d34f9a37edef412cd079e47f7972e814b",
+    "src/cvevidence/request_ui.py": "0d8b61061f1029b4d1a69fbe80d87debfc2ccef406fe54429d3e527a212b4bc4",
+    "src/cvevidence/requests.py": "f3c6d8fa06f55b5aa0fea2721cef20a61b15f592c008fa00bfde4e4f021e28e7",
+    "src/cvevidence/result_summary.py": "c9178d675e5f438572d72bb6fb350f67247770b2f5db9b32f68c7e652c373675",
+    "src/cvevidence/runner.py": "d339b572863f211a6c245697f9936e20de41cd8a47720f70ec6188ce0ebedde5",
+    "src/cvevidence/runtime_guard.py": "075cd5d8ee10be7e9edd00e5e1c5c61ca87bb2394f7cb9619db0a2d7f718c9ff",
+    "src/cvevidence/sources.py": "48c4134df239ae68ae84f82d0a516bc52a83fa5251d1b0f2179d11a8cf2d91fa",
+    "src/cvevidence/storage.py": "b46fa79ae173cfce0a046931bd9a5760bc999a9d4c0ddce18e77d7f8421a4516",
+    "src/cvevidence/web_access.py": "f7038f90c8f4341c64d187c2ec8409023cbd43e1305933278bd23d931c34df8c",
+    "src/cvevidence/worker.py": "e03b28eb5d3621654ac61d8095d70f0182a2e6745003698df39d973a2e293368",
+    "src/cvevidence/workflow_navigation.py": "4967c7787935f84fa5cc5fa5b364ac4d1afb479580524e3cc9e241b4eb6ae43b",
+    "src/cvevidence/workspace.py": "00c54a3d3c14cfdf19dfd523e73dc0895799c30f5c0ffde07ac24ab9675cbe89",
+    "src/cvevidence_core/__init__.py": "5778195f3a165eca61694eed5cde5e8d37c68824f75f061ff90cb981c471f010",
+    "src/cvevidence_core/__main__.py": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
+    "src/cvevidence_core/ai.py": "4a18a8304113b8209e2df6dc3e63f90551d9f61e71d63a6d80249c37444b3f3a",
+    "src/cvevidence_core/assessment.py": "7d353140e1c2fd9814e54a92c114bcc7f0d355ebb7fbae86d230664f2da7d309",
+    "src/cvevidence_core/buildproof.py": "cdcef73d1b64bea0f2b7a20f9d8b2ea19dea120d82273bde3fd6c5bdd01b71dd",
+    "src/cvevidence_core/catalog.py": "5a3627f6f0ce35fecd82c4c2ae03100bf5bf30cd89da50376ea2ea9084cfe5d9",
+    "src/cvevidence_core/cli.py": "ea8daeb79a2be080ae724327d887caa39aa05756b99cae978780b739e431b05d",
+    "src/cvevidence_core/evidence.py": "3d2901f1c725e5f73058fd10d746509ec31570aa8a653050d0b00cbbeb9fbe04",
+    "src/cvevidence_core/frankie_adapter.py": "69d9b69b664447f21d6694192f13d5ab420c81270af0a6956f4e2f661b93db67",
+    "src/cvevidence_core/integrity.py": "8201dcb3f451669e7e53c859b987f2ef948b0438f43733f400b332290577829c",
+    "src/cvevidence_core/investigation_evidence.py": "d65e5daa1925d9d3d6c19375f76d0ac737d34be7a166ffadc15dd59f0e231f3f",
+    "src/cvevidence_core/operational.py": "33c6ee101abebc2c9ce34b36ad51e5f00881644cf5add4e327225b29bef74b72",
+    "src/cvevidence_core/queries.py": "d1826dae4ff79942cc69a9da899aa88d97da932c350d4c6fa39a9f918997ccb9",
+    "src/cvevidence_core/reviewed_sources.json": "e5b8b39d6e4cf4ef3f675ada7254f6ee7f3fe71359bf0a19bc7f9ac8643277a4",
+    "src/cvevidence_core/sources.py": "2f7acf3b3c61e9f9db4ab85d61ccf6e32e7f286f6102d58612b69c8478e8bf43",
+    "src/cvevidence_core/supplements.py": "54d5314939a5cb16e9a70fa5264fc6cd013af9f9f65eb7916690b19dee8c82ed",
+    "src/cvevidence_core/verifier.py": "8e922061d1b2c39567dc6928c1c95cc672c5036c9756cb8c7d81cdaf2ef0e4b8",
+    "src/cvevidence_core/workflow.py": "037fff2e8f575e6ccbe58c6222b7edb2e8df07acad0b367728065d384e31382c"
+  },
+  "cases": [
+    {
+      "family": "rom",
+      "inputs": [
+        {
+          "package_id": "pc3_rom_static",
+          "sha256": "d2070bc95eabb183b9c91c4b84fdbde1d231d0f103b27d69935c0eb3b873ccb8"
+        },
+        {
+          "package_id": "supplement_pc3_rom_runtime",
+          "sha256": "7f50ecb6d721432a8867eff5f1d956a65c2ba099df4d79d9464c6b2b2f69f2c5"
+        }
+      ],
+      "error": null,
+      "before": {
+        "run_id": "574448ca-b240-4308-9024-a710fbef9acd",
+        "parent_run_id": "ce8f5144-f24e-4aec-86eb-a7a3949dd85e",
+        "context_hash": "9c31a700e6e675b85be76705e30d9002bbac0fe33086bef1fb9de509be87a29b",
+        "archive_sha256": "d2070bc95eabb183b9c91c4b84fdbde1d231d0f103b27d69935c0eb3b873ccb8",
+        "primary_artifact": {
+          "path": "images/device.rom",
+          "sha256": "1285e9da60f599131c44b0f65f4b87e379d392e2a24343bbc980d5f8a5eda204"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "NEEDS_INVESTIGATION",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "UNKNOWN"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED_WITH_GAPS"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "9c31a700e6e675b85be76705e30d9002bbac0fe33086bef1fb9de509be87a29b",
+            "evidence_ids": [],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-c66cbcb8034f8349bcce",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "WAITING_USER_INPUT",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "尚無同成品的運作證據；PC2 靜態路徑不等於 PC3 實際觀測。",
+          "evidence_basis": "NOT_OBSERVED",
+          "provenance_verified": false,
+          "status": "MISSING"
+        }
+      },
+      "after": {
+        "run_id": "8e310faa-e664-48bf-a529-62356efed359",
+        "parent_run_id": "95c81a6c-0c7b-4317-88de-2395b4fc6be4",
+        "context_hash": "7399e5a4a0d34701cef8fb6c77658ac2052a849c9cad618b4446f150414f136f",
+        "archive_sha256": "6f6230ed83e7a5460865de9436505d126629092b3994029372f70099dea77f49",
+        "primary_artifact": {
+          "path": "images/device.rom",
+          "sha256": "1285e9da60f599131c44b0f65f4b87e379d392e2a24343bbc980d5f8a5eda204"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "AFFECTED",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "SUPPORTED"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "7399e5a4a0d34701cef8fb6c77658ac2052a849c9cad618b4446f150414f136f",
+            "evidence_ids": [
+              "E-330ff2754d802bd73ca10cccd19103f0327f8acd8bd56a343c672e42c0e7bfa6"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-c66cbcb8034f8349bcce",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          },
+          {
+            "context_hash": "7399e5a4a0d34701cef8fb6c77658ac2052a849c9cad618b4446f150414f136f",
+            "evidence_ids": [
+              "E-e1266fe4264ec92362649bebe83385fb1639a24666c05f8cf9d1efa96d720126"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-4a863dff88bfa3f05c24",
+            "question": "請核對新收到的運作收據所引用的 runtime/tls.log，確認原始內容是否支持必要條件。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/tls.log"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "同成品正常運作紀錄與必要配置已由對應格式規則核對；不是漏洞重現或實體設備認證。",
+          "evidence_basis": "CONTROLLED_LOCAL_OBSERVATION",
+          "provenance_verified": false,
+          "status": "VERIFIED"
+        }
+      }
+    },
+    {
+      "family": "cmake",
+      "inputs": [
+        {
+          "package_id": "pc3_cmake_static",
+          "sha256": "5dc5d7b25333b10b53e1aaeac9830dd3a25ecb9da3dd646787c49f783b0564b5"
+        },
+        {
+          "package_id": "supplement_pc3_cmake_runtime",
+          "sha256": "703a18838207d722b7a8742e4f78630cd8771d32259e5292558ae26c38e28d6b"
+        }
+      ],
+      "error": null,
+      "before": {
+        "run_id": "40eb2b09-5c4e-4bef-af30-5fb79ed5dfeb",
+        "parent_run_id": "fcda9768-84e2-4780-ac9d-1de7b1c9fb7c",
+        "context_hash": "34bb5c9e6932c9ff18c123b3a892672474e0de0b0aada236060dca27ca5217f0",
+        "archive_sha256": "5dc5d7b25333b10b53e1aaeac9830dd3a25ecb9da3dd646787c49f783b0564b5",
+        "primary_artifact": {
+          "path": "product/update-reader",
+          "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "NEEDS_INVESTIGATION",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "UNKNOWN"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED_WITH_GAPS"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "34bb5c9e6932c9ff18c123b3a892672474e0de0b0aada236060dca27ca5217f0",
+            "evidence_ids": [],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-48789c8b49a46a4842f8",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "WAITING_USER_INPUT",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "尚無同成品的運作證據；PC2 靜態路徑不等於 PC3 實際觀測。",
+          "evidence_basis": "NOT_OBSERVED",
+          "provenance_verified": false,
+          "status": "MISSING"
+        }
+      },
+      "after": {
+        "run_id": "bb252998-dcd4-4089-a0f0-546399b36f6d",
+        "parent_run_id": "850be1dc-b1b2-4d21-99ee-02e43aa649a4",
+        "context_hash": "b1d1080f190f2751c48448a36b835c3c569e8bccfb48bfa36f7e2845ffdbd2f5",
+        "archive_sha256": "fde213f04e365d39c150f1fa709e99ae1376fb5e26ce04b2f96f0b974cdc4be0",
+        "primary_artifact": {
+          "path": "product/update-reader",
+          "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "AFFECTED",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "SUPPORTED"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "b1d1080f190f2751c48448a36b835c3c569e8bccfb48bfa36f7e2845ffdbd2f5",
+            "evidence_ids": [
+              "E-f0252e41cc6d142fc90b21f600be8ebdb000fcde0748171a95cdf7f1f7c2ec2a"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-48789c8b49a46a4842f8",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          },
+          {
+            "context_hash": "b1d1080f190f2751c48448a36b835c3c569e8bccfb48bfa36f7e2845ffdbd2f5",
+            "evidence_ids": [
+              "E-6c201bc8355cdbb3c6a037120b2458ef485a998fb020f0dbe372b9299af464f4"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-55e4cf20031f282bc068",
+            "question": "請核對新收到的運作收據所引用的 runtime/normal.log，確認原始內容是否支持必要條件。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/normal.log"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          },
+          {
+            "context_hash": "b1d1080f190f2751c48448a36b835c3c569e8bccfb48bfa36f7e2845ffdbd2f5",
+            "evidence_ids": [
+              "E-bb838d4b1f32436942a308762bb52475c1acec1245c1a19c901a1e19fb705a24"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-5eda147f861fbbb02521",
+            "question": "請核對新收到的運作收據所引用的 runtime/normal.gz，確認原始內容是否支持必要條件。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/normal.gz"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "同成品正常運作紀錄與必要配置已由對應格式規則核對；不是漏洞重現或實體設備認證。",
+          "evidence_basis": "CONTROLLED_LOCAL_OBSERVATION",
+          "provenance_verified": false,
+          "status": "VERIFIED"
+        }
+      }
+    },
+    {
+      "family": "curl",
+      "inputs": [
+        {
+          "package_id": "pc3_curl_static",
+          "sha256": "654f57cf313027ed07174031133f9e3b7f76c6ff405d0b412252dd772af666c8"
+        },
+        {
+          "package_id": "supplement_pc3_curl_runtime",
+          "sha256": "88ea0baf96d4ffacfe351f8a3729dfd82a55e8f0e88c38ee32ee347b63c7894e"
+        }
+      ],
+      "error": null,
+      "before": {
+        "run_id": "835a5d9d-6094-4d9f-9833-93883342fc34",
+        "parent_run_id": "c20f8c49-0d3d-4ed9-87fe-ab464122ec95",
+        "context_hash": "0de1d278eec2641a73be51310bf6605ba9a1d8b6097467b9d57d38c80509ab65",
+        "archive_sha256": "654f57cf313027ed07174031133f9e3b7f76c6ff405d0b412252dd772af666c8",
+        "primary_artifact": {
+          "path": "install/bin/curl",
+          "sha256": "8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "NEEDS_INVESTIGATION",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "UNKNOWN"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED_WITH_GAPS"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "0de1d278eec2641a73be51310bf6605ba9a1d8b6097467b9d57d38c80509ab65",
+            "evidence_ids": [],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-160500d09d1c9fa6ba1f",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "WAITING_USER_INPUT",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "尚無同成品的運作證據；PC2 靜態路徑不等於 PC3 實際觀測。",
+          "evidence_basis": "NOT_OBSERVED",
+          "provenance_verified": false,
+          "status": "MISSING"
+        }
+      },
+      "after": {
+        "run_id": "d9f44c3a-9917-4c43-9b75-0c0b4a68f962",
+        "parent_run_id": "37754e29-6449-4bc7-8c1f-4ea77f47fce1",
+        "context_hash": "f9e7269fc08c9637381ee14aca15adfd85e6048bad0d6b56592104f39ec77ec1",
+        "archive_sha256": "3e08ec8dbeb9339b95e251c8888984b0e7446a541845e327d4ede803805f73d7",
+        "primary_artifact": {
+          "path": "install/bin/curl",
+          "sha256": "8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b"
+        },
+        "profile_version": "2026-09-12.1-runtime-v2",
+        "verdict": "AFFECTED",
+        "conditions": {
+          "build_identity": "SUPPORTED",
+          "component": "SUPPORTED",
+          "library_binding": "SUPPORTED",
+          "product_binding": "SUPPORTED",
+          "scope_complete": "SUPPORTED",
+          "vulnerable_implementation": "SUPPORTED",
+          "entry_reachable": "SUPPORTED",
+          "trigger_prerequisites": "SUPPORTED",
+          "runtime_observation": "SUPPORTED"
+        },
+        "queries": [
+          {
+            "query_id": "Q1_COMPONENT",
+            "pc_layer": "PC1",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q2_BUILD",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q3_IMPLEMENTATION",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q4_BINDING",
+            "pc_layer": "PC2",
+            "status": "COMPLETED"
+          },
+          {
+            "query_id": "Q5_PATH",
+            "pc_layer": "PC3",
+            "status": "COMPLETED"
+          }
+        ],
+        "followup_queries": [
+          {
+            "context_hash": "f9e7269fc08c9637381ee14aca15adfd85e6048bad0d6b56592104f39ec77ec1",
+            "evidence_ids": [
+              "E-17d6304bb92f1781103c0b1b7e0189fe597c8bede05ca0237290c4c7c58892d2"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-160500d09d1c9fa6ba1f",
+            "question": "請提供本次設備／成品的運作收據，指出原始輸出與配置在哪裡。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/observation.json"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          },
+          {
+            "context_hash": "f9e7269fc08c9637381ee14aca15adfd85e6048bad0d6b56592104f39ec77ec1",
+            "evidence_ids": [
+              "E-a7afb951d5b902697b2607b41fc8a831b0a3388bdd948c826bb1444676f42a18"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-9923a08c07c71dc4e465",
+            "question": "請核對新收到的運作收據所引用的 runtime/socks5-wire.json，確認原始內容是否支持必要條件。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/socks5-wire.json"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          },
+          {
+            "context_hash": "f9e7269fc08c9637381ee14aca15adfd85e6048bad0d6b56592104f39ec77ec1",
+            "evidence_ids": [
+              "E-75c9507cd7d7ef63a834b1930ed855e80eb37bf022c1db720fc4da8180ab5bdb"
+            ],
+            "origin": "RULE_GAP",
+            "query_id": "DQ-25c900c7490c6eda2b40",
+            "question": "請核對新收到的運作收據所引用的 runtime/download.conf，確認原始內容是否支持必要條件。",
+            "reason": "核對 PC3 的同成品運作材料；不以原碼或文字聲明替代。",
+            "required_files": [
+              "runtime/download.conf"
+            ],
+            "status": "VERIFIED",
+            "target_condition_id": "runtime_observation"
+          }
+        ],
+        "runtime_observation": {
+          "description": "同成品正常運作紀錄與必要配置已由對應格式規則核對；不是漏洞重現或實體設備認證。",
+          "evidence_basis": "CONTROLLED_LOCAL_OBSERVATION",
+          "provenance_verified": false,
+          "status": "VERIFIED"
+        }
+      }
+    }
+  ],
+  "history": {
+    "before_run": "d6d5ec93-f39e-4f89-9fc4-21ead7a856e5",
+    "after_run": "f399f27a-7b46-46b8-8b2a-fc88f5702ad0",
+    "verdict": "NEEDS_INVESTIGATION",
+    "statements": [
+      {
+        "statement_id": "M-fef65598aa026580d2f3b1a8",
+        "source_context_hash": "34bb5c9e6932c9ff18c123b3a892672474e0de0b0aada236060dca27ca5217f0",
+        "assessed_context_hash": "dbdbf6f4dbe3638047d040e2a9aea834e53fe44bf2fce729c9e66c5903af1b36",
+        "blocks_verdict": true
+      }
+    ]
+  }
+}
