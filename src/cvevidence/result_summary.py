@@ -76,3 +76,43 @@ def condition_interpretation(condition):
     elif condition.get("condition_id") == "entry_reachable":
         boundary = "此列描述交付程式的路徑；實際部署的外部可達性與權限仍須另行覆核。"
     return label, boundary
+
+
+def condition_groups(entry):
+    """Validate a complete, non-overlapping presentation mapping from core."""
+    mapping = entry.get("condition_groups")
+    if not isinstance(mapping, dict) or mapping.get("cve_id") != entry.get("cve_id") or mapping.get("grouping_only") is not True:
+        return []
+    conditions = objects((entry.get("assessment") or {}).get("conditions"))
+    by_id = {c.get("condition_id"): c for c in conditions}
+    if len(by_id) != len(conditions): return []
+    groups = [{"group_id": "共用前提", "title": "建置、綁定與範圍", "condition_ids": mapping.get("shared_prerequisite_ids", [])}, *objects(mapping.get("groups"))]
+    result, seen = [], set()
+    for group in groups:
+        ids = group.get("condition_ids")
+        if not isinstance(ids, list) or not ids or any(not isinstance(cid, str) or cid not in by_id or cid in seen for cid in ids):
+            return []
+        if len(set(ids)) != len(ids): return []
+        seen.update(ids)
+        result.append({**group, "conditions": [by_id[cid] for cid in ids]})
+    return result if seen == set(by_id) else []
+
+
+def pc_summaries(entry):
+    """Combine saved condition explanations without generating a PC verdict."""
+    summaries = []
+    affected = (entry.get("assessment") or {}).get("verdict") == "AFFECTED"
+    for group in condition_groups(entry):
+        shared = group["group_id"] == "共用前提"
+        states = [c.get("state") for c in group["conditions"]]
+        highlight = affected and not shared and all(s == "SUPPORTED" for s in states)
+        tone = "affected" if highlight else "pending" if any(s not in ("SUPPORTED", "BLOCKED") for s in states) else "neutral"
+        label = "受影響判定的支持條件" if highlight else "含待確認條件" if tone == "pending" else "含阻斷證據" if "BLOCKED" in states else "條件有證據支持"
+        paragraphs = []
+        for condition in group["conditions"]:
+            title = str(condition.get("title") or condition.get("condition_id") or "未命名條件")
+            explanation = str(condition.get("explanation") or "尚無保存說明")
+            paragraphs.append(title + "（" + condition_interpretation(condition)[0] + "）：" + explanation)
+        summaries.append({**group, "shared": shared, "tone": tone, "label": label,
+                          "summary": "\n\n".join(paragraphs)})
+    return summaries

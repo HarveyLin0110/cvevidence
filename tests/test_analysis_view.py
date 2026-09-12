@@ -91,3 +91,20 @@ def test_untrusted_content_only_literal_and_rejected_not_recommended():
     assert "DO_NOT_RECOMMEND" not in displayed(app) and "DO_NOT_SHOW_AS_FINDING" not in displayed(app)
     assert "本次未呼叫模型" in displayed(app)
     assert not app.markdown
+
+def test_pc_consolidated_text_stays_literal_and_report_agrees():
+    from tests.test_result_summary import grouped_entry
+    from cvevidence.analysis_report import export_analysis
+    payload = sample()
+    entry = payload['analyses'][0]
+    grouped = grouped_entry('AFFECTED')
+    entry['assessment'].update(grouped['assessment'])
+    entry['condition_groups'] = grouped['condition_groups']
+    marker = '<script>TEST_ONLY</script> ![image](https://example.invalid/private)'
+    entry['assessment']['conditions'][-1]['explanation'] = marker
+    app = app_for(payload, callbacks=True)
+    assert not app.exception and not app.markdown
+    assert 'PC3 · path' in displayed(app) and marker in displayed(app)
+    assert '受影響判定的支持條件' in displayed(app)
+    report = export_analysis(payload, context_hash='test-context', cve_id=entry['cve_id'], run_id='TEST_ONLY')
+    assert 'PC 綜合說明' in report and marker in report

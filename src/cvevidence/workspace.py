@@ -207,8 +207,17 @@ def workspace(st, *, store_root=None):
                 selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
                 cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
             else: st.text("本次分析："+cve)
-            symptom=st.text_area("本次調查情境",value=symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
-            can_analyze=run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
+            from .analysis_context import read_analysis_context
+            history_ok=True
+            saved_symptom=""
+            if run.input_package and run.input_package.context_hash:
+                try:
+                    saved_symptom=read_analysis_context(runner.store,run.run_id,cve_id=cve)["symptom"]
+                except (ValueError,OSError,KeyError,TypeError):
+                    history_ok=False
+                    st.error("本次查核的歷史材料無法核對；請保留原紀錄並確認歷程，暫停建立新判定。")
+            symptom=st.text_area("本次調查情境",value=saved_symptom or symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
+            can_analyze=history_ok and run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
             st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
             if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
                 try:
