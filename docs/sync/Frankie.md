@@ -78,3 +78,6 @@
 
 ## F15：獨立 AI 工作台（2026-09-12）
 新增 AI attempt 保存、可信任 worker、明確外送授權、冪等與並發防護、歷史及報告副本；原工程保持不變。詳見 ../development/F15-ai-workspace.md。真實最小 API 請求成功；CMake06 首次完整 AI 為 TIMED_OUT，保留失敗，不列成功。此 session 負責8506；整合端負責8505/8507及主線發布。
+
+### F15 真實閉環交付
+程式25a39bf（f11ca7a + main e9cc996），136測試通過。CMake06第二次獨立Sol/low AI實際2 calls→NEEDS_USER_INPUT，要求同build libz.a；AppTest顯示真實AI／報告、套用補件／重判AFFECTED，原工程與首次TIMED_OUT保持。詳見 docs/releases/Frankie-F15-live-acceptance-20260912.md。PR14已推送；公開部署與新核心升級交整合端。
