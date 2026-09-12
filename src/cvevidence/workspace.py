@@ -218,7 +218,8 @@ def workspace(st, *, store_root=None):
                 except (ValueError,OSError,RuntimeError): st.error("工程分析未完成，請確認 CVE 與收件狀態。")
         with st.expander("證據瀏覽器：搜尋、核對原文與比較來源"):
             source_viewer(st,runner,run)
-        next_button(st,PAGES[4],"下一步：查核紀錄與補件")
+        if not payload:
+            next_button(st,PAGES[4],"下一步：查核紀錄與補件")
     else:
         if page==PAGES[3] and payload:
             entry=payload["analyses"][0]
