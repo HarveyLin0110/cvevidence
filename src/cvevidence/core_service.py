@@ -141,7 +141,8 @@ class CoreService:
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError("Source operation timed out") from exc
 
-    def supplement(self, parent_id, path=None, stream=None, note="", timeout=120):
+    def supplement(self, parent_id, path=None, stream=None, note="", timeout=120,
+                   archive_sha256=None, manifest_sha256=None):
         if not 0 < timeout <= 300:
             raise ValueError("Invalid deadline")
         deadline = monotonic() + timeout
@@ -154,12 +155,13 @@ class CoreService:
             raise ValueError("Provide a delta or statement")
         try:
             if has_delta:
-                sha = self.retain_stream(stream) if stream is not None else self.retain(path)
+                sha = self.retain_stream(stream,archive_sha256) if stream is not None else self.retain(path,archive_sha256)
                 with tempfile.TemporaryDirectory(dir=self.temp) as temp:
                     output = Path(temp) / "merged.tar.gz"
                     self.invoke("delta", parent.input_package.archive_sha256,
                         parent.input_package.context_hash, timeout=self.remaining(deadline),
                         supplement=str(self.store.root / "blobs" / sha), output=str(output),
+                        supplement_sha256=sha, supplement_manifest_sha256=manifest_sha256,
                         child_package_id="supplemented-" + uuid4().hex)
                     merged_sha = self.retain(output)
                     child = self.collect_digest(merged_sha, parent.cve_id, timeout=self.remaining(deadline))
@@ -187,13 +189,15 @@ def catalog_entries(root):
     """Catalog is trusted repo/operator configuration, never an uploaded locator."""
     root = Path(root).resolve()
     entries = []
+    index=root / "data/catalogs/index.json"
+    selected=set(json.loads(index.read_text()).get("selected_datasets",[])) if index.exists() else set()
     for path in sorted((root / "data/catalogs").glob("*.json")):
         catalog = json.loads(path.read_text())
         for item in catalog.get("packages", []):
-            archive = root / item["archive"]["relative_path"]
+            archive = root / item["archive"].get("repo_path",item["archive"]["relative_path"])
             resolved = archive.resolve()
-            if not resolved.is_relative_to(root / "var/artifacts"):
+            if not any(resolved.is_relative_to(allowed) for allowed in (root/"var/artifacts",root/"demo-inputs")):
                 continue
             entries.append(dict(item, dataset=catalog["dataset_version"],
-                local_path=str(resolved), available=resolved.is_file()))
-    return entries
+                local_path=str(resolved), available=resolved.is_file(), selected=catalog["dataset_version"] in selected))
+    return sorted(entries,key=lambda e:(not e["selected"],e["package_id"],e["dataset"]))

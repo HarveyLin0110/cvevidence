@@ -196,7 +196,8 @@ def workspace(st):
                 if st.button("套用已取得的補件並建立新 run"):
                     with st.spinner("核心正在驗證補件…"):
                         item=matching[selected_delta]
-                        child=runner.supplement_file(run.run_id,path=item["local_path"])
+                        child=runner.supplement_file(run.run_id,path=item["local_path"],
+                            archive_sha256=item["archive"]["sha256"],manifest_sha256=item["manifest_sha256"])
                     st.session_state.selected_run=child.run_id
                     st.rerun()
             with st.form("supplement-"+run.run_id):

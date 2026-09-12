@@ -49,8 +49,11 @@ def execute(req):
             return sources.compare_sources(context, **req["arguments"])
         if op != "delta":
             raise ValueError("Unsupported operation")
-        supplement, _ = checked_archive(req["supplement"])
+        supplement, _ = checked_archive(req["supplement"],req.get("supplement_sha256"))
         safe_extract(supplement, root / "supplement")
+        expected=req.get("supplement_manifest_sha256")
+        if expected and file_hash(root / "supplement/manifest.json")!=expected:
+            raise IntegrityError("Supplement catalog manifest hash mismatch")
         validation = validate_supplement(context, root / "supplement")
         if not validation["can_merge"]:
             raise IntegrityError("Supplement belongs to a different build")
