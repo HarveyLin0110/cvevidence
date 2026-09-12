@@ -1,4 +1,24 @@
-# Parallel QA：固定 checkpoint 接線驗收
+# Parallel QA 第二輪：合併後 ROM 補件與歷史語意
+
+更新：2026-09-12T14:05:51+08:00。**首筆工程＋補件通過；剩餘範圍執行中。核心／adapter 實測，網頁未驗。**
+
+固定基準 `44efc7bdcc533760ab167a2a005b0111b9758483`，分支 `codex/parallel-qa-r2`，worktree `/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/parallel/qa-r2`。基準已整合第一輪三支 QA 腳本、9/9、3/3、9/9 報告（對應 `0a480df`、`ab44f09`、`44efc7b`）；下方第一輪交件狀態僅作歷史，不計本輪測試數。
+
+產品新增差異為 A 的 statement_context／pending reviews 分離、主線 workflow／重判保留歷史文字、B 的 AI 可靠性及 ELF handle 關閉。adapter 未變；本輪聚焦 ROM archive／workflow／歷史重新核對與拒絕失敗隔離，不重跑九格、75 項單元、CMake Live 或壓力測試。
+
+在本 worktree 真正執行：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/merged_rom_probe.py
+```
+
+首筆原始輸出：`var/validation/parallel-qa/merged-rom-r2-20260912T060449958481Z/`。`01-original-with-statements.result.json` 是 Git ROM 03＋中性說明＋歷史停用 heartbeat 聲明的工程結果，實測 NEEDS_INVESTIGATION，1.793 秒；`02-supplemented-history.result.json` 是同 build delta 合併後送 archive adapter 的結果，NOT_AFFECTED，13.088 秒。`03-delta-identity-and-history-transition` 檢查亦通過，涵蓋同 build、成品 bytes/hash、不變的原 M-ID／來源 context、新 context、歷史聲明由待查改為有目前證據支持，pending reviews 由 1 變 0。三項為首筆完成數，不預填其餘通過。
+
+暫存 snapshot 使用 QA 專用 package ID，新 context 為 `ed299a3ed9594dcbaf3fdb8a67a0e0461c8be8a510fdc1750b307058c3ce96a3`；不要求等於正式 Runner 未來 context。原檔與完整 JSON/事件均在自己的忽略 var/validation 目錄；完整報告隨後補上。
+
+---
+
+# 第一輪歷史：固定 checkpoint 接線驗收
 
 **核心通過／網頁未驗。** 新增 archive 接線驗收九格 9/9、補件 3/3、錯誤／狀態邊界 9/9。本輪只驗 Git `demo-inputs/` → 核心 adapter 的真實邊界；不把資料交付、mock、既有驗收或舊 `var` 成品計作新的端到端成功。
 

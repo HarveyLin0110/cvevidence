@@ -1,4 +1,19 @@
-# Parallel QA 同步
+# Parallel QA 第二輪同步
+
+更新：2026-09-12T14:03:23+08:00。**RUNNING：首筆工程＋補件 3/3 通過；其餘項目執行中。**
+
+- 固定基準：`44efc7bdcc533760ab167a2a005b0111b9758483`；worktree `/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/parallel/qa-r2`；分支 `codex/parallel-qa-r2`，已核對乾淨。
+- 第一輪三支 QA 腳本與 9/9、3/3、9/9 摘要已隨 `0a480df`、`ab44f09`、`44efc7b` 整合；下方第一輪交件狀態為歷史紀錄，不作本輪結果。
+- 本輪產品差異：A 的 statement_context／statement_reviews 分離與補件後重新比對；主線 workflow 保留歷史文字、OFFLINE／後續調查重核入口；B 的 AI 可靠性；buildproof 關閉檔案 handle。adapter 未變。
+- 聚焦 ROM 03 真實 archive → 缺件 → 同 build delta → 阻斷，持續保留中性／歷史文字；真正衝突／未覆蓋入口仍待查；失敗補件／context／hash 不污染原 input／結果。
+- 首筆 ROM 03 archive 1.793 秒 → NEEDS_INVESTIGATION；補件後 archive 13.088 秒 → NOT_AFFECTED，同 build／成品 bytes 不變，新增 3862 檔，新 context `ed299a3ed9594dcbaf3fdb8a67a0e0461c8be8a510fdc1750b307058c3ce96a3`。原 M-ID／來源 context 保留，原待查聲明改為 CONSISTENT_WITH_VERIFIED_EVIDENCE，pending reviews=0。
+- 真正執行命令：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/qa_parallel/merged_rom_probe.py`。當次輸出 `var/validation/parallel-qa/merged-rom-r2-20260912T060449958481Z/`，第一筆工程 `01-original-with-statements.result.json`、補件後 `02-supplemented-history.result.json`、各自 events、`supplement-plan.json`、漸進 `report.json` 可供主對話讀取。
+- 75 項原測試、CMake Live 與第一輪全套不重跑。衝突／未覆蓋入口／重判／失敗不污染驗收仍在執行。
+- NOT_RUN：Live API、正式 UI／Runner／報告、全量效能。沒有跨對話 callable；主對話請讀本檔／commit，未宣稱訊息已投遞。
+
+---
+
+# 第一輪歷史同步
 
 更新：2026-09-12 13:49（Asia/Taipei）。僅 C 對話維護。**核心通過／網頁未驗。**
 
