@@ -4,7 +4,7 @@
 ## 工作邊界
 - 本分支：codex/integration-handoff。
 - 本機工作目錄：~/projects/cvevidence-integration。
-- Frankie 原開發分支：codex/frankie-fresh-milestones；目錄 ~/projects/cvevidence-fresh。另一開發 session 尚未決定最終分支，請使用自己的 worktree，不直接修改整合目錄。
+- Frankie 個人開發分支已確認：codex/frankie-feature-development；目錄 ~/projects/cvevidence-fresh，port8506。本整合目錄使用port8505，双方不操作對方服務。
 - 本 session 只做雙方 commit 接入、介面相容修正、整合測試、服務驗證與交接；不另寫 Query/判定/AI，也不擴寫多 CVE 或其他前端新功能。
 - 新功能交付請附分支/SHA、介面樣例、測試與變更範圍；整合端 fetch 後按 commit 核對，經 PR 交接，不自動 merge main。
 - Horace.md 僅由 Horace 維護；本 session 後續更新此檔，避免與另一個 Frankie 開發 session 同改 Frankie.md。
@@ -17,6 +17,8 @@
 - 12/12 SHA256SUMS 成功；三格式9/9初始收件、3/3同build補件成功，四種來源工具與報告成功。
 - ROM 432→4294，CMake 260→409，curl 6245→6250；均無覆寫父紀錄、無移除/變更舊來源，錯build拒收。
 - 詳細摘要在 docs/releases/official-input-integration-20260912.json。
+- 整合PR：https://github.com/HarveyLin0110/cvevidence/pull/3；程式commit 1ac9d4b，56項測試通過，CI34675527610成功。
+- 8505實際瀏覽器已通過正式03_rom匯入→資料確認，無舊模型ValidationError。Horace PR#2交接留言已更新正式包收件結果。
 - Horace 所述 Sol/medium 與一次 CMake Live 成功是對方的本機進度；此整合版工程/AI仍NOT_RUN。
 
 ## 已解決的頁面問題
