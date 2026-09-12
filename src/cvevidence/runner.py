@@ -9,13 +9,34 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def analyze_offline(self, parent_run_id, *, cve_id=None, symptom="", timeout=120):
+        from .core_service import CoreService
+        return CoreService(self.store).analyze_offline(parent_run_id,
+            cve_id=cve_id, symptom=symptom, timeout=timeout)
+
+    def read_engineering(self, run_id):
+        from .engineering import read_engineering
+        return read_engineering(self.store, run_id)
+
+    def submit_request(self, **kwargs):
+        from .requests import submit
+        return submit(self, **kwargs)
+
+    def read_request(self, request_id):
+        from .requests import RequestStore
+        return RequestStore(self.store).read(request_id)
+
     def start_file(self, path=None, **kwargs):
         from .core_service import CoreService
         return CoreService(self.store).start(path, **kwargs)
 
     def source_tool(self, run_id, operation, **arguments):
-        from .core_service import CoreService
-        return CoreService(self.store).tool(run_id, operation, **arguments)
+        from .events import invoke_with_receipt
+        return invoke_with_receipt(self, run_id, operation, arguments)
+
+    def tool_history(self, run_id):
+        from .events import EventStore
+        return EventStore(self.store).read(run_id)
 
     def supplement_file(self, parent_id, **kwargs):
         from .core_service import CoreService
@@ -93,7 +114,8 @@ class Runner:
             # A note is pending material, not new verified facts or a copied verdict.
             values = parent.model_dump()
             values.update(run_id=str(uuid4()), created_at=datetime.now(timezone.utc).isoformat(),
-                          status="COLLECTED", assessment=None, advice=None, mode="OFFLINE")
+                          status="COLLECTED", assessment=None, advice=None, mode="OFFLINE",
+                          engineering_payload_sha256=None, engineering_status="NOT_RUN", ai_status="NOT_RUN")
             values["limitations"] = list(parent.limitations) + ["Text supplement is unverified; no rules rerun."]
             run = RunEnvelope.model_validate(values)
         else:

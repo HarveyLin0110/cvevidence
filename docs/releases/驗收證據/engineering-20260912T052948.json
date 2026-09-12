@@ -1,0 +1,232 @@
+{
+  "created_at": "2026-09-12T05:28:27.973640+00:00",
+  "cases": [
+    {
+      "package_id": "01_rom",
+      "expected": "AFFECTED",
+      "observed": "AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 8.994,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "SUPPORTED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "02_rom",
+      "expected": "NOT_AFFECTED",
+      "observed": "NOT_AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 10.089,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "BLOCKED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "03_rom",
+      "expected": "NEEDS_INVESTIGATION",
+      "observed": "NEEDS_INVESTIGATION",
+      "pass": true,
+      "elapsed_seconds": 0.756,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "UNKNOWN",
+        "library_binding": "UNKNOWN",
+        "product_binding": "UNKNOWN",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "UNKNOWN",
+        "entry_reachable": "UNKNOWN",
+        "trigger_prerequisites": "UNKNOWN"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "04_cmake",
+      "expected": "AFFECTED",
+      "observed": "AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 0.342,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "SUPPORTED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "05_cmake",
+      "expected": "NOT_AFFECTED",
+      "observed": "NOT_AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 0.294,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "BLOCKED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "06_cmake",
+      "expected": "NEEDS_INVESTIGATION",
+      "observed": "NEEDS_INVESTIGATION",
+      "pass": true,
+      "elapsed_seconds": 0.328,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "UNKNOWN",
+        "product_binding": "UNKNOWN",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "SUPPORTED",
+        "entry_reachable": "UNKNOWN",
+        "trigger_prerequisites": "UNKNOWN"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "07_curl",
+      "expected": "AFFECTED",
+      "observed": "AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 11.302,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "SUPPORTED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "08_curl",
+      "expected": "NOT_AFFECTED",
+      "observed": "NOT_AFFECTED",
+      "pass": true,
+      "elapsed_seconds": 11.089,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "BLOCKED",
+        "entry_reachable": "SUPPORTED",
+        "trigger_prerequisites": "SUPPORTED"
+      },
+      "conflicts": []
+    },
+    {
+      "package_id": "09_curl",
+      "expected": "NEEDS_INVESTIGATION",
+      "observed": "NEEDS_INVESTIGATION",
+      "pass": true,
+      "elapsed_seconds": 12.223,
+      "evidence_count": 8,
+      "condition_states": {
+        "build_identity": "SUPPORTED",
+        "component": "SUPPORTED",
+        "library_binding": "SUPPORTED",
+        "product_binding": "SUPPORTED",
+        "scope_complete": "SUPPORTED",
+        "vulnerable_implementation": "SUPPORTED",
+        "entry_reachable": "UNKNOWN",
+        "trigger_prerequisites": "UNKNOWN"
+      },
+      "conflicts": []
+    }
+  ],
+  "supplements": [
+    {
+      "base": "03_rom",
+      "before": "NEEDS_INVESTIGATION",
+      "after": "NOT_AFFECTED",
+      "expected": "NOT_AFFECTED",
+      "same_artifact": true,
+      "new_context": true,
+      "pass": true,
+      "elapsed_seconds": 6.389
+    },
+    {
+      "base": "06_cmake",
+      "before": "NEEDS_INVESTIGATION",
+      "after": "AFFECTED",
+      "expected": "AFFECTED",
+      "same_artifact": true,
+      "new_context": true,
+      "pass": true,
+      "elapsed_seconds": 0.281
+    },
+    {
+      "base": "09_curl",
+      "before": "NEEDS_INVESTIGATION",
+      "after": "AFFECTED",
+      "expected": "AFFECTED",
+      "same_artifact": true,
+      "new_context": true,
+      "pass": true,
+      "elapsed_seconds": 11.706
+    }
+  ],
+  "adversarial": [
+    {
+      "test": "tampered_value",
+      "pass": true
+    },
+    {
+      "test": "tampered_id",
+      "pass": true
+    },
+    {
+      "test": "tampered_quote",
+      "pass": true
+    },
+    {
+      "test": "statement_cannot_make_safe",
+      "pass": true
+    },
+    {
+      "test": "renamed_case_and_time",
+      "pass": true
+    }
+  ],
+  "elapsed_seconds": 80.06,
+  "pass": true
+}

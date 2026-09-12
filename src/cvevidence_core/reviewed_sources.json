@@ -1,0 +1,44 @@
+{
+  "profile_revision": "2026-09-12.1",
+  "scope": "Exact reviewed source revisions; source hashes are not product verdicts. Unknown or modified sources require a new review.",
+  "sources": {
+    "openssl-1.0.1f": {
+      "source/openssl/ssl/t1_lib.c": "536114785bee47c0f44044aab2ded99f625c2e63b3fcd082cce1d92ef91ea473",
+      "source/openssl/ssl/s3_pkt.c": "600c0ba95556e7aba57c64456c02ec54615d0bd652a82ce822ddeaa3ebd8b208",
+      "source/openssl/ssl/ssl_lib.c": "ed52a2d72915c6ea08e62673d9cbbf14fff6db567baa3dbd0fc30d6ab790df9c",
+      "source/openssl/ssl/s3_lib.c": "322f17e83fb69df12d2d825588afd30ef81781cf744f216460a40fca78e7f8d8",
+      "source/openssl/ssl/t1_srvr.c": "54f822e67e516e9a63e04b04c7ffba750917b5d923d485cd34f920629c87fefe",
+      "source/openssl/ssl/ssl_locl.h": "8019b3f250d5bdab94dc1c5690267ecd9cbe434ae72fd5c07f1daf019c83d66a",
+      "source/openssl/crypto/opensslv.h": "dbb71d4fa08df76f3799b752e687eaa60630d3e8973168d517da9df645c4b877"
+    },
+    "zlib-1.2.12": {
+      "source/zlib/inflate.c": "a268c9231441898893c0e2212c5304625c88d12371f1c09fcd2b2a7a54d57d43",
+      "source/zlib/zlib.h": "045cf777c6c9109b28ddcf3a413c5ca15e39fc513c13ef87bd9a3132a59d1b51"
+    },
+    "zlib-1.2.13": {
+      "source/zlib/inflate.c": "f1679575fef1717d908dd09d7bfe8fff89c21941cadd7c255a2ccccfba3a287e",
+      "source/zlib/zlib.h": "a980a0d104198a53cc220c51ab5856e5be901bec8a2d02e0ee79a8754219dfed"
+    },
+    "curl-8.3.0": {
+      "source/curl/lib/socks.c": "d6581154231c00d566ec24a748e65652f579c35def8e8935b9542908a02fe6dc",
+      "source/curl/lib/urlapi.c": "89cc68f10e3e760d1b01ba03310c1d68f221b66691befcfab9b2d390624e91fc",
+      "source/curl/lib/url.c": "f24319594a8aa549df7828cfe129f6fa1b9f845ab9654b243ec3a77a4dc2dc10",
+      "source/curl/lib/transfer.c": "cc363c2dae5822a39a5377140332bde1b416ec30add965043d8ba1dae494550e",
+      "source/curl/src/tool_operate.c": "ba1272722ee9e91223c452ffb1b94f40a30116bc6d185ca2c3f6db67adc3a29e",
+      "source/curl/src/tool_getparam.c": "9b31a579491000879ce468e818974a9b9318d2217d9eec09e5b734b94440b6c4",
+      "source/curl/include/curl/curlver.h": "b768ba120a292d8bf4025287ef50de8fa1ad679c0246fd26313d20407088cefd"
+    },
+    "curl-8.3.0-patched": {
+      "source/curl/lib/socks.c": "e260baf31fb32b438a4b5fbdcd2037bc64bfc5f94dad473a14e61ca56946d48e"
+    },
+    "reviewed-demo-entry": {
+      "source/device.c": "ae031526e431c6b652af8ce6ebc6e09d84e5296682a2ac3b5b124d4c00cc608a"
+    },
+    "reviewed-gzip-entry": {
+      "source/update_reader.c": "b5b2ba73e5ab2340612172beeb7e438beac17fa8b8c1113d02cf78f5aa127783"
+    },
+    "reviewed-curl-entry": {
+      "install/download-update.sh": "2ef56fadf97556a9684f52b6f2b46af490be586f5c543e6d9956943f8618f143"
+    }
+  }
+}

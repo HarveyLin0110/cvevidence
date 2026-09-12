@@ -23,7 +23,7 @@ def read_excerpt(context:InputPackage,source_id:str,start_line:int=1,end_line:in
  if start_line>len(lines):raise ValueError('Line range exceeds source')
  end_line=min(end_line,len(lines));excerpt='\n'.join(lines[start_line-1:end_line]);row=context.sources[source_id]
  payload={'source_id':source_id,'file_sha256':row['sha256'],'start_line':start_line,'end_line':end_line,'text':excerpt,'context_hash':context.context_hash}
- return {'excerpt_id':'X-'+digest(payload)[:24],**payload}
+ return {'excerpt_id':'X-'+digest({k:v for k,v in payload.items() if k!='context_hash'})[:24],**payload}
 
 def search_sources(context:InputPackage,term:str,source_ids:list[str]|None=None,limit:int=30)->dict:
  if not isinstance(term,str) or not term or len(term)>200 or not 1<=limit<=100:raise ValueError('Invalid literal search')

@@ -1,0 +1,1013 @@
+{
+  "description": "今日 demo 資料的真實 API/工具紀錄；API key 不在此輸出。",
+  "source_record": "var/validation/live-20260912T052347790914/rom_missing.json",
+  "cve_id": "CVE-2014-0160",
+  "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726",
+  "engineering_verdict": "NEEDS_INVESTIGATION",
+  "ai": {
+    "schema_version": "1.0",
+    "mode": "LIVE",
+    "status": "NEEDS_USER_INPUT",
+    "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726",
+    "engineering_assessment_id": "A-45893395c61e816f7acb17afbeae75ad552e2a3652a3663de8e62dc781ff2d33",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "tasks": [
+      {
+        "task_id": "I-4a7d0d807d416951ed00de5e",
+        "action": "LIST",
+        "question": "現有提交中是否已有可把「關掉 heartbeat」口述綁定到指定 ROM／同一 build 的編譯、預處理、連結或產物證據？",
+        "reason": "先盤點完整檔案，避免重複索取，並將最小補件限縮到 Heartbleed 實作排除與產品綁定所必需的資料。",
+        "term": "",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "",
+        "citations": [
+          "E-3ebb6d810f2e37aac26bccb031d6b337dd8c0973bb1d4e515225405a5fef38b4",
+          "E-e1f15e994917d22701f9ee197377282cfa05af47a4ec30c724ce37a8eb73bc0e",
+          "E-a9503c6434b4246184997e3261225621bca7c3219d6163098938a9db27395cb2",
+          "E-780ba323e5a8e370b1ceba22ebd453c73b6cd6f79e58eb34b1209acaeca13c15"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "sources": [
+            {
+              "path": "build/build-record.json",
+              "kind": "file",
+              "sha256": "11bbb117b164dfcd408d46425325ff49ba563a27f2918cffd7b674ca4ed48ef3",
+              "size": 1113,
+              "source_id": "S-1be7dbbfacd586cd504b0770"
+            },
+            {
+              "path": "build/commands/0000-compiler-version.json",
+              "kind": "file",
+              "sha256": "4a8f9a2f4e4e2424217225f70030b533c40b9353131757538548a4641379ab75",
+              "size": 390,
+              "source_id": "S-420a9f6ddaff02a6630bbd64"
+            },
+            {
+              "path": "build/commands/0000-compiler-version.log",
+              "kind": "file",
+              "sha256": "8497f84b2b8334c413d9c6166bd39d009ba55d2ff60a8f23e66dfa5819c2b048",
+              "size": 246,
+              "source_id": "S-4bbccf7b365c8ea95199879b"
+            },
+            {
+              "path": "build/commands/0005-zlib-configure.json",
+              "kind": "file",
+              "sha256": "b45bf6922261f8b2f2d0e92623c481f42918cdd31a78e6f43cc54ac64674af57",
+              "size": 506,
+              "source_id": "S-1e281b6b7a615b77442712d8"
+            },
+            {
+              "path": "build/commands/0005-zlib-configure.log",
+              "kind": "file",
+              "sha256": "ab92040bbaf0241634b781f74ebcecf61a8b0d52cb955012230b829ca5c11422",
+              "size": 569,
+              "source_id": "S-863e803b2fceb34a007640d7"
+            },
+            {
+              "path": "build/commands/0006-zlib-build.json",
+              "kind": "file",
+              "sha256": "39c4fe1f999191c854b639a43990d143e0365f846872f790ec7ce91e046db610",
+              "size": 391,
+              "source_id": "S-c8780755e889fcb539632ff9"
+            },
+            {
+              "path": "build/commands/0006-zlib-build.log",
+              "kind": "file",
+              "sha256": "8e793f24b00e266bebc40b3f3cd87254174f7ee3426b3401bee7b7fbcc5e1c9a",
+              "size": 7278,
+              "source_id": "S-eefebed26f613346222a5302"
+            },
+            {
+              "path": "build/commands/0007-zlib-install.json",
+              "kind": "file",
+              "sha256": "4afd70bcd91320ab2db3034a7a47d3c5a89d85ae909552ba378a9485b3bd59f3",
+              "size": 397,
+              "source_id": "S-6b87872b1dd85817cf300619"
+            },
+            {
+              "path": "build/commands/0007-zlib-install.log",
+              "kind": "file",
+              "sha256": "23094e1181f7fc4132c808f9a34a736185320c831f4137f54109822cba456f19",
+              "size": 1961,
+              "source_id": "S-17b21f2fcb370fb228e1b8be"
+            },
+            {
+              "path": "build/commands/0008-device-compile.json",
+              "kind": "file",
+              "sha256": "3305f2589bfb466b0794464f8658dfc161ea1da5f6fcd46c7ff4a604d0d06832",
+              "size": 847,
+              "source_id": "S-4f2178605b6603701caf23b8"
+            },
+            {
+              "path": "build/commands/0008-device-compile.log",
+              "kind": "file",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "size": 0,
+              "source_id": "S-b424f394d256f1f7d2096db4"
+            },
+            {
+              "path": "build/commands/0009-device-link.json",
+              "kind": "file",
+              "sha256": "3fb4963d032d0c4c093f914a3a715710c5d0d470c7f4ac6763712f7f77e89e4e",
+              "size": 1033,
+              "source_id": "S-74c980e4702ec8727fad191d"
+            },
+            {
+              "path": "build/commands/0009-device-link.log",
+              "kind": "file",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "size": 0,
+              "source_id": "S-00d6e231b5b8b0268758e1cc"
+            },
+            {
+              "path": "build/commands/0010-local-test-certificate.json",
+              "kind": "file",
+              "sha256": "c7a7c81e7fe6f8c22177f7ef284936908cd93721465d2493b50558be91797843",
+              "size": 792,
+              "source_id": "S-c593f79384e1ae1a9cf56342"
+            },
+            {
+              "path": "build/commands/0010-local-test-certificate.log",
+              "kind": "file",
+              "sha256": "04cb80a823e01891012994a3c0c20ad55dfc39cf680322a5804d3231b75092e9",
+              "size": 1106,
+              "source_id": "S-17ccc687aeb0b739838b0e38"
+            },
+            {
+              "path": "build/commands/0011-pack-squashfs.json",
+              "kind": "file",
+              "sha256": "d0e7ab30ef663a1dfe91646f0284455a805b7705a0921610f6f319a06dc277f0",
+              "size": 670,
+              "source_id": "S-c95c034748c6c4ba787cc5c2"
+            },
+            {
+              "path": "build/commands/0011-pack-squashfs.log",
+              "kind": "file",
+              "sha256": "6865cf0d3b5af7b546ff53d77f6b4a690395ba871aee5cbcffeae46901dbef9f",
+              "size": 1108,
+              "source_id": "S-78c14f95deeb0581db343810"
+            },
+            {
+              "path": "build/commands/0012-unpack-squashfs.json",
+              "kind": "file",
+              "sha256": "a96b5b13d05ca5493d2e96ca448fd837a0e0b75e420d3caab8a85d494bad5bd5",
+              "size": 620,
+              "source_id": "S-ab43bc6f5c65e10067c3e148"
+            },
+            {
+              "path": "build/commands/0012-unpack-squashfs.log",
+              "kind": "file",
+              "sha256": "05a6ae850c76cbd5fb018f39d9c7641499ac898881e6423bb9701cb844919866",
+              "size": 282,
+              "source_id": "S-a1fbd4579615e28cf40e088a"
+            },
+            {
+              "path": "build/commands/0013-extracted-device-normal-run.json",
+              "kind": "file",
+              "sha256": "37a3168fdab52ac3a70bf73f7b5c5374f02901a4a95a80c67423d51add5676b3",
+              "size": 753,
+              "source_id": "S-2ebeeffa993b583db976b508"
+            },
+            {
+              "path": "build/commands/0013-extracted-device-normal-run.log",
+              "kind": "file",
+              "sha256": "a67d9b94af0dbf64bd5d101db85f50ed1c727b1c552b0dfbde2af5c9e21baf06",
+              "size": 160,
+              "source_id": "S-17483caed4cb01ce83b7fe22"
+            },
+            {
+              "path": "build/commands/0014-extracted-device-tcp-normal-run.json",
+              "kind": "file",
+              "sha256": "372748656709affe11df01249ca718c4d2d88a524350106a632ff59e08e35f35",
+              "size": 875,
+              "source_id": "S-a48f7ff016e49aa42e1e4b38"
+            },
+            {
+              "path": "build/commands/0014-extracted-device-tcp-normal-run.log",
+              "kind": "file",
+              "sha256": "95baab864f6fa20489551d8e616bfb619335fcf11fa6f387b2fdb3d529e5b0dc",
+              "size": 220,
+              "source_id": "S-493089d28f480af37e700dfa"
+            },
+            {
+              "path": "build/commands/0015-product-dynamic.json",
+              "kind": "file",
+              "sha256": "377f3136d99624b6da9aa9da156224313c61ff0a5b84286d8b72df3cff8e0206",
+              "size": 514,
+              "source_id": "S-b32219825de8b5cf009ceb64"
+            },
+            {
+              "path": "build/commands/0015-product-dynamic.log",
+              "kind": "file",
+              "sha256": "a194c24ab6614e2c7d9fc5dec5b8ab31d0a82a1be688f52351c7306b7f9f6acc",
+              "size": 1737,
+              "source_id": "S-c857c834094d3f782ee14ceb"
+            },
+            {
+              "path": "build/device.o",
+              "kind": "file",
+              "sha256": "42a234307fa67ec7631268188d9baec2dc079d0d1c3e645a3bef546dc0318e68",
+              "size": 76336,
+              "source_id": "S-d8692f92b996027f9ad7a89e"
+            },
+            {
+              "path": "build/product.map",
+              "kind": "file",
+              "sha256": "0c870c41ff0bef3b6c6ea0564c20e2ca67448a982620ac840e4ca0a74736a07b",
+              "size": 26096,
+              "source_id": "S-73f0529832b02ad893726816"
+            },
+            {
+              "path": "images/device.rom",
+              "kind": "file",
+              "sha256": "9ee6e6d88ca2796266798e62130b4c30d48bdb7101df3f4a9115966577582d92",
+              "size": 1155072,
+              "source_id": "S-307e0f036ef1de56f756f409"
+            },
+            {
+              "path": "observations/cert.pem",
+              "kind": "file",
+              "sha256": "5165a234ae87ec1c46496a13eea836dea6aed8ad3c547636489d044ea404a0be",
+              "size": 1139,
+              "source_id": "S-6a8acbcc3e86300614973210"
+            },
+            {
+              "path": "observations/rom-comparison.json",
+              "kind": "file",
+              "sha256": "0f7c09eb928796ae55a91a07093ed5494dd6a73395ceb557927dd63f960412a3",
+              "size": 973,
+              "source_id": "S-170ed5a3084832b9f197a5c0"
+            },
+            {
+              "path": "product/device-management",
+              "kind": "file",
+              "sha256": "1ad7ea2704ed7508cd80dde580722e09b15a6a3b5902a2b89e2199f447916a40",
+              "size": 62552,
+              "source_id": "S-399ea718fe613adb4ebc3c43"
+            },
+            {
+              "path": "provenance/curl-8.3.0.tar.xz.receipt.json",
+              "kind": "file",
+              "sha256": "39736ed8bd72fd7446ae655ed6cb14fad4577ced8dcc83a48842e5b8715f5f55",
+              "size": 386,
+              "source_id": "S-1ae9241d023887b991642828"
+            },
+            {
+              "path": "provenance/curl-socks5.patch.receipt.json",
+              "kind": "file",
+              "sha256": "52505f3565a0446190e32b6b1792ba02955a9e5707fab660799bc1c8759a3b90",
+              "size": 425,
+              "source_id": "S-c25e76711bd0057e4812b339"
+            },
+            {
+              "path": "provenance/openssl-1.0.1f.tar.gz.receipt.json",
+              "kind": "file",
+              "sha256": "312496973094bccb5a94898f87ff060113ae51752b7adbe9a0e45781f607d721",
+              "size": 466,
+              "source_id": "S-3b70da20ce3e04b3001ca481"
+            },
+            {
+              "path": "provenance/zlib-1.2.12.tar.gz.receipt.json",
+              "kind": "file",
+              "sha256": "6bbcd5c3569eba7db2c0dcb9d14ddc4a08cb6ac0e3e3ed2559f3387dd4d5d5c1",
+              "size": 389,
+              "source_id": "S-17d30458b71b7b821605b233"
+            },
+            {
+              "path": "provenance/zlib-1.2.13.tar.gz.receipt.json",
+              "kind": "file",
+              "sha256": "eafc355046ee0a682ae4286ef23c15546aaf4ed0c6235cb07527d4b5ce8ff03e",
+              "size": 389,
+              "source_id": "S-3a9a235a6448bffcb5f54c28"
+            },
+            {
+              "path": "rom-root/bin/device-management",
+              "kind": "file",
+              "sha256": "1ad7ea2704ed7508cd80dde580722e09b15a6a3b5902a2b89e2199f447916a40",
+              "size": 62552,
+              "source_id": "S-6d2fdcaa485a4b7c9aadd3a0"
+            },
+            {
+              "path": "rom-root/etc/device.conf",
+              "kind": "file",
+              "sha256": "6f37efcd574a32a5b2849989500263bc4137e0790be2e979cdc927c168706506",
+              "size": 60,
+              "source_id": "S-59e3850aaa11619155120e28"
+            },
+            {
+              "path": "rom-root/lib/libcrypto.so",
+              "kind": "symlink",
+              "target": "libcrypto.so.1.0.0",
+              "sha256": "a9bbce4c58ef93d0266bd7c67d1ed4aedffd1c47be9c702c53ec8b3030c9d62a",
+              "size": 18,
+              "source_id": "S-3b7889cb66847418c5f9135e"
+            },
+            {
+              "path": "rom-root/lib/libcrypto.so.1.0.0",
+              "kind": "file",
+              "sha256": "401f168f5962f868ddc2337e7c07631c87742ef4d3b947fc77884a2a2256d34c",
+              "size": 2196048,
+              "source_id": "S-ba05dc97793c05c0ccadaa6e"
+            },
+            {
+              "path": "rom-root/lib/libssl.so",
+              "kind": "symlink",
+              "target": "libssl.so.1.0.0",
+              "sha256": "9d4a1967030972ca13147524d5070185b79b4594ae5e3b03100a9f1d499f059e",
+              "size": 15,
+              "source_id": "S-9a36b5ce8f837d66aaa10b44"
+            },
+            {
+              "path": "rom-root/lib/libssl.so.1.0.0",
+              "kind": "file",
+              "sha256": "8fd06f6155f612631cd3e9df61b9da197effe2fed69b1d709138209d3da3c55d",
+              "size": 507848,
+              "source_id": "S-2806924eb48c9830d145d205"
+            },
+            {
+              "path": "rom-root/lib/libz.so",
+              "kind": "symlink",
+              "target": "libz.so.1.2.13",
+              "sha256": "b9c5db9d3895ce7ab313a81f3f17c1d23203b5ddce6ef622765bd70ecf134122",
+              "size": 14,
+              "source_id": "S-1231e09093e04e0fbb092187"
+            },
+            {
+              "path": "rom-root/lib/libz.so.1",
+              "kind": "symlink",
+              "target": "libz.so.1.2.13",
+              "sha256": "b9c5db9d3895ce7ab313a81f3f17c1d23203b5ddce6ef622765bd70ecf134122",
+              "size": 14,
+              "source_id": "S-16ce3adf099e5e351c1b182f"
+            },
+            {
+              "path": "rom-root/lib/libz.so.1.2.13",
+              "kind": "file",
+              "sha256": "2285a4e501a9b2a9231302c443740c7f5656c1a105b90a42a0f8854d3bd91a55",
+              "size": 125592,
+              "source_id": "S-0bf073bbffa7e89db5294aff"
+            },
+            {
+              "path": "sbom.cdx.json",
+              "kind": "file",
+              "sha256": "a8d15748992779af66073316f1ae2182f558cbd7c8468c04182be2f881f9a288",
+              "size": 2049,
+              "source_id": "S-4c07d287d90484587efa3a4b"
+            },
+            {
+              "path": "sdk/include/openssl/aes.h",
+              "kind": "file",
+              "sha256": "bccfd84dd66ea20661c31bd4052484f240db6cfd6b5ba336a0bf6c2368606222",
+              "size": 5507,
+              "source_id": "S-d098d77db30d1aec1ee5ae64"
+            },
+            {
+              "path": "sdk/include/openssl/asn1.h",
+              "kind": "file",
+              "sha256": "d3eb9cdae6fb7cc986fee2a327842d753ea0de36fd02165545f6f275ce22e849",
+              "size": 52190,
+              "source_id": "S-38cf3b577343397e72728c2c"
+            },
+            {
+              "path": "sdk/include/openssl/asn1_mac.h",
+              "kind": "file",
+              "sha256": "9c12bd8e2129f13927ed0e5359d838c5570d7e7bc26b03d327931669bd42cd7d",
+              "size": 19143,
+              "source_id": "S-463f9ed23988f6e35f9ba594"
+            },
+            {
+              "path": "sdk/include/openssl/asn1t.h",
+              "kind": "file",
+              "sha256": "1a1dcf1723213a581c0dc1b277b3b7fbeab6518350d49e76c729e08102c8a56e",
+              "size": 30092,
+              "source_id": "S-c2f9e87507f3652fd1f9d114"
+            },
+            {
+              "path": "sdk/include/openssl/bio.h",
+              "kind": "file",
+              "sha256": "d17634ece5ecbcecfef1d265abedf13421ed35237f34de0cd85524d4a0fc3ee5",
+              "size": 32987,
+              "source_id": "S-58fa286b63c3b851b7c4d16f"
+            },
+            {
+              "path": "sdk/include/openssl/blowfish.h",
+              "kind": "file",
+              "sha256": "c280c2006b94654827ffee6bc0cf837a127aded4d340dec0356cf9455b65d0bd",
+              "size": 5143,
+              "source_id": "S-ff80168e537ac0ad93783f81"
+            },
+            {
+              "path": "sdk/include/openssl/bn.h",
+              "kind": "file",
+              "sha256": "adc294225808ea448fa142e86cf3f7fc194da7f33e66526c52628d25d699a7a6",
+              "size": 36185,
+              "source_id": "S-92f0cf3b0e0b12c07d767ace"
+            },
+            {
+              "path": "sdk/include/openssl/buffer.h",
+              "kind": "file",
+              "sha256": "55d6cf00fbfb60edecb90c9d2ba49f54cb28a49a8a82de2e801de0cd7a65d5e2",
+              "size": 4652,
+              "source_id": "S-c678337fb9c52a5c24e601c9"
+            },
+            {
+              "path": "sdk/include/openssl/camellia.h",
+              "kind": "file",
+              "sha256": "4d179ea08c10b67fadbf0f0cef1c0abf6734e15760db47b427632b5ad50dbe9f",
+              "size": 4956,
+              "source_id": "S-b99aa7047a27be744e629d18"
+            },
+            {
+              "path": "sdk/include/openssl/cast.h",
+              "kind": "file",
+              "sha256": "e874e69748b8a8b7542a84ba589dd97ba7bb1de7c34039a5c1b1bccebc4db95e",
+              "size": 4492,
+              "source_id": "S-8663c08b4156398557675425"
+            },
+            {
+              "path": "sdk/include/openssl/cmac.h",
+              "kind": "file",
+              "sha256": "d0fa8c340121bffdf8d9289f4c8a0fab1313c7e145670d68e00b6e565ecca6ff",
+              "size": 3244,
+              "source_id": "S-1a33e055b8c7081e6abcccf6"
+            },
+            {
+              "path": "sdk/include/openssl/cms.h",
+              "kind": "file",
+              "sha256": "d384581c26c855e5aa67d717100dc7f33a58526efc6d4bfe53381f9f42089599",
+              "size": 19927,
+              "source_id": "S-85fb1a8f63f304c0403b958e"
+            },
+            {
+              "path": "sdk/include/openssl/comp.h",
+              "kind": "file",
+              "sha256": "e265c265fba67f884ea2e6cd821fdc660ffc6b04a9a71ec138bfd757b1da92d3",
+              "size": 1978,
+              "source_id": "S-0c913d69d4f32621e21d4056"
+            },
+            {
+              "path": "sdk/include/openssl/conf.h",
+              "kind": "file",
+              "sha256": "ad9b9f7575869535b112f02e3907f77c64dda064c93faf6dbe15ddfec76a8b15",
+              "size": 9848,
+              "source_id": "S-c5c87a35f947725725a7d347"
+            }
+          ],
+          "total": 432,
+          "truncated": true,
+          "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+        }
+      },
+      {
+        "task_id": "I-a57ee6523197556988aa040a",
+        "action": "SEARCH",
+        "question": "現有資料是否出現可核對的 heartbeat 排除巨集，且能連到 libssl 的實際建置？",
+        "reason": "口述不足；搜尋字面巨集可快速判斷是否已有編譯或預處理證據，並避免把版本、symbol 或正常測試誤當成排除證明。",
+        "term": "OPENSSL_NO_HEARTBEATS",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [
+          "E-e1f15e994917d22701f9ee197377282cfa05af47a4ec30c724ce37a8eb73bc0e"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "matches": [
+            {
+              "excerpt_id": "X-f5ebb751725b29d972921de4",
+              "source_id": "S-815b2faca642c7d9dc6b825d",
+              "file_sha256": "25281e217908f37c329b36873b94bdba15529a2c1d29251c1b0dc523c37695c4",
+              "start_line": 686,
+              "end_line": 690,
+              "text": "\tSSL_ctrl((ssl), SSL_CTRL_GET_RI_SUPPORT, 0, NULL)\n\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_heartbeat(ssl) \\\n        SSL_ctrl((ssl),SSL_CTRL_TLS_EXT_SEND_HEARTBEAT,0,NULL)",
+              "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+            },
+            {
+              "excerpt_id": "X-4b1e446b72b8d12f6e8549ab",
+              "source_id": "S-815b2faca642c7d9dc6b825d",
+              "file_sha256": "25281e217908f37c329b36873b94bdba15529a2c1d29251c1b0dc523c37695c4",
+              "start_line": 1601,
+              "end_line": 1605,
+              "text": "#define SSL_CTRL_SET_TLS_EXT_SRP_STRENGTH\t\t80\n#define SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD\t\t81\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_CTRL_TLS_EXT_SEND_HEARTBEAT\t\t\t\t85\n#define SSL_CTRL_GET_TLS_EXT_HEARTBEAT_PENDING\t\t86",
+              "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+            },
+            {
+              "excerpt_id": "X-2b09c1b5c13e74e31e2f46a0",
+              "source_id": "S-cbab362cd2c87c4147ae98c6",
+              "file_sha256": "5f9afa48569f555bdbe92884705ca83198a6b79f14332624693e24f032dc021e",
+              "start_line": 355,
+              "end_line": 359,
+              "text": "SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)\n\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_TLSEXT_HB_ENABLED\t\t\t\t0x01\n#define SSL_TLSEXT_HB_DONT_SEND_REQUESTS\t0x02",
+              "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+            }
+          ],
+          "truncated": false,
+          "skipped_nontext_or_large": 69
+        }
+      },
+      {
+        "task_id": "I-8f23db9baad40bb68c6cfd57",
+        "action": "READ",
+        "question": "產品編譯與連結紀錄能否把 device-management 綁定到 ROM 內的 libssl，並提供任何 heartbeat 排除旗標？",
+        "reason": "確認現有產品綁定證據與其邊界，區分產品編譯旗標、動態依賴與 libssl 自身的建置旗標。",
+        "term": "",
+        "source_ids": [
+          "S-4f2178605b6603701caf23b8",
+          "S-74c980e4702ec8727fad191d",
+          "S-b32219825de8b5cf009ceb64",
+          "S-c857c834094d3f782ee14ceb"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [
+          "E-780ba323e5a8e370b1ceba22ebd453c73b6cd6f79e58eb34b1209acaeca13c15",
+          "E-a9503c6434b4246184997e3261225621bca7c3219d6163098938a9db27395cb2"
+        ],
+        "required_files": [],
+        "status": "TOOL_ERROR",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "error": "READ 需要一個 source_id"
+        }
+      },
+      {
+        "task_id": "I-919a16c38336035f6714c432",
+        "action": "READ",
+        "question": "產品連結命令是否明確指定 libssl、輸出 linker map，並帶有 heartbeat 相關設定？",
+        "reason": "先確認產品 executable 與 SSL library 的連結關係；此紀錄仍不能替代 libssl 自身編譯證據。",
+        "term": "",
+        "source_ids": [
+          "S-74c980e4702ec8727fad191d"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [
+          "E-780ba323e5a8e370b1ceba22ebd453c73b6cd6f79e58eb34b1209acaeca13c15"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-f50ddce00c36942b138e0ddd",
+          "source_id": "S-74c980e4702ec8727fad191d",
+          "file_sha256": "3fb4963d032d0c4c093f914a3a715710c5d0d470c7f4ac6763712f7f77e89e4e",
+          "start_line": 1,
+          "end_line": 21,
+          "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/tools/demo-data/factory/cc_capture.py\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o\",\n    \"-L/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib\",\n    \"-Wl,-rpath,$ORIGIN/../lib\",\n    \"-Wl,-Map,/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/product.map\",\n    \"-lssl\",\n    \"-lcrypto\",\n    \"-lz\",\n    \"-ldl\",\n    \"-o\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/product/device-management\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0009-device-link.log\",\n  \"log_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T04:43:10.433041+00:00\"\n}",
+          "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+        }
+      },
+      {
+        "task_id": "I-6da5497259aed7cadfb3dfd6",
+        "action": "READ",
+        "question": "交付執行檔的動態分析是否顯示其實際依賴與載入 ROM 內的 libssl.so.1.0.0？",
+        "reason": "補強產品到交付 shared library 的綁定；即使成立，仍不把動態依賴或 symbol 命中當作 Heartbleed 適用性結論。",
+        "term": "",
+        "source_ids": [
+          "S-c857c834094d3f782ee14ceb"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [
+          "E-0e320b024d6c58e8112826bcc973ed098e5ef7789e36ed001f93b1a8cfa1ccdc",
+          "E-780ba323e5a8e370b1ceba22ebd453c73b6cd6f79e58eb34b1209acaeca13c15"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "excerpt_id": "X-980790b7a5ec64c0e7654e51",
+          "source_id": "S-c857c834094d3f782ee14ceb",
+          "file_sha256": "a194c24ab6614e2c7d9fc5dec5b8ab31d0a82a1be688f52351c7306b7f9f6acc",
+          "start_line": 1,
+          "end_line": 34,
+          "text": "\nDynamic section at offset 0x4c18 contains 31 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libssl.so.1.0.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libcrypto.so.1.0.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libz.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN/../lib]\n 0x000000000000000c (INIT)               0x2000\n 0x000000000000000d (FINI)               0x335c\n 0x0000000000000019 (INIT_ARRAY)         0x5c08\n 0x000000000000001b (INIT_ARRAYSZ)       8 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x5c10\n 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x3b0\n 0x0000000000000005 (STRTAB)             0x910\n 0x0000000000000006 (SYMTAB)             0x3e8\n 0x000000000000000a (STRSZ)              721 (bytes)\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000003 (PLTGOT)             0x5e48\n 0x0000000000000002 (PLTRELSZ)           1104 (bytes)\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000017 (JMPREL)             0xd98\n 0x0000000000000007 (RELA)               0xc90\n 0x0000000000000008 (RELASZ)             264 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x000000000000001e (FLAGS)              BIND_NOW\n 0x000000006ffffffb (FLAGS_1)            Flags: NOW PIE\n 0x000000006ffffffe (VERNEED)            0xc50\n 0x000000006fffffff (VERNEEDNUM)         1\n 0x000000006ffffff0 (VERSYM)             0xbe2\n 0x000000006ffffff9 (RELACOUNT)          3\n 0x0000000000000000 (NULL)               0x0",
+          "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+        }
+      },
+      {
+        "task_id": "I-91e96d8a4900ba0ddfe6b998",
+        "action": "SEARCH",
+        "question": "linker map 是否記錄實際選中的 libssl 路徑，可將 -lssl 從命令意圖提升為具體 library 選擇證據？",
+        "reason": "最小補件應只補尚未證明的 libssl 建置；先確認現有 map 是否已足以證明產品連結到 SDK 的 shared library。",
+        "term": "libssl.so",
+        "source_ids": [
+          "S-73f0529832b02ad893726816"
+        ],
+        "start_line": 1,
+        "end_line": 200,
+        "finding": "",
+        "citations": [
+          "E-780ba323e5a8e370b1ceba22ebd453c73b6cd6f79e58eb34b1209acaeca13c15"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "matches": [
+            {
+              "excerpt_id": "X-decc0ecd4759182aea646bfa",
+              "source_id": "S-73f0529832b02ad893726816",
+              "file_sha256": "0c870c41ff0bef3b6c6ea0564c20e2ca67448a982620ac840e4ca0a74736a07b",
+              "start_line": 5,
+              "end_line": 9,
+              "text": "As-needed library included to satisfy reference by file (symbol)\n\nlibssl.so.1.0.0               /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (SSL_CTX_free)\nlibcrypto.so.1.0.0            /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (ERR_print_errors_fp)\nlibz.so.1                     /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (zlibVersion)",
+              "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+            },
+            {
+              "excerpt_id": "X-3689ac7a5ea779bfedd57063",
+              "source_id": "S-73f0529832b02ad893726816",
+              "file_sha256": "0c870c41ff0bef3b6c6ea0564c20e2ca67448a982620ac840e4ca0a74736a07b",
+              "start_line": 46,
+              "end_line": 50,
+              "text": "LOAD /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libssl.so\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libcrypto.so\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libz.so",
+              "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+            }
+          ],
+          "truncated": false,
+          "skipped_nontext_or_large": 0
+        }
+      },
+      {
+        "task_id": "I-befdaefe7cec0805e0cdcf02",
+        "action": "LIST",
+        "question": "完整提交清單中是否已有 OpenSSL heartbeat 關鍵來源、libssl 建置產物，或 t1_lib／s3_pkt 的編譯與預處理紀錄？",
+        "reason": "在宣告缺件前依檔名再盤點，將補件壓縮為能直接證明兩個 heartbeat 路徑編譯結果並綁定交付 libssl 的最小集合。",
+        "term": "t1_lib.c",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "",
+        "citations": [
+          "E-e1f15e994917d22701f9ee197377282cfa05af47a4ec30c724ce37a8eb73bc0e",
+          "E-a9503c6434b4246184997e3261225621bca7c3219d6163098938a9db27395cb2"
+        ],
+        "required_files": [],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "sources": [],
+          "total": 0,
+          "truncated": false,
+          "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+        }
+      },
+      {
+        "task_id": "I-c3a60dfb35d2843d73500cc3",
+        "action": "ASK_USER",
+        "question": "請補哪些最少資料，才能把「heartbeat 已關閉」從口述提升為可核對、且綁定到本次 ROM 內 libssl 的證據？",
+        "reason": "現有資料已顯示產品連結 SDK libssl、執行檔需要 libssl.so.1.0.0，卻沒有 libssl 自身對兩個 heartbeat 相關來源的同 build 編譯／預處理結果；標頭中的條件式宣告也不代表巨集在建置時確實生效。",
+        "term": "",
+        "source_ids": [],
+        "start_line": 1,
+        "end_line": 1,
+        "finding": "最小補件為：同一 build 的 t1_lib.c、s3_pkt.c 實際來源與各自完整編譯命令及預處理輸出（含實際使用 headers／巨集），再加上這兩個 object 進入 SDK libssl.so.1.0.0 的連結 map／建置紀錄及該 library 雜湊。所有資料須來自 build_id rom-20260912T043812-0b9b1a，且 library 雜湊須與 images/device.rom（SHA-256 9ee6e6d88ca2796266798e62130b4c30d48bdb7101df3f4a9115966577582d92）解出的 rom-root/lib/libssl.so.1.0.0 一致。若無預處理輸出，可提供同次建置生成、可顯示兩處條件編譯結果的等價 compiler 記錄；單獨口述、SBOM、1.0.1f 版本字串、正常 TLS 測試或 symbol 命中均不足。",
+        "citations": [
+          "X-f5ebb751725b29d972921de4",
+          "X-4b1e446b72b8d12f6e8549ab",
+          "X-2b09c1b5c13e74e31e2f46a0",
+          "X-f50ddce00c36942b138e0ddd",
+          "X-980790b7a5ec64c0e7654e51",
+          "X-decc0ecd4759182aea646bfa",
+          "X-3689ac7a5ea779bfedd57063",
+          "E-3ebb6d810f2e37aac26bccb031d6b337dd8c0973bb1d4e515225405a5fef38b4",
+          "E-e1f15e994917d22701f9ee197377282cfa05af47a4ec30c724ce37a8eb73bc0e"
+        ],
+        "required_files": [
+          "source/openssl/ssl/t1_lib.c（build_id rom-20260912T043812-0b9b1a 實際輸入）",
+          "source/openssl/ssl/s3_pkt.c（同 build 實際輸入）",
+          "t1_lib.c 與 s3_pkt.c 的同 build 完整 compiler invocation／compile record",
+          "t1_lib.c 與 s3_pkt.c 的同 build 預處理輸出，或可等價顯示兩處條件編譯結果的 compiler 產物",
+          "SDK libssl.so.1.0.0 的同 build linker map／連結紀錄（須列出上述 objects）",
+          "SDK libssl.so.1.0.0 的 SHA-256，並附與 ROM 解出 rom-root/lib/libssl.so.1.0.0 相同 bytes／hash 的對照紀錄"
+        ],
+        "status": "COMPLETED",
+        "citation_verification": {
+          "valid": true,
+          "invalid_ids": [],
+          "meaning_verified": false,
+          "note": "已驗證引用存在與原文一致；AI 語意推論仍待工程師覆核。"
+        },
+        "result": {
+          "required_files": [
+            "source/openssl/ssl/t1_lib.c（build_id rom-20260912T043812-0b9b1a 實際輸入）",
+            "source/openssl/ssl/s3_pkt.c（同 build 實際輸入）",
+            "t1_lib.c 與 s3_pkt.c 的同 build 完整 compiler invocation／compile record",
+            "t1_lib.c 與 s3_pkt.c 的同 build 預處理輸出，或可等價顯示兩處條件編譯結果的 compiler 產物",
+            "SDK libssl.so.1.0.0 的同 build linker map／連結紀錄（須列出上述 objects）",
+            "SDK libssl.so.1.0.0 的 SHA-256，並附與 ROM 解出 rom-root/lib/libssl.so.1.0.0 相同 bytes／hash 的對照紀錄"
+          ],
+          "same_build_required": true,
+          "build_id": "rom-20260912T043812-0b9b1a",
+          "artifact_sha256": "9ee6e6d88ca2796266798e62130b4c30d48bdb7101df3f4a9115966577582d92"
+        }
+      }
+    ],
+    "excerpts": [
+      {
+        "excerpt_id": "X-9d2a37a057d8b87a89828de6",
+        "source_id": "S-35ed00ab849c280932438f6a",
+        "file_sha256": "ae031526e431c6b652af8ce6ebc6e09d84e5296682a2ac3b5b124d4c00cc608a",
+        "start_line": 26,
+        "end_line": 37,
+        "text": "  SSL *connection=SSL_new(context);char message[128];\n  SSL_set_fd(connection,socket_fd);\n  if(SSL_accept(connection)!=1){ERR_print_errors_fp(stderr);return 12;}\n  int count=SSL_read(connection,message,sizeof(message));\n  if(count<=0)return 13;\n  int sent=SSL_write(connection,message,count);\n  SSL_free(connection);SSL_CTX_free(context);return sent==count?0:14;\n}\nstatic int tls_roundtrip(const char *cert,const char *key) {\n  int pair[2];if(socketpair(AF_UNIX,SOCK_STREAM,0,pair))return 20;\n  pid_t child=fork();if(child<0)return 21;\n  if(child==0){close(pair[0]);int r=serve_once(pair[1],cert,key);close(pair[1]);_exit(r);}",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-f5ebb751725b29d972921de4",
+        "source_id": "S-815b2faca642c7d9dc6b825d",
+        "file_sha256": "25281e217908f37c329b36873b94bdba15529a2c1d29251c1b0dc523c37695c4",
+        "start_line": 686,
+        "end_line": 690,
+        "text": "\tSSL_ctrl((ssl), SSL_CTRL_GET_RI_SUPPORT, 0, NULL)\n\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_heartbeat(ssl) \\\n        SSL_ctrl((ssl),SSL_CTRL_TLS_EXT_SEND_HEARTBEAT,0,NULL)",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-4b1e446b72b8d12f6e8549ab",
+        "source_id": "S-815b2faca642c7d9dc6b825d",
+        "file_sha256": "25281e217908f37c329b36873b94bdba15529a2c1d29251c1b0dc523c37695c4",
+        "start_line": 1601,
+        "end_line": 1605,
+        "text": "#define SSL_CTRL_SET_TLS_EXT_SRP_STRENGTH\t\t80\n#define SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD\t\t81\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_CTRL_TLS_EXT_SEND_HEARTBEAT\t\t\t\t85\n#define SSL_CTRL_GET_TLS_EXT_HEARTBEAT_PENDING\t\t86",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-2b09c1b5c13e74e31e2f46a0",
+        "source_id": "S-cbab362cd2c87c4147ae98c6",
+        "file_sha256": "5f9afa48569f555bdbe92884705ca83198a6b79f14332624693e24f032dc021e",
+        "start_line": 355,
+        "end_line": 359,
+        "text": "SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)\n\n#ifndef OPENSSL_NO_HEARTBEATS\n#define SSL_TLSEXT_HB_ENABLED\t\t\t\t0x01\n#define SSL_TLSEXT_HB_DONT_SEND_REQUESTS\t0x02",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-f50ddce00c36942b138e0ddd",
+        "source_id": "S-74c980e4702ec8727fad191d",
+        "file_sha256": "3fb4963d032d0c4c093f914a3a715710c5d0d470c7f4ac6763712f7f77e89e4e",
+        "start_line": 1,
+        "end_line": 21,
+        "text": "{\n  \"argv\": [\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/tools/demo-data/factory/cc_capture.py\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o\",\n    \"-L/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib\",\n    \"-Wl,-rpath,$ORIGIN/../lib\",\n    \"-Wl,-Map,/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/product.map\",\n    \"-lssl\",\n    \"-lcrypto\",\n    \"-lz\",\n    \"-ldl\",\n    \"-o\",\n    \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/product/device-management\"\n  ],\n  \"cwd\": \"/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package\",\n  \"expected_returncode\": 0,\n  \"log\": \"build/commands/0009-device-link.log\",\n  \"log_sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"returncode\": 0,\n  \"started_at\": \"2026-09-12T04:43:10.433041+00:00\"\n}",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-980790b7a5ec64c0e7654e51",
+        "source_id": "S-c857c834094d3f782ee14ceb",
+        "file_sha256": "a194c24ab6614e2c7d9fc5dec5b8ab31d0a82a1be688f52351c7306b7f9f6acc",
+        "start_line": 1,
+        "end_line": 34,
+        "text": "\nDynamic section at offset 0x4c18 contains 31 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libssl.so.1.0.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libcrypto.so.1.0.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libz.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN/../lib]\n 0x000000000000000c (INIT)               0x2000\n 0x000000000000000d (FINI)               0x335c\n 0x0000000000000019 (INIT_ARRAY)         0x5c08\n 0x000000000000001b (INIT_ARRAYSZ)       8 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x5c10\n 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0x3b0\n 0x0000000000000005 (STRTAB)             0x910\n 0x0000000000000006 (SYMTAB)             0x3e8\n 0x000000000000000a (STRSZ)              721 (bytes)\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000003 (PLTGOT)             0x5e48\n 0x0000000000000002 (PLTRELSZ)           1104 (bytes)\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000017 (JMPREL)             0xd98\n 0x0000000000000007 (RELA)               0xc90\n 0x0000000000000008 (RELASZ)             264 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x000000000000001e (FLAGS)              BIND_NOW\n 0x000000006ffffffb (FLAGS_1)            Flags: NOW PIE\n 0x000000006ffffffe (VERNEED)            0xc50\n 0x000000006fffffff (VERNEEDNUM)         1\n 0x000000006ffffff0 (VERSYM)             0xbe2\n 0x000000006ffffff9 (RELACOUNT)          3\n 0x0000000000000000 (NULL)               0x0",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-decc0ecd4759182aea646bfa",
+        "source_id": "S-73f0529832b02ad893726816",
+        "file_sha256": "0c870c41ff0bef3b6c6ea0564c20e2ca67448a982620ac840e4ca0a74736a07b",
+        "start_line": 5,
+        "end_line": 9,
+        "text": "As-needed library included to satisfy reference by file (symbol)\n\nlibssl.so.1.0.0               /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (SSL_CTX_free)\nlibcrypto.so.1.0.0            /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (ERR_print_errors_fp)\nlibz.so.1                     /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o (zlibVersion)",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      },
+      {
+        "excerpt_id": "X-3689ac7a5ea779bfedd57063",
+        "source_id": "S-73f0529832b02ad893726816",
+        "file_sha256": "0c870c41ff0bef3b6c6ea0564c20e2ca67448a982620ac840e4ca0a74736a07b",
+        "start_line": 46,
+        "end_line": 50,
+        "text": "LOAD /usr/lib/gcc/x86_64-linux-gnu/13/crtbeginS.o\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/build/device.o\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libssl.so\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libcrypto.so\nLOAD /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/build/rom-20260912T043812-0b9b1a/package/sdk/lib/libz.so",
+        "context_hash": "362de586a0b4155ecfb281efd23d1571cfc6e4156833f910dc1ada01fa0d1726"
+      }
+    ],
+    "calls": [
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1d5842087d0a3ee68039cbd617d",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 3522,
+          "input_tokens_details": {
+            "cache_write_tokens": 3400,
+            "cached_tokens": 0
+          },
+          "output_tokens": 342,
+          "output_tokens_details": {
+            "reasoning_tokens": 48
+          },
+          "total_tokens": 3864
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1dab77887d0819cf094b378c2a8",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 9439,
+          "input_tokens_details": {
+            "cache_write_tokens": 5917,
+            "cached_tokens": 3400
+          },
+          "output_tokens": 247,
+          "output_tokens_details": {
+            "reasoning_tokens": 74
+          },
+          "total_tokens": 9686
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1e0144087d0a8a1145f300f52a9",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 10358,
+          "input_tokens_details": {
+            "cache_write_tokens": 919,
+            "cached_tokens": 9317
+          },
+          "output_tokens": 291,
+          "output_tokens_details": {
+            "reasoning_tokens": 28
+          },
+          "total_tokens": 10649
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1e4bd1087d0b00d7a03ce28470f",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 10674,
+          "input_tokens_details": {
+            "cache_write_tokens": 316,
+            "cached_tokens": 10236
+          },
+          "output_tokens": 187,
+          "output_tokens_details": {
+            "reasoning_tokens": 22
+          },
+          "total_tokens": 10861
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1e86c1087d0951ec971e981cd0c",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 11451,
+          "input_tokens_details": {
+            "cache_write_tokens": 777,
+            "cached_tokens": 10552
+          },
+          "output_tokens": 240,
+          "output_tokens_details": {
+            "reasoning_tokens": 12
+          },
+          "total_tokens": 11691
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1ecd88887d092206110361f46ab",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 12533,
+          "input_tokens_details": {
+            "cache_write_tokens": 1082,
+            "cached_tokens": 11329
+          },
+          "output_tokens": 216,
+          "output_tokens_details": {
+            "reasoning_tokens": 28
+          },
+          "total_tokens": 12749
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1f39bb087d0ba209d948868cec9",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 13445,
+          "input_tokens_details": {
+            "cache_write_tokens": 912,
+            "cached_tokens": 12411
+          },
+          "output_tokens": 415,
+          "output_tokens_details": {
+            "reasoning_tokens": 192
+          },
+          "total_tokens": 13860
+        }
+      },
+      {
+        "response_id": "resp_013d600b7224b547016aa4e1fa806087d0a5e1317352532f32",
+        "model": "gpt-5.6-sol",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 13929,
+          "input_tokens_details": {
+            "cache_write_tokens": 484,
+            "cached_tokens": 13323
+          },
+          "output_tokens": 1067,
+          "output_tokens_details": {
+            "reasoning_tokens": 261
+          },
+          "total_tokens": 14996
+        }
+      }
+    ],
+    "elapsed_seconds": 53.463,
+    "verified_ai_facts": [
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-f5ebb751725b29d972921de4",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-4b1e446b72b8d12f6e8549ab",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-2b09c1b5c13e74e31e2f46a0",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-f50ddce00c36942b138e0ddd",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-980790b7a5ec64c0e7654e51",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-decc0ecd4759182aea646bfa",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      },
+      {
+        "kind": "SOURCE_EXCERPT",
+        "excerpt_id": "X-3689ac7a5ea779bfedd57063",
+        "verification": "EXACT_BYTES_AND_LOCATOR",
+        "engineering_inference_verified": false
+      }
+    ],
+    "note": "AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。",
+    "record_hash": "42348773abea3d95b7af3ae8dcb1c161eed90809654a380170c82f9ed9028fee"
+  }
+}

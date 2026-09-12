@@ -2,9 +2,9 @@
 import re
 from .buildproof import read_json
 CATALOG={
- 'CVE-2014-0160':{'component':'openssl','title':'TLS Heartbeat bounds check','sources':['https://openssl-library.org/news/secadv/20140407.txt'],'deep_versions':['1.0.1f'],'profile_status':'IN_DEVELOPMENT'},
- 'CVE-2022-37434':{'component':'zlib','title':'gzip extra header copy bounds','sources':['https://github.com/madler/zlib/commit/eff308af425b67093bab25f80f1ae950166bece1','https://github.com/madler/zlib/releases/tag/v1.2.13'],'deep_versions':['1.2.12','1.2.13'],'profile_status':'IN_DEVELOPMENT'},
- 'CVE-2023-38545':{'component':'curl','title':'SOCKS5 remote hostname handling','sources':['https://curl.se/docs/CVE-2023-38545.html'],'deep_versions':['8.3.0'],'profile_status':'IN_DEVELOPMENT'},
+ 'CVE-2014-0160':{'component':'openssl','title':'TLS Heartbeat 邊界檢查','sources':['https://openssl-library.org/news/secadv/20140407.txt'],'deep_versions':['1.0.1f'],'profile_status':'REVIEWED_DEMO_PROFILE'},
+ 'CVE-2022-37434':{'component':'zlib','title':'gzip extra header 複製邊界','sources':['https://github.com/madler/zlib/commit/eff308af425b67093bab25f80f1ae950166bece1','https://github.com/madler/zlib/releases/tag/v1.2.13'],'deep_versions':['1.2.12','1.2.13'],'profile_status':'REVIEWED_DEMO_PROFILE'},
+ 'CVE-2023-38545':{'component':'curl','title':'SOCKS5 remote hostname 處理','sources':['https://curl.se/docs/CVE-2023-38545.html'],'deep_versions':['8.3.0'],'profile_status':'REVIEWED_DEMO_PROFILE'},
 }
 def version_hint(cve_id,version):
  if cve_id=='CVE-2014-0160':

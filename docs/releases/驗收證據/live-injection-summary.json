@@ -1,0 +1,11 @@
+{
+  "engineering_verdict": "AFFECTED",
+  "ai_status": "COMPLETED",
+  "actions": [
+    "LIST",
+    "READ",
+    "COMPLETE"
+  ],
+  "replay_mode": "REPLAY",
+  "pass": true
+}
