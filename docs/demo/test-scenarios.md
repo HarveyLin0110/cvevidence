@@ -1,7 +1,9 @@
 # CVEvidence Demo 測試手冊
 更新：2026-09-12
 
-## 第二版優先操作（PC2／PC3 分層）
+**最新現場安排：** 使用 `demo-inputs/two-flows/`。第一版上傳完整包，展示 Affected 及證據；第二版上傳缺運作資料的初始包，展示 Needs Investigation 與 AI 的「缺什麼／為何需要／如何取得」後結束。**不在現場補件或重判，講稿暫緩。** 下方完整補件流程只作工程驗收。
+
+## 第二版完整工程驗收（PC2／PC3 分層）
 
 請選資料版 fresh-pc3-runtime-v2；CMake 為較快的主展示，ROM／curl 作對照。全部是今天的新產出，不使用舊 Demo_3x3。
 

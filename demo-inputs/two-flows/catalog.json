@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "dataset_version": "fresh-demo-two-flows-v2",
+  "created_at": "2026-09-12T07:45:31.013678+00:00",
+  "packages": [
+    {
+      "package_id": "demo_cmake_complete_v2",
+      "kind": "initial",
+      "format": "cmake",
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T041957-c54d2c",
+      "build_id": "cmake-20260912T041957-c54d2c",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+      },
+      "manifest_sha256": "0f4b307c93e0e31fcaf95a784eb056a7a17bd6bc0be3d563b496b2e25cc87ec0",
+      "file_count": 408,
+      "base_package_id": null,
+      "archive": {
+        "filename": "demo_1_complete.tar.gz",
+        "repo_path": "demo-inputs/two-flows/01_complete/demo_1_complete.tar.gz",
+        "relative_path": "demo-inputs/two-flows/01_complete/demo_1_complete.tar.gz",
+        "sha256": "95c05f59d5aefc31807cfd38bc7c78b9ca5b00b210e9013cf5359e81420fd6e1",
+        "size_bytes": 2006914
+      }
+    },
+    {
+      "package_id": "pc3_cmake_static",
+      "kind": "initial",
+      "format": "cmake",
+      "product_id": "fresh-cmake",
+      "release_id": "cmake-20260912T041957-c54d2c",
+      "build_id": "cmake-20260912T041957-c54d2c",
+      "primary_artifact": {
+        "path": "product/update-reader",
+        "sha256": "124cdf81d567f2f7b86f2a0a3839a33acce5bd388f2b075d5f4a252881d22969"
+      },
+      "manifest_sha256": "d29c52b64d30aad6d3f481316c8932503662467f3608a055a2649cd091e17bf3",
+      "file_count": 405,
+      "base_package_id": null,
+      "archive": {
+        "filename": "demo_2_requires_evidence.tar.gz",
+        "repo_path": "demo-inputs/two-flows/02_requires_evidence/demo_2_requires_evidence.tar.gz",
+        "relative_path": "demo-inputs/two-flows/02_requires_evidence/demo_2_requires_evidence.tar.gz",
+        "sha256": "5dc5d7b25333b10b53e1aaeac9830dd3a25ecb9da3dd646787c49f783b0564b5",
+        "size_bytes": 2006138
+      }
+    }
+  ],
+  "input_archive_hashes": [
+    "5dc5d7b25333b10b53e1aaeac9830dd3a25ecb9da3dd646787c49f783b0564b5",
+    "703a18838207d722b7a8742e4f78630cd8771d32259e5292558ae26c38e28d6b"
+  ],
+  "notes": [
+    "Two presentation inputs assembled from today's fixed same-build PC3 materials.",
+    "The second presentation stops at the explanation of missing materials.",
+    "No expected verdict is supplied to the analysis engine."
+  ]
+}
