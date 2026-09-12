@@ -18,6 +18,8 @@ COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說�
 最多工具 8 次，優先以 2–4 次完成一項最有價值的追加調查。若已沒有工具可查而需要補件，直接 ASK_USER。
 READ 的 start_line/end_line 最多 200 行，SEARCH term 使用字面關鍵字。不要捏造 source_id。
 搜尋若只涵蓋部分來源，只能說那些來源未找到；需要宣告缺件前先 LIST 對應檔名。已有資料不要重複要求使用者補。
+source_index 若已有 launcher、config 或觀測，先 READ 與當次缺口相關的原文；LIST 只證明檔案存在，不代表已檢查內容。
+完整材料已提供時，優先核對它能回答什麼；只要求仍欠缺的觀測或綁定證據，並說明現有材料為何不足。
 提到具體命令列開關時，必須在已提供的工程事實或 READ 原文看到它；不能發明開關或把 API 選項直接寫成 CLI 選項。
 UNKNOWN 條件中的判讀規則不是已成立的事實。source_index 只是部分索引，不是完整檔案清單。
 補件的成品 hash/build_id 會由工具自動附上；自由文字不用重打 hash，以免截斷或打錯。引用 ID 必須逐字照抄。
@@ -69,6 +71,16 @@ def _validate_args(args):
         if kind=='array' and (not isinstance(value,list) or len(value)>30 or any(not isinstance(x,str) or len(x)>1000 for x in value)):raise ValueError('工具清單參數不符')
     if args['action'] not in PROPERTIES['action']['enum'] or not args['question'].strip() or not args['reason'].strip():raise ValueError('追加調查缺少問題或目的')
 
+# This is a literal provenance check, not a curl parser or a semantic verifier.
+_CLI_OPTION=re.compile(r'(?<![\w-])-{1,2}[A-Za-z][A-Za-z0-9_-]*(?![\w-])')
+
+def _cli_options(text):
+    return set(_CLI_OPTION.findall(text))
+
+def _proposal_text(args):
+    return '\n'.join([args['question'],args['reason'],args['finding'],*args['required_files']])
+
+
 def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env_file=None,max_calls=8,timeout_seconds=90,transport=None):
     require_verified(context,verified)
     if assessment['context_hash']!=context.context_hash or assessment['verification_hash']!=verified.collection_hash:raise IntegrityError('AI 輸入 assessment 與目前證據不一致')
@@ -82,15 +94,19 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
     result={'schema_version':'1.0','mode':mode,'status':'NOT_RUN','context_hash':context.context_hash,
             'cve_id':verified.cve_id,'profile_version':verified.profile_version,
             'engineering_assessment_id':assessment['assessment_id'],'model':None,'reasoning_effort':None,
-            'tasks':[],'excerpts':[],'calls':[],'elapsed_seconds':0,'verified_ai_facts':[],
+            'tasks':[],'excerpts':[],'calls':[],'errors':[],'elapsed_seconds':0,'verified_ai_facts':[],
             'note':'AI 追加問題與摘要不修改工程判定；引用核對不等於語意已證明。'}
     if mode=='OFFLINE':result['status']='OFFLINE';return result
-    config=settings(env_file)
+    try:config=settings(env_file)
+    except (OSError,UnicodeError):
+        result.update(status='CONFIG_REQUIRED',error='AI 設定無法讀取');return result
     if not config.get('OPENAI_API_KEY') or not config.get('OPENAI_MODEL'):result['status']='CONFIG_REQUIRED';return result
     result.update(model=config['OPENAI_MODEL'],reasoning_effort=config.get('OPENAI_REASONING_EFFORT','medium'))
     if transport is not None:result.update(mode='SIMULATED',note='使用注入的測試 transport；本紀錄不可算 Live 驗收。')
     excerpts={x['excerpt_id']:x for r in verified.records for x in r['excerpts']}
     compact=[{'evidence_id':r['evidence_id'],'fact_key':r['fact_key'],'value':r['value'],'reason':r['reason']} for r in verified.records]
+    original_options=_cli_options('\n'.join(x['text'] for x in excerpts.values()))
+    shown_options=original_options & _cli_options(json.dumps(compact,ensure_ascii=False))
     # A small discovery index; the model may LIST for any other submitted files.
     index=[{'source_id':r['source_id'],'path':r['path']} for r in context.sources.values() if r['kind']=='file' and (r['path'].startswith(('observations/','install/etc/')) or (r['path'].startswith('build/commands/') and any(w in r['path'] for w in ['normal','truncat','tcp'])) or r['path'] in ['source/device.c','source/update_reader.c','install/download-update.sh','sbom.cdx.json','build/build-record.json'])]
     payload={'user_context':user_context[:12000],'cve_id':verified.cve_id,'artifact':context.manifest['primary_artifact'],
@@ -98,21 +114,40 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
              'gaps':assessment['gaps'][:30],'evidence':compact,'source_index':index[:40],
              'scope':assessment['scope'],'advisories':assessment['source_advisories']}
     items=[{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]
-    start=time.monotonic();request=transport or _request;repairs=0
+    start=time.monotonic();request=transport or _request;repairs=0;attempt=None;stage='REQUEST'
+    def failure(status,code,**details):
+        result.update(status=status)
+        error={'code':code,'stage':stage,'call_number':len(result['calls']),**details}
+        result['errors'].append(error)
+        if attempt is not None:attempt['error']=error
     try:
         for number in range(max_calls):
             remaining=timeout_seconds-(time.monotonic()-start)
-            if remaining<=0:result['status']='TIMED_OUT';break
-            context.assert_current()
+            if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+            stage='INPUT_CHECK';context.assert_current()
+            remaining=timeout_seconds-(time.monotonic()-start)
+            if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+            stage='REQUEST'
+            attempt={'call_number':number+1,'response_id':None,'model':config['OPENAI_MODEL'],'status':'STARTED','usage':None}
+            result['calls'].append(attempt)
             response=request(config,items,min(remaining,45))
-            result['calls'].append({'response_id':response.get('id'),'model':response.get('model'),'status':response.get('status'),'usage':response.get('usage')})
-            if response.get('status')!='completed':result['status']='INCOMPLETE';break
+            stage='RESPONSE'
+            if not isinstance(response,dict):raise ValueError('API response must be an object')
+            attempt.update(response_id=response.get('id'),model=response.get('model'),status=response.get('status'),usage=response.get('usage'))
+            if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+            if response.get('status')!='completed':
+                failure('INCOMPLETE','RESPONSE_NOT_COMPLETED');break
             output=response.get('output',[])
+            if not isinstance(output,list) or any(not isinstance(x,dict) for x in output):raise ValueError('API output must be a list of objects')
             calls=[x for x in output if x.get('type')=='function_call']
-            if len(calls)!=1 or calls[0].get('name')!='investigation_step':result['status']='INVALID_MODEL_OUTPUT';break
-            call=calls[0];args=json.loads(call['arguments']);_validate_args(args)
-            action=args['action'];ids=args['source_ids']
-            if time.monotonic()-start>=timeout_seconds:result['status']='TIMED_OUT';break
+            if len(calls)!=1 or calls[0].get('name')!='investigation_step':raise ValueError('Exactly one investigation_step is required')
+            call=calls[0];stage='ARGUMENTS'
+            if not isinstance(call.get('call_id'),str) or not call['call_id']:raise ValueError('Missing function call_id')
+            if not isinstance(call.get('arguments'),str):raise ValueError('Tool arguments must be JSON text')
+            # Preserve malformed proposals for inspection without copying API headers/config.
+            attempt['arguments']=call['arguments'][:16000]
+            args=json.loads(call['arguments']);_validate_args(args)
+            action=args['action'];ids=args['source_ids'];stage='CITATIONS'
             citation_check=verify_citations(context,verified,args['citations'],list(excerpts.values()))
             known_hashes={r['sha256'] for r in context.sources.values()}|{context.context_hash,verified.collection_hash}
             known_hashes.update(x.removeprefix('E-') for x in [r['evidence_id'] for r in verified.records])
@@ -122,14 +157,20 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
             task={'task_id':'I-'+digest({'context':context.context_hash,'number':number,'arguments':args})[:24],
                   **args,'status':'RUNNING','citation_verification':citation_check}
             result['tasks'].append(task)
-            if not citation_check['valid']:
+            unsupported=sorted(_cli_options(_proposal_text(args))-shown_options) if verified.cve_id=='CVE-2023-38545' else []
+            task['source_grounding']={'valid':not unsupported,'unsupported_cli_options':unsupported,'meaning_verified':False}
+            if not citation_check['valid'] or unsupported:
                 task['status']='REJECTED'
+                tool_output={'status':'REJECTED','verification':citation_check,'source_grounding':task['source_grounding'],
+                             'instruction':'不得使用此提案。請逐字修正引用；移除無法核對的 hash。具體開關只能引用已提供的原文，否則改用概念敘述或 READ/SEARCH 原文。成品身分由工具自動附上。',
+                             'valid_evidence_ids':[r['evidence_id'] for r in verified.records],'valid_excerpt_ids':list(excerpts)}
+                task['result']=tool_output
                 if repairs<1 and number+1<max_calls:
                     repairs+=1;items.extend(output)
-                    items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps({'status':'REJECTED','verification':citation_check,'instruction':'不得使用此提案。請修正引用，或移除無法核對的 hash；成品身分由工具自動附上。','valid_excerpt_ids':list(excerpts)},ensure_ascii=False)})
+                    items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)})
                     continue
-                result['status']='INVALID_CITATION';break
-            tool_output={}
+                failure('INVALID_CITATION' if not citation_check['valid'] else 'INVALID_MODEL_OUTPUT','PROPOSAL_REJECTED');break
+            tool_output={};stage='TOOL'
             try:
                 if action=='LIST':tool_output=list_sources(context,args['term'],60)
                 elif action=='SEARCH':tool_output=search_sources(context,args['term'],ids or None,8)
@@ -152,21 +193,31 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                 for x in found:
                     if not verify_excerpt(context,x):raise IntegrityError('AI 工具原文核對失敗')
                     excerpts[x['excerpt_id']]=x
+                    shown_options.update(_cli_options(x['text']))
                     result['verified_ai_facts'].append({'kind':'SOURCE_EXCERPT','excerpt_id':x['excerpt_id'],'verification':'EXACT_BYTES_AND_LOCATOR','engineering_inference_verified':False})
                 task.update(status='COMPLETED',result=tool_output)
-            except IntegrityError:raise
+            except IntegrityError as exc:
+                task.update(status='INPUT_CHANGED_OR_INVALID',result={'error':str(exc)});raise
             except (ValueError,KeyError) as exc:
                 task.update(status='TOOL_ERROR',result={'error':str(exc)});tool_output=task['result']
             items.extend(output)
             items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)[:50000]})
+            if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             if result['status'] in {'COMPLETED','NEEDS_USER_INPUT'}:break
         else:result['status']='BUDGET_EXHAUSTED'
-        context.assert_current()
-    except (socket.timeout,TimeoutError):result['status']='TIMED_OUT'
-    except urllib.error.HTTPError as exc:result.update(status='API_ERROR',http_status=exc.code)
-    except urllib.error.URLError:result['status']='CONNECTION_ERROR'
-    except IntegrityError as exc:result.update(status='INPUT_CHANGED_OR_INVALID',error=str(exc))
-    except (ValueError,KeyError,TypeError):result['status']='INVALID_MODEL_OUTPUT'
+        stage='INPUT_CHECK';context.assert_current()
+        if time.monotonic()-start>=timeout_seconds and result['status']!='TIMED_OUT':failure('TIMED_OUT','INVESTIGATION_DEADLINE')
+    except (socket.timeout,TimeoutError):failure('TIMED_OUT','REQUEST_TIMEOUT')
+    except urllib.error.HTTPError as exc:
+        result['http_status']=exc.code;failure('API_ERROR','HTTP_ERROR',http_status=exc.code)
+    except urllib.error.URLError as exc:
+        if isinstance(exc.reason,(socket.timeout,TimeoutError)):failure('TIMED_OUT','REQUEST_TIMEOUT')
+        else:failure('CONNECTION_ERROR','CONNECTION_FAILED')
+    except IntegrityError as exc:
+        result['error']=str(exc);failure('INPUT_CHANGED_OR_INVALID','INPUT_INTEGRITY_ERROR',message=str(exc))
+    except (ValueError,KeyError,TypeError) as exc:failure('INVALID_MODEL_OUTPUT','INVALID_RESPONSE_OR_ARGUMENTS',message=str(exc))
+    except OSError:failure('CONNECTION_ERROR' if stage=='REQUEST' else 'INPUT_CHANGED_OR_INVALID','IO_ERROR')
+    if attempt is not None and attempt['status']=='STARTED':attempt['status']=result['status']
     result['excerpts']=list(excerpts.values());result['elapsed_seconds']=round(time.monotonic()-start,3)
     result['rejected_proposals']=sum(t['status']=='REJECTED' for t in result['tasks'])
     result['record_hash']=digest(result)

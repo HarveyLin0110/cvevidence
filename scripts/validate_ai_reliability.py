@@ -1,0 +1,143 @@
+"""Bounded AI checks with separate mock, native Live, and live-API fault injection records."""
+from __future__ import annotations
+import argparse
+import copy
+import datetime
+import json
+import pathlib
+import sys
+import unittest
+import uuid
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'src'))
+from cvevidence_core import ai
+from cvevidence_core.assessment import assess
+from cvevidence_core.integrity import digest, file_hash, ingest_package, safe_extract
+from cvevidence_core.queries import collect_evidence
+from cvevidence_core.verifier import verify
+
+CASES = {
+    'missing': ('09_curl', '更新下載經 SOCKS5，偶爾握手慢。我不知道 DNS 在哪裡解析，請先查現有資料，再指出最小缺件。不要把尚未提供的執行設定當成已知事實。'),
+    'early': ('07_curl', 'launcher、download.conf 與正常 SOCKS5 觀測已經在提交資料中。請直接檢查現有原文的 DNS、傳輸速率設定與握手觀測；分開說明程式有受影響條件和正常測試是否已重現漏洞。'),
+}
+
+
+def write_json(path, value):
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2)+'\n')
+
+
+def run_mock(folder):
+    suite = unittest.defaultTestLoader.discover(str(ROOT/'tests'), pattern='test_ai_reliability.py')
+    with (folder/'unittest.log').open('w') as stream:
+        result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
+    summary = {'validation_kind': 'MOCK_TRANSPORT', 'formal_live_eligible': False, 'api_calls': 0,
+               'tests_run': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors),
+               'passed': result.wasSuccessful()}
+    write_json(folder/'summary.json', summary)
+    return summary['passed']
+
+
+def run_live(folder, options):
+    # Only the existing trusted config reader touches the key; never serialize config.
+    try:
+        config = ai.settings(options.env_file)
+        configured = bool(config.get('OPENAI_API_KEY') and config.get('OPENAI_MODEL'))
+    except (OSError, UnicodeError):
+        configured = False
+    if not configured:
+        write_json(folder/'summary.json', {'status': 'CONFIG_REQUIRED', 'api_calls': 0, 'passed': False})
+        return False
+    catalog = json.loads((ROOT/'demo-inputs/catalog.json').read_text())
+    selected = list(CASES) if options.case == 'all' else [options.case]
+    rows = []
+    for name in selected:
+        package, user_context = CASES[name]
+        catalog_entry = next(x for x in catalog['packages'] if x['package_id'] == package)
+        archive = ROOT/catalog_entry['archive']['repo_path']
+        if file_hash(archive) != catalog_entry['archive']['sha256']:
+            raise ValueError('Demo archive hash mismatch')
+        case_folder = folder/name
+        case_folder.mkdir()
+        unpacked = case_folder/'input'
+        safe_extract(archive, unpacked)
+        manifests = list(unpacked.rglob('manifest.json'))
+        if len(manifests) != 1:
+            raise ValueError('Expected exactly one input manifest')
+        context = ingest_package(manifests[0].parent, expected_manifest_hash=catalog_entry['manifest_sha256'])
+        verified = verify(context, collect_evidence(context, 'CVE-2023-38545'))
+        assessment = assess(context, verified)
+        assessment_before = digest(assessment)
+        fault = {'validation_kind': 'LIVE_API_FAULT_INJECTION', 'formal_live_eligible': False,
+                 'note': '每次模型回應均來自真實 API；僅首次回應的 citations 被測試程式改成不存在的 ID。調查依既有 API 標為 SIMULATED，不計正式 Live。',
+                 'api_responses': [], 'injected': False}
+
+        def fault_transport(config, items, timeout):
+            original = ai._request(config, items, timeout)
+            fault['api_responses'].append({'response_id': original.get('id'), 'status': original.get('status'),
+                                           'model': original.get('model'), 'usage': original.get('usage')})
+            changed = copy.deepcopy(original)
+            calls = [x for x in changed.get('output', []) if x.get('type') == 'function_call']
+            if not fault['injected'] and original.get('status') == 'completed' and len(calls) == 1:
+                args = json.loads(calls[0]['arguments'])
+                fault['original_arguments'] = copy.deepcopy(args)
+                args['citations'] = ['X-validation-invalid-reference']
+                fault['injected_arguments'] = args
+                calls[0]['arguments'] = json.dumps(args, ensure_ascii=False)
+                fault['injected'] = True
+            write_json(case_folder/'fault-injection.json', fault)
+            return changed
+
+        injected = options.mode == 'live-fault'
+        investigation = ai.investigate(context, verified, assessment, user_context, mode='LIVE',
+                                       env_file=options.env_file, max_calls=options.max_calls,
+                                       timeout_seconds=options.timeout_seconds,
+                                       transport=fault_transport if injected else None)
+        record = {'validation_kind': 'LIVE_API_FAULT_INJECTION' if injected else 'NATIVE_LIVE',
+                  'formal_live_eligible': not injected, 'context_hash': context.context_hash,
+                  'assessment': assessment, 'ai': investigation}
+        write_json(case_folder/'result.json', record)
+        completed = [t for t in investigation['tasks'] if t['status'] == 'COMPLETED']
+        citation_gate = all(t['citation_verification']['valid'] and t['source_grounding']['valid'] for t in completed)
+        recovery = investigation.get('rejected_proposals', 0) > 0 and investigation['status'] in ('COMPLETED', 'NEEDS_USER_INPUT')
+        row = {'case': name, 'package_id': package, 'validation_kind': record['validation_kind'],
+               'formal_live_eligible': not injected, 'mode': investigation['mode'],
+               'model': investigation['model'], 'reasoning_effort': investigation['reasoning_effort'],
+               'status': investigation['status'], 'elapsed_seconds': investigation['elapsed_seconds'],
+               'api_attempts': len(investigation['calls']), 'actions': [t['action'] for t in investigation['tasks']],
+               'rejected_proposals': investigation.get('rejected_proposals', 0), 'accepted_citations_valid': citation_gate,
+               'engineering_unchanged': digest(assessment) == assessment_before,
+               'fault_injected': fault['injected'] if injected else False,
+               'recovery_observed': recovery if injected else None,
+               'semantic_review': '待人工核對問題、結論與原文；此 gate 不把引用存在當語意正確。'}
+        row['passed'] = (investigation['status'] in ('COMPLETED', 'NEEDS_USER_INPUT') and citation_gate
+                         and row['engineering_unchanged'] and bool(investigation['calls'])
+                         and (not injected or (fault['injected'] and recovery)))
+        rows.append(row)
+        write_json(folder/'summary.json', rows)
+        print(json.dumps(row, ensure_ascii=False), flush=True)
+    return all(row['passed'] for row in rows)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--mode', choices=['mock', 'live', 'live-fault'], default='mock')
+    parser.add_argument('--case', choices=['all', *CASES], default='all')
+    parser.add_argument('--env-file', type=pathlib.Path)
+    parser.add_argument('--max-calls', type=int, default=8)
+    parser.add_argument('--timeout-seconds', type=int, default=90)
+    options = parser.parse_args()
+    if not 1 <= options.max_calls <= 12 or not 1 <= options.timeout_seconds <= 180:
+        parser.error('Investigation budgets exceed allowed bounds')
+    if options.mode == 'live-fault' and options.case == 'all':
+        options.case = 'early'  # One fault-injection scenario per invocation.
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%f')
+    folder = ROOT/'var/validation/parallel-ai'/(stamp+'-'+options.mode+'-'+uuid.uuid4().hex[:8])
+    folder.mkdir(parents=True, exist_ok=False)
+    print(str(folder), flush=True)
+    passed = run_mock(folder) if options.mode == 'mock' else run_live(folder, options)
+    return 0 if passed else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
