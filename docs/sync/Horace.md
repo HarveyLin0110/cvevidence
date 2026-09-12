@@ -1,12 +1,13 @@
 # Horace 開發同步
 
-更新：2026-09-12 14:32（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
+更新：2026-09-12 14:56（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
 
 ## 可立即接線的版本
 
 - 最新產品 checkpoint：**`7b24110`**，分支 `codex/horace-fresh-core`，[PR #9](https://github.com/HarveyLin0110/cvevidence/pull/9)。已合回 main `9d11d48` 的 OFFLINE 工作台；沒有覆改 Frankie 的產品程式。PR 最新 head／CI 以 GitHub 即時狀態為準。
 - Git 的 **`demo-inputs/` 已在 main**：9 初始包＋3 同 build 補件，12 包 hash 通過，約 95 MB／最大 17 MB。主展示先 `rom/03_rom.tar.gz`，再從補件入口傳 `rom/supplement_03_rom.tar.gz`。配對與可貼文字見該資料夾 README。
-- main 已交 OFFLINE 工程頁、同 build 補件、重判及前後報告；Frankie 的真實瀏覽器紀錄在 `docs/releases/Frankie-workspace-engineering-20260912.md`。**Live 的正式執行／保存與來源原文定位顯示仍須整合端接入；核心成功不等於網站已啟用。**
+- **團隊 HTTPS 站已實測工程補件流程**：頁面 SHA `ea5e571`；Horace 真 Chrome 操作 ROM 03 → Needs Investigation → 同 build 補件 → Not Affected → 前後比較，重新載入後原報告文字完全保留。原工程 run `2181d491`、補件後 `c4b39a19`。詳見 `docs/releases/團隊站_ROM_實測_2026-09-12.md`。初判下載收到事件；補件後下載事件逾時，待確認。未重啟服務。
+- **網站 Live 仍未接入**：第 04 步實際為 OFFLINE 並明示未接線。本機 key 不隨 Git 同步；網站主機需可信設定與獨立 AI worker／stage 保存。ea5e571 畫面及報告仍未直接呈現 evidence.excerpts。main 最新查得 `e9cc996`；PR #9 `9863b1b` 當時 CI 成功、CLEAN，尚未合併。
 - 本輪不是要求隊友重做 Query／規則／AI：使用 `src/cvevidence_core/` 的現成入口即可。完整語意及樣例見 `docs/architecture/核心分析介面與接線提案.md`。
 
 ## 責任與固定限制
