@@ -281,7 +281,8 @@ def workspace(st, *, store_root=None):
                     st.subheader("補件前後工程結果")
                     st.text("前次工程 Run："+previous.run_id)
                     st.json(compare_analyses(runner.read_engineering(previous.run_id),payload,
-                        parent_context=previous.input_package.context_hash,child_context=run.input_package.context_hash,cve_id=run.cve_id))
+                        parent_context=previous.input_package.context_hash,child_context=run.input_package.context_hash,cve_id=run.cve_id,
+                        include_followup_queries=True))
             except (ValueError,OSError,TypeError,KeyError):
                 st.warning("前後工程結果無法核對，不顯示未確認的比較。")
         if not run.error:

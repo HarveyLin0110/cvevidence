@@ -7,22 +7,23 @@ from .supplements import interpret_statement,statement_parts
 LABELS={'build_identity':'同一成品與 build 身分','component':'元件與已審查版本',
         'library_binding':'元件 source／object／library 綁定','product_binding':'產品實際連結綁定',
         'scope_complete':'交付成品的分析範圍完整','vulnerable_implementation':'受影響實作存在且未有效排除',
-        'entry_reachable':'外部輸入可進入相關程式路徑','trigger_prerequisites':'漏洞特有的必要使用條件'}
+        'entry_reachable':'成品的靜態輸入路徑','trigger_prerequisites':'實作中的漏洞必要條件',
+        'runtime_observation':'同成品的部署／運作條件觀測'}
 GUARDS=('build_identity','component','library_binding','product_binding','scope_complete')
-NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites')
+NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites','runtime_observation')
 
 def describe_condition_groups(cve_id):
     """Presentation semantics only; groups never replace profile conditions or rules."""
     if cve_id not in CATALOG:raise ValueError('No reviewed condition grouping for this CVE')
-    return {'schema_version':'1.0','cve_id':cve_id,'grouping_only':True,
+    return {'schema_version':'2.0','cve_id':cve_id,'grouping_only':True,
             'shared_prerequisite_ids':['build_identity','library_binding','product_binding','scope_complete'],
             'groups':[
                 {'group_id':'PC1','title':'元件適用性','condition_ids':['component'],
                  'meaning':'核對元件與已審查版本，並由共用綁定證據確認它屬於目前成品。'},
-                {'group_id':'PC2','title':'實作與修補','condition_ids':['vulnerable_implementation'],
-                 'meaning':'核對脆弱實作、功能停用或有效修補；仍須對應到已綁定的 library 與成品。'},
-                {'group_id':'PC3','title':'產品輸入路徑','condition_ids':['entry_reachable','trigger_prerequisites'],
-                 'meaning':'核對外部輸入路徑及各 CVE 特有使用條件，並使用共用的產品實際連結綁定。'}],
+                {'group_id':'PC2','title':'成品實作與靜態路徑','condition_ids':['vulnerable_implementation','entry_reachable','trigger_prerequisites'],
+                 'meaning':'這份成品編入什麼：核對原碼、修補、功能設定、成品綁定及靜態輸入路徑；不代表設備已如此運作。'},
+                {'group_id':'PC3','title':'部署與實際運作','condition_ids':['runtime_observation'],
+                 'meaning':'這個成品如何運作：核對同成品的命令、正常交互原始紀錄及配置；缺件保持未知，受控觀測不冒充客戶實機。'}],
             'note':'PC 分組僅供呈現，沒有另算三個布林值；正式判定仍看所有條件、共用前提、範圍與衝突。'}
 
 def _review_statements(context,facts,states,statements,conflicts):
@@ -101,9 +102,12 @@ def assess(context,verified,statements=()):
         'rom':'提供同一 ROM hash 的 SDK/source、libssl 每個 object 的編譯紀錄、heartbeat 旗標與預處理輸出、實際 linker map。',
         'cmake':'提供同次產品 source、CMake compile/link 紀錄、libz.a 與 linker map，核對 inflateGetHeader 及 extra/chunk 容量。',
         'curl':'提供同成品 hash 的 launcher/config、libcurl 與 compiler/link 紀錄，以及 SOCKS5 DNS/握手與 buffer 設定觀測。'}
+    next_steps = [playbook[context.manifest['format']]]
+    if guards and not reviews and not conflicts and all(states[k]=='SUPPORTED' for k in NECESSARY if k!='runtime_observation') and states['runtime_observation']=='UNKNOWN':
+        next_steps = ['PC2 工程證據已齊全；請補同成品 runtime/observation.json 及其引用的正常運作原始輸出／配置，或覆核不一致的材料。']
     result={'schema_version':'1.0','cve_id':verified.cve_id,'profile_version':verified.profile_version,'context_hash':context.context_hash,
             'verdict':verdict,'reason':reason,'conditions':conditions,'conflicts':conflicts,'statement_reviews':reviews,'gaps':gaps,
-            'next_steps':[playbook[context.manifest['format']]] if verdict=='NEEDS_INVESTIGATION' else ['由工程師覆核成品範圍、交付紀錄可信度與實際部署環境。'],
+            'next_steps':next_steps if verdict=='NEEDS_INVESTIGATION' else ['由工程師覆核成品範圍、交付紀錄可信度與實際部署環境。'],
             'blocked_conditions':blocked if guards else [],'evidence_ids':[r['evidence_id'] for r in verified.records],
             'source_advisories':CATALOG[verified.cve_id]['sources'],'human_review_required':True,'provenance_verified':False,
             'scope':'只涵蓋目前提交的成品與已審查程式路徑；未證明實際部署暴露、漏洞已被利用或異常由此 CVE 造成。',

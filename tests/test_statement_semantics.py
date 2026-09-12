@@ -53,6 +53,14 @@ class StatementSemanticsTests(unittest.TestCase):
                 else:
                     shutil.copy2(extra / row['path'], target)
             manifest = copy.deepcopy(base.manifest)
+            if name == 'affected':
+                # v2 also requires today's real same-product runtime observation.
+                runtime_extra = cls.root / 'runtime_extra'
+                safe_extract(ROOT / 'demo-inputs/runtime-v2/supplement_pc3_cmake_runtime.tar.gz', runtime_extra)
+                runtime_manifest = json.loads((runtime_extra / 'manifest.json').read_text())
+                assert runtime_manifest['build_id'] == manifest['build_id']
+                assert runtime_manifest['primary_artifact'] == manifest['primary_artifact']
+                shutil.copytree(runtime_extra / 'runtime', merged / 'runtime')
             manifest['files'] = scan(merged)
             (merged / 'manifest.json').write_text(json.dumps(manifest))
             cls.load(name, merged, cve)

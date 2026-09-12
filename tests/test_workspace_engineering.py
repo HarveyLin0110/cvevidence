@@ -30,7 +30,7 @@ def click(app, label):
 
 def test_real_analysis_ai_exit_report_and_supplement_reanalysis(tmp_path, monkeypatch):
     runner = Runner(RunStore(tmp_path / "runtime"))
-    parent = runner.start_file(ROOT / "demo-inputs/cmake/06_cmake.tar.gz", cve="CVE-2022-37434")
+    parent = runner.start_file(ROOT / "demo-inputs/runtime-v2/pc3_cmake_static.tar.gz", cve="CVE-2022-37434")
     before = runner.store._run_path(parent.run_id).read_bytes()
     monkeypatch.setenv("CVEVIDENCE_STORE", str(runner.store.root))
     app = AppTest.from_file(str(ROOT / "runner_app.py")).run()

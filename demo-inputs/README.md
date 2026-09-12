@@ -1,5 +1,7 @@
 # Demo 輸入檔：今天重建、可直接交給前端
 
+**第二版主展示請使用 [runtime-v2 操作說明](runtime-v2/README.md)。** 新增六包，把 PC2 完整工程證據與 PC3 實際運作補件分開；預設 catalog 已改選新版。以下十二包及其驗收為今天較早版本的材料與歷史說明。以新 runtime-v2 規則重新分析舊的靜態完整包，可能因缺少 PC3 仍待查；不要套用早期 Affected 結果。舊 run 保留原判定及 profile，查看歷史不會自動重判。
+
 此資料夾就是隊友與展示時選檔的共同位置，隨 Git 一起取得。12 個壓縮包全部來自 2026-09-12 新製作的 builder 與官方重新下載的 OSS；未沿用舊 Demo 的程式、成品或驗收結果。
 
 共約 95 MB，最大單包約 17 MB，直接納入 Git，不需要額外下載 Release 或 Git LFS。請保留 `.tar.gz` 原檔與檔名，避免重新壓縮造成 catalog hash 不同。每包 root 都有 `manifest.json`，副檔名為 gzip tar；核心已支援此格式。前端選檔器也須允許 `.tar.gz`，不能只接受 `.zip`。
