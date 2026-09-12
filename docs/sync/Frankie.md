@@ -81,3 +81,9 @@
 
 ### F15 真實閉環交付
 程式25a39bf（f11ca7a + main e9cc996），136測試通過。CMake06第二次獨立Sol/low AI實際2 calls→NEEDS_USER_INPUT，要求同build libz.a；AppTest顯示真實AI／報告、套用補件／重判AFFECTED，原工程與首次TIMED_OUT保持。詳見 docs/releases/Frankie-F15-live-acceptance-20260912.md。PR14已推送；公開部署與新核心升級交整合端。
+
+## F16：統整性結果摘要（2026-09-12）
+結果先顯示完整結論/依據/未知原因，再列五Query發現、缺件與矛盾；PC及完整條件表改為折疊。純展示，不改規則或AI。8506真實ROM保存結果瀏覽器核對成功；詳見 docs/development/F16-result-summary.md。待固定SHA交整合發布。
+
+## F17：結論面向與情境（2026-09-12）
+新增12種證據情境的結論設計矩陣，分工程適用性／漏洞重現／部署暴露；未有獨立受驗證欄位時不推論重現或暴露。結果頁與報告共用證據邊界，條件SUPPORTED僅支持該主張。核心trigger_prerequisites範圍疑義記待Horace覆核，不改規則。詳見 docs/development/F17-conclusion-scenarios.md。

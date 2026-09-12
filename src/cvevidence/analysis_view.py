@@ -4,6 +4,7 @@ The caller must read a validated, user-scoped saved result. Scope checks here ar
 defence against displaying the wrong selection, not proof of evidence integrity.
 """
 import json
+from .result_summary import conclusion, query_summaries, conclusion_dimensions, condition_interpretation
 
 QUERIES = {
     "Q1_COMPONENT": "元件與版本",
@@ -197,7 +198,7 @@ def render_engineering(st, entry, *, package=None):
         st.info("尚未產生工程判定；未知 CVE 或未完成分析不能視為安全。")
         return
     if package:
-        with st.expander("本次建置與輸入材料", expanded=True):
+        with st.expander("本次建置與輸入材料", expanded=False):
             left, right = st.columns(2)
             with left:
                 st.caption("產品 / Release")
@@ -212,7 +213,10 @@ def render_engineering(st, entry, *, package=None):
     verdict = assessment.get("verdict")
     with st.container(border=True):
         st.text(VERDICTS.get(verdict, "未提供有效工程判定"))
-        st.text(text(assessment.get("reason")))
+        summary = conclusion(entry)
+        st.text(summary["text"])
+        st.text("判定依據：" + text(summary["reason"]))
+        if summary["detail"]: st.text(summary["detail"])
         st.caption("工程初判須覆核；不代表異常已歸因，也不是部署安全認證。")
     conditions = rows(assessment.get("conditions"))
     metrics = st.columns(3)
@@ -221,6 +225,27 @@ def render_engineering(st, entry, *, package=None):
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
     overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "起始查核與追加問題", "證據與引用", "待補資料與覆核"])
     with overview:
+        st.subheader("這份結果能回答什麼")
+        for dimension in conclusion_dimensions(entry):
+            with st.container(border=True):
+                st.text(dimension["面向"] + "：" + dimension["本次結論"])
+                st.caption(dimension["解讀邊界"])
+        st.subheader("五項查核告訴我們什麼")
+        st.caption("下列統整來自本次保存的查核發現；「查核已完成」不是「產品安全」或「漏洞成立」。")
+        for query_summary in query_summaries(entry):
+            with st.container(border=True):
+                st.text(query_summary["label"] + " · " + query_summary["state"])
+                for finding in query_summary["findings"][:2]:
+                    st.text(finding)
+                if not query_summary["findings"]:
+                    st.text("尚無可展示的查核發現，不能據此推論產品是否受影響。")
+                for item in query_summary["missing"][:2]:
+                    st.text("尚缺：" + text(item))
+                for item in query_summary["conflicts"][:2]:
+                    st.text("待釐清：" + text(item))
+                if any(len(query_summary[field]) > 2 for field in ("findings", "missing", "conflicts")):
+                    st.caption("此處呈現重點；完整發現與缺件請見「起始查核與追加問題」。")
+        st.subheader("深入查核：PC 條件")
         groups = condition_groups(entry)
         if groups:
             st.subheader("PC 工程條件")
@@ -228,12 +253,13 @@ def render_engineering(st, entry, *, package=None):
             if entry["condition_groups"].get("schema_version") == "2.0":
                 st.caption("PC2：成品實作與靜態輸入路徑。PC3：實際部署與運作證據；靜態路徑不等於已觀測到實際運作。")
             for group in groups:
-                with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=True):
+                with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=False):
                     if group.get("meaning"): st.text(text(group["meaning"]))
                     for condition in group["conditions"]:
-                        state = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}.get(condition.get("state"), "尚待確認")
+                        state, boundary = condition_interpretation(condition)
                         st.text(text(condition.get("title")) + "：" + state)
                         st.text(text(condition.get("explanation")))
+                        st.caption(boundary)
         else:
             st.caption("此保存紀錄未提供可核對的 PC 分組；以下保留原始條件，重新分析後可取得新版分組。")
         for line in runtime_summary(entry):
@@ -246,13 +272,14 @@ def render_engineering(st, entry, *, package=None):
         lines(st, assessment.get("next_steps"))
         st.subheader("適用範圍")
         st.text(text(assessment.get("scope")))
-        st.subheader("條件摘要")
         states = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}
         if conditions:
-            st.dataframe([{"條件": text(c.get("title")),
-                           "狀態": states.get(c.get("state"), "未提供"),
-                           "說明": text(c.get("explanation"))} for c in conditions],
-                         hide_index=True, use_container_width=True)
+            with st.expander("所有條件與詳細說明"):
+                st.dataframe([{"條件": text(c.get("title")),
+                               "狀態": condition_interpretation(c)[0],
+                               "說明": text(c.get("explanation")),
+                               "尚不能據此認定": condition_interpretation(c)[1]} for c in conditions],
+                             hide_index=True, use_container_width=True)
         else:
             st.info("未提供條件明細。")
     with queries_tab:

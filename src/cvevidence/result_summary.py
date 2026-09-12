@@ -1,0 +1,78 @@
+"""Deterministic presentation of saved findings; does not infer a verdict."""
+QUERY_LABELS = {
+    "Q1_COMPONENT": "Q1 元件與版本",
+    "Q2_BUILD": "Q2 建置身分",
+    "Q3_IMPLEMENTATION": "Q3 受影響實作",
+    "Q4_BINDING": "Q4 成品綁定與範圍",
+    "Q5_PATH": "Q5 輸入路徑與必要條件",
+}
+def objects(value):
+    return [x for x in value if isinstance(x, dict)] if isinstance(value, list) else []
+
+def query_summaries(entry):
+    evidence = {}
+    for item in objects(entry.get("evidence")):
+        evidence.setdefault(item.get("evidence_id"), []).append(item)
+    result = []
+    for qid, label in QUERY_LABELS.items():
+        matches = [q for q in objects(entry.get("queries")) if q.get("query_id") == qid]
+        query = matches[0] if len(matches) == 1 else {}
+        if isinstance(query.get("title"), str) and query["title"].strip():
+            label = qid.split("_", 1)[0] + " " + query["title"].strip()
+        status = query.get("status")
+        state = {"COMPLETED": "查核已完成", "COMPLETED_WITH_GAPS": "有缺件，尚未查清",
+                 "CONFLICT": "存在矛盾，需覆核"}.get(status, "未提供可用結果")
+        if len(matches) > 1: state = "結果重複，需覆核"
+        findings = []
+        for eid in query.get("evidence_ids", []):
+            items = evidence.get(eid, [])
+            if len(items) == 1 and isinstance(items[0].get("reason"), str) and items[0]["reason"]:
+                if items[0]["reason"] not in findings: findings.append(items[0]["reason"])
+        missing = query.get("missing") if isinstance(query.get("missing"), list) else []
+        conflicts = query.get("conflicts") if isinstance(query.get("conflicts"), list) else []
+        if conflicts: state = "存在矛盾，需覆核"
+        elif missing: state = "有缺件，尚未查清"
+        result.append({"query_id": qid, "label": label, "state": state, "findings": findings,
+                       "missing": missing, "conflicts": conflicts})
+    return result
+
+def conclusion(entry):
+    assessment = entry.get("assessment") or {}
+    verdict = assessment.get("verdict")
+    conclusions = {
+        "AFFECTED": "本次成品被判定受此 CVE 影響。請優先安排修補或緩解，並由工程師覆核。",
+        "NOT_AFFECTED": "本次成品被判定不受此 CVE 影響。此結論只適用目前提交的成品、建置與查核範圍。",
+        "NEEDS_INVESTIGATION": "目前還不能確認本次成品是否受此 CVE 影響；需補齊或釐清關鍵證據後再判定。",
+    }
+    conditions = objects(assessment.get("conditions"))
+    relevant = [c for c in conditions if c.get("state") == ("BLOCKED" if verdict == "NOT_AFFECTED" else "UNKNOWN")]
+    titles = [c["title"] for c in relevant if isinstance(c.get("title"), str)]
+    detail = ""
+    if verdict == "NOT_AFFECTED" and titles:
+        detail = "判定依據中的阻斷條件：" + "、".join(titles) + "。"
+    elif verdict == "NEEDS_INVESTIGATION" and titles:
+        detail = "仍待確認：" + "、".join(titles) + "。"
+    return {"text": conclusions.get(verdict, "尚未提供有效判定，不能將此結果視為安全。"),
+            "reason": assessment.get("reason"), "detail": detail}
+
+def conclusion_dimensions(entry):
+    """Current engineering schema has no separately verified reproduction/deployment verdict."""
+    return [
+        {"面向": "工程適用性", "本次結論": conclusion(entry)["text"],
+         "解讀邊界": "依核心對本次成品、建置與 CVE 的工程判定；不是實際攻擊成功紀錄。"},
+        {"面向": "漏洞重現", "本次結論": "尚無獨立覆核的重現結論",
+         "解讀邊界": "此報告未提供專用的重現驗收結果；不等於已重現，也不等於重現失敗。正常測試不能代替漏洞重現。"},
+        {"面向": "部署暴露與實際利用", "本次結論": "尚無獨立覆核的部署／利用結論",
+         "解讀邊界": "程式路徑可達不等於實際部署可從外部存取；需另外核對配置、網路路徑、權限與觀測證據。"},
+    ]
+
+def condition_interpretation(condition):
+    state = condition.get("state")
+    label = {"SUPPORTED": "支持此項工程條件", "BLOCKED": "此項工程條件有阻斷證據",
+             "UNKNOWN": "此項條件仍需確認"}.get(state, "此項條件仍需確認")
+    boundary = "此狀態只描述這一項主張，不能單獨代表整體受影響或安全。"
+    if condition.get("condition_id") == "trigger_prerequisites":
+        boundary = "此列只描述核心已審查的必要使用條件；不代表已實際觸發漏洞。重現與部署暴露須另行覆核。"
+    elif condition.get("condition_id") == "entry_reachable":
+        boundary = "此列描述交付程式的路徑；實際部署的外部可達性與權限仍須另行覆核。"
+    return label, boundary
