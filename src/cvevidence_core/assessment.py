@@ -11,6 +11,20 @@ LABELS={'build_identity':'同一成品與 build 身分','component':'元件與�
 GUARDS=('build_identity','component','library_binding','product_binding','scope_complete')
 NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites')
 
+def describe_condition_groups(cve_id):
+    """Presentation semantics only; groups never replace profile conditions or rules."""
+    if cve_id not in CATALOG:raise ValueError('No reviewed condition grouping for this CVE')
+    return {'schema_version':'1.0','cve_id':cve_id,'grouping_only':True,
+            'shared_prerequisite_ids':['build_identity','library_binding','product_binding','scope_complete'],
+            'groups':[
+                {'group_id':'PC1','title':'元件適用性','condition_ids':['component'],
+                 'meaning':'核對元件與已審查版本，並由共用綁定證據確認它屬於目前成品。'},
+                {'group_id':'PC2','title':'實作與修補','condition_ids':['vulnerable_implementation'],
+                 'meaning':'核對脆弱實作、功能停用或有效修補；仍須對應到已綁定的 library 與成品。'},
+                {'group_id':'PC3','title':'產品輸入路徑','condition_ids':['entry_reachable','trigger_prerequisites'],
+                 'meaning':'核對外部輸入路徑及各 CVE 特有使用條件，並使用共用的產品實際連結綁定。'}],
+            'note':'PC 分組僅供呈現，沒有另算三個布林值；正式判定仍看所有條件、共用前提、範圍與衝突。'}
+
 def _review_statements(context,facts,states,statements,conflicts):
     """Recheck original text against this receipt, never trust supplied review flags."""
     history=[];pending=[]

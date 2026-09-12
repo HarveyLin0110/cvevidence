@@ -300,6 +300,26 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(result['tasks'][-1]['status'], 'COMPLETED')
         self.assertTrue(result['verified_ai_facts'])
 
+    def test_replay_keeps_original_times_and_never_calls_model(self):
+        from cvevidence_core.ai import replay_investigation
+        with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
+             patch('cvevidence_core.ai._request', return_value=response(self.complete())):
+            record = investigate(self.context, self.verified, self.assessment, mode='LIVE')
+        before = copy.deepcopy(record)
+        with patch('cvevidence_core.ai._request', side_effect=AssertionError('Replay must stay offline')):
+            replay = replay_investigation(self.context, record)
+        self.assertEqual(record, before)
+        self.assertEqual(replay['mode'], 'REPLAY')
+        self.assertEqual(replay['original_started_at'], record['started_at'])
+        self.assertEqual(replay['original_finished_at'], record['finished_at'])
+        self.assertTrue(replay['original_time_available'])
+        self.assertEqual(replay['original_record_hash'], record['record_hash'])
+        legacy = {k: v for k, v in record.items() if k not in ('started_at', 'finished_at', 'record_hash')}
+        legacy['record_hash'] = digest(legacy)
+        replay = replay_investigation(self.context, legacy)
+        self.assertFalse(replay['original_time_available'])
+        self.assertIsNone(replay['original_started_at'])
+
     def test_workflow_keeps_engineering_assessment_on_bad_api_envelope(self):
         with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
              patch('cvevidence_core.ai._request', return_value=None):

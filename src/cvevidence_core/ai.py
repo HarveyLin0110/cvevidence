@@ -1,6 +1,7 @@
 """Bounded Responses API investigation, isolated from the engineering verdict."""
 from __future__ import annotations
 import json,os,pathlib,re,socket,time,urllib.error,urllib.request
+from datetime import datetime,timezone
 from .integrity import IntegrityError,digest
 from .sources import list_sources,search_sources,read_excerpt,compare_sources,verify_excerpt
 from .verifier import require_verified,verify_citations
@@ -15,6 +16,7 @@ SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律�
 文字聲明、SBOM、版本命中、正常測試、symbol 命中都不能單獨證明漏洞適用或安全。症狀原因與 CVE 適用性分開。
 每個新問題寫 question、reason（簡短的調查目的，非內部思考過程）。READ/SEARCH 結果可引 X-ID；工程事實引用 E-ID。
 COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說未知。ASK_USER 時清楚寫 required_files 及同 build/hash 要求。
+每項補件要求要說明向哪個角色取得、需要哪份材料，以及要核對的內容；不要重複索取已提交且足夠的檔案。
 總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 COMPLETE／ASK_USER。優先以 2–4 次完成一項最有價值的追加調查。
 預留一次呼叫收尾；剩兩次時至多做一個必要查核，剩一次時依已有證據 COMPLETE 或提出具體 ASK_USER。不得為了完成而捏造答案，資料不足要明說限制。
 READ 的 start_line/end_line 最多 200 行，SEARCH term 使用字面關鍵字。不要捏造 source_id。
@@ -107,7 +109,8 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
     except (OSError,UnicodeError):
         result.update(status='CONFIG_REQUIRED',error='AI 設定無法讀取');return result
     if not config.get('OPENAI_API_KEY') or not config.get('OPENAI_MODEL'):result['status']='CONFIG_REQUIRED';return result
-    result.update(model=config['OPENAI_MODEL'],reasoning_effort=config.get('OPENAI_REASONING_EFFORT','medium'))
+    result.update(model=config['OPENAI_MODEL'],reasoning_effort=config.get('OPENAI_REASONING_EFFORT','medium'),
+                  started_at=datetime.now(timezone.utc).isoformat())
     if transport is not None:result.update(mode='SIMULATED',note='使用注入的測試 transport；本紀錄不可算 Live 驗收。')
     excerpts={x['excerpt_id']:x for r in verified.records for x in r['excerpts']}
     compact=[{'evidence_id':r['evidence_id'],'fact_key':r['fact_key'],'value':r['value'],'reason':r['reason']} for r in verified.records]
@@ -230,6 +233,7 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
     if attempt is not None and attempt['status']=='STARTED':attempt['status']=result['status']
     result['excerpts']=list(excerpts.values());result['elapsed_seconds']=round(time.monotonic()-start,3)
     result['rejected_proposals']=sum(t['status']=='REJECTED' for t in result['tasks'])
+    result['finished_at']=datetime.now(timezone.utc).isoformat()
     result['record_hash']=digest(result)
     return result
 
@@ -245,4 +249,8 @@ def replay_investigation(context,record):
     if verified.profile_version!=record.get('profile_version'):raise IntegrityError('Replay 的 profile 版本不一致')
     for task in record.get('tasks',[]):
         if task.get('status')=='COMPLETED' and not verify_citations(context,verified,task.get('citations',[]),record.get('excerpts',[]))['valid']:raise IntegrityError('Replay 引用無法重新核對')
-    return {**record,'mode':'REPLAY','original_record_hash':record['record_hash'],'note':'播放先前 Live 紀錄；本次未呼叫模型。'}
+    return {**record,'mode':'REPLAY','original_record_hash':record['record_hash'],
+            'original_started_at':record.get('started_at'),'original_finished_at':record.get('finished_at'),
+            'original_time_available':bool(record.get('started_at') and record.get('finished_at')),
+            'replayed_at':datetime.now(timezone.utc).isoformat(),
+            'note':'播放先前 Live 紀錄；本次未呼叫模型。缺少原時間的舊紀錄顯示未知，不以播放時間代替。'}

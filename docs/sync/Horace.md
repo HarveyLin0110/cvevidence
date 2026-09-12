@@ -51,7 +51,7 @@
 
 - D 固定 renderer `40802c8`、report `184145c` 的真 ROM JSON 呈現通過，AI 身分欄位完整。指定整合 `a47a1a3` 尚缺 analyze／正式分析保存；新 `codex/integration-offline` 的 `70b3b68` 已交 `Runner.analyze_offline`／`read_engineering` 與固定 OFFLINE worker，並記錄真實 ROM／CMake／curl 五 query 的保存驗收；UI 接線及 Live 仍待完成。該版核心基於 `0a480df`，請再接 PR #9 以取得 A/B 修正，不能把舊基線發現套到新版本。
 - 上述 renderer/report 只顯示 witnesses，未呈現核心既有 `evidence.excerpts` 的 X-ID、行號、原文與 hash；請 Frankie 接上既有內容及同 scope 的來源操作，不自造 locator。
-- B 的 ROM 補件後 Live 第一筆用盡 8 次呼叫（73.196 秒）仍未 COMPLETE，含一次 COMPARE 四來源的 TOOL_ERROR；工程 dict／已保存 JSON 保留，AI 失敗後未重判。這筆保留為 BUDGET_EXHAUSTED，不能被早先 Live 成功數掩蓋；需評估工具參數引導與剩餘預算收尾。第二筆聚焦原文的 Live 仍由 B 驗收，主線不重跑。
+- B 的 ROM 補件後 Live 第一筆用盡 8 次呼叫（73.196 秒）仍未 COMPLETE，含一次 COMPARE 四來源的 TOOL_ERROR；工程 dict／已保存 JSON 保留，AI 失敗後未重判。這筆保留為 BUDGET_EXHAUSTED，不能被早先 Live 成功數掩蓋；需評估工具參數引導與剩餘預算收尾。B 第二筆聚焦正常 TCP/TLS 的 Live 已通過（2 calls、16.519 秒），正式歷史／工程保留。主線再針對第一筆原問題修正預算提示與工具參數引導；`dd47a1e` 真實 Live 已由 8 次耗盡改為 5 次完成、44.872 秒，8 筆新原文重核並維持 Not Affected。原失敗保留，不放寬 Verifier／不增加預算；一次結果不能當成功率保證。
 
 ## 並行工作與接收
 
@@ -74,3 +74,12 @@
 ## 存放與提交
 
 展示輸入 `demo-inputs/` 已入 Git；原 build/archive 在 `var/artifacts/`，本機 run 在 `var/runtime/`，報告在 `var/exports/`，可公開驗收摘要在 `docs/releases/`。不提交客戶原始資料、key 或完整模型私有推理。每輪取得遠端最新狀態，只 stage 本人改動；不 force push，由整合負責人審查後合 main。
+
+## 本輪新交件
+
+- B 第二輪 QA 已合入 `848cb32`／`c1d0604`／`7853ed3`，C 第二輪已合入 `19a8b78`／`65789d2`。C 16 項通過、無新產品 blocker；B 2 模擬通過、兩筆原 Live 一通過一失敗。原始固定基準為 `44efc7b`，不改寫成新 head 已全數重跑。
+- 核心 `analyses[].condition_groups` 提供 PC1／PC2／PC3 與共用前提，僅供呈現；assessment／Evidence ID 與判定規則不變。Frankie 可依欄位顯示，不用猜 PC 分組。
+- 新 Live 保存 started_at／finished_at；Replay 帶原時間與本次播放時間。舊紀錄缺時間明示未知，不補造。
+- 以上對應 V5 PC 條件分組、Replay 帶原時間、追加補件含取證角色與驗收材料；詳細字段見核心接線提案。
+
+本輪產品與 main 相容測試：119 passed、23 subtests，29.86 秒；另 49 項 AI／回流聚焦測試通過。新增使用者未交付入口的 Live／Replay 驗收腳本，待實際結果另記，不預填通過。

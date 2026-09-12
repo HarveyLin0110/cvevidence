@@ -3,7 +3,7 @@ from .integrity import ingest_package,IntegrityError,UnsupportedError,InputPacka
 from .catalog import discover_candidates,CATALOG
 from .queries import collect_evidence
 from .verifier import verify
-from .assessment import assess,check_claim,summarize
+from .assessment import assess,check_claim,summarize,describe_condition_groups
 from .ai import investigate
 from .supplements import interpret_statement
 from .investigation_evidence import reassess_after_investigation
@@ -30,6 +30,7 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
         event('AI',ai['status'],cve_id)
         followup=reassess_after_investigation(context,assessment,ai,notes) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None
         results.append({'cve_id':cve_id,'status':'COMPLETED','queries':collection['queries'],'evidence':collection['evidence'],
+                        'condition_groups':describe_condition_groups(cve_id),
                         'assessment':assessment,'claim_checks':[check_claim(context,assessment,c) for c in claims if c.get('cve_id')==cve_id],
                         'ai':ai,'investigation_verification':followup,'summary':summarize(assessment,ai)})
     context.assert_current()
