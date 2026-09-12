@@ -13,6 +13,7 @@ from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
 from .ai_workspace import ai_workspace, selected_ai, with_ai_result
+from .ai_presenter import attempt_metadata
 from .query_preparation import render_preparation
 
 def controlled_path(value):
@@ -259,12 +260,13 @@ def workspace(st, *, store_root=None):
                 ai_record=selected_ai(st,runner,run)
                 report_payload=with_ai_result(payload,ai_record)
             except (ValueError,OSError,KeyError,TypeError):
+                ai_record=None
                 st.warning("選取的 AI 紀錄無法核對，報告只包含工程結果。")
         text=export_analysis(report_payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
         if ai_record:
             metadata=ai_record["request"]
             text="AI 獨立紀錄："+metadata["ai_id"]+" · "+metadata["created_at"]+" · "+ai_record["status"]+"\n原工程紀錄未覆寫。\n\n"+text
-            st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+ai_record["status"])
+            st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+attempt_metadata(request=metadata)["provider_label"]+" · "+ai_record["status"])
         if payload:
             assessment=payload["analyses"][0].get("assessment") or {}
             st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))

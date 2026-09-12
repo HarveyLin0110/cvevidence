@@ -34,6 +34,72 @@ class AIRequest(Model):
         return self
 
 
+class AIExecutionVersions(Model):
+    code_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    prompt_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    contract_version: Literal["2.0"] = "2.0"
+
+
+class AIRequestV2(AIRequest):
+    schema_version: Literal["2.0"] = "2.0"
+    provider: Literal["openai_api", "codex_cli"]
+    auth_type: Literal["api_key", "chatgpt"]
+    config_id: str = Field(pattern=r"^[a-f0-9]{64}$")
+    versions: AIExecutionVersions
+
+    @model_validator(mode="after")
+    def provider_authentication(self):
+        expected = "api_key" if self.provider == "openai_api" else "chatgpt"
+        if self.auth_type != expected:
+            raise ValueError("AI provider authentication mismatch")
+        return self
+
+
+def parse_ai_request(raw):
+    data = json.loads(raw) if isinstance(raw, (str, bytes, bytearray)) else raw
+    if not isinstance(data, dict):
+        raise ValueError("AI request must be an object")
+    version = data.get("schema_version", "1.0")
+    if version == "1.0":
+        return AIRequest.model_validate(data)
+    if version == "2.0":
+        return AIRequestV2.model_validate(data)
+    raise ValueError("Unsupported AI request version")
+
+
+def _validate_v2_receipts(ai, request):
+    if ai.get("schema_version") != "2.0" or ai.get("provider") != request.provider or ai.get("auth_type") != request.auth_type:
+        raise ValueError("AI provider or version mismatch")
+    if ai.get("reasoning_effort") != request.reasoning_effort:
+        raise ValueError("AI reasoning configuration mismatch")
+    calls = ai.get("calls")
+    if not isinstance(calls, list):
+        raise ValueError("AI calls must be a list")
+    successful = ai.get("status") in ("COMPLETED", "NEEDS_USER_INPUT")
+    if successful and not calls:
+        raise ValueError("Completed LIVE requires provider receipts")
+    for number, call in enumerate(calls, 1):
+        if not isinstance(call, dict) or call.get("provider") != request.provider or call.get("call_number") != number:
+            raise ValueError("AI call provider or sequence mismatch")
+        if not successful:
+            continue
+        if call.get("status") != "completed":
+            raise ValueError("Incomplete provider call")
+        if request.provider == "openai_api":
+            if not isinstance(call.get("response_id"), str) or not call["response_id"]:
+                raise ValueError("Missing Responses API receipt")
+        else:
+            if (not isinstance(call.get("thread_id"), str) or not call["thread_id"]
+                    or call.get("exit_code") != 0 or isinstance(call.get("exit_code"), bool)
+                    or call.get("terminal_event") != "turn.completed"
+                    or not isinstance(call.get("events_sha256"), str)
+                    or len(call["events_sha256"]) != 64
+                    or any(c not in "0123456789abcdef" for c in call["events_sha256"])):
+                raise ValueError("Missing Codex terminal receipt")
+            if call.get("response_id"):
+                raise ValueError("Codex cannot supply a fabricated API receipt")
+
+
 class AIOutcome(Model):
     ai_id: str
     status: AIStatus
@@ -61,6 +127,13 @@ def validate_ai_payload(payload, request):
         ("context_hash", request.context_hash), ("cve_id", request.cve_id),
         ("engineering_assessment_id", request.assessment_id), ("mode", "LIVE"), ("model", request.model))):
         raise ValueError("AI result scope mismatch")
+    if isinstance(request, AIRequestV2):
+        if (payload.get("schema_version") != "2.0" or payload.get("provider") != request.provider
+                or payload.get("auth_type") != request.auth_type):
+            raise ValueError("AI wrapper version or provider mismatch")
+        if payload.get("versions") != request.versions.model_dump():
+            raise ValueError("AI execution version mismatch")
+        _validate_v2_receipts(ai, request)
     status = ai.get("status")
     # Pydantic validates the finite status set, without treating unknown values as success.
     AIOutcome(ai_id=request.ai_id, status=status, completed_at="validation", payload_sha256="0" * 64)
@@ -69,7 +142,7 @@ def validate_ai_payload(payload, request):
     if status in ("COMPLETED", "NEEDS_USER_INPUT"):
         calls = ai.get("calls")
         if (not request.consent or not ai.get("record_hash") or not isinstance(calls, list) or not calls
-                or not all(isinstance(call, dict) and isinstance(call.get("response_id"), str) and call["response_id"] for call in calls)):
+                or (not isinstance(request, AIRequestV2) and not all(isinstance(call, dict) and isinstance(call.get("response_id"), str) and call["response_id"] for call in calls))):
             raise ValueError("Completed LIVE requires consent and call receipts")
     record_hash = ai.get("record_hash")
     if record_hash:
@@ -110,7 +183,7 @@ class AIStore:
 
     def read(self, ai_id):
         from .engineering import read_engineering
-        request = AIRequest.model_validate_json(self.path(ai_id, "start").read_bytes())
+        request = parse_ai_request(self.path(ai_id, "start").read_bytes())
         if request.ai_id != ai_id: raise ValueError("AI receipt identity mismatch")
         parent = self.store.read(request.parent_run_id)
         engineering = read_engineering(self.store, parent.run_id)
@@ -136,7 +209,7 @@ class AIStore:
         for path in self.root.glob("*.start.json"):
             try:
                 if path.is_symlink(): raise ValueError("AI receipt cannot be a symlink")
-                request = AIRequest.model_validate_json(path.read_bytes())
+                request = parse_ai_request(path.read_bytes())
                 if request.parent_run_id != parent_run_id: continue
                 valid.append(self.read(path.name.removesuffix(".start.json")))
             except (ValueError, OSError, KeyError, TypeError):

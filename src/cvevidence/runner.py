@@ -22,8 +22,8 @@ class Runner:
         return AIStore(self.store).history(parent_run_id)
 
     def ai_configuration(self):
-        from .ai_service import operator_config
-        return operator_config()[1]
+        from .ai_config import public_configuration
+        return public_configuration()
 
     def analyze_offline(self, parent_run_id, *, cve_id=None, symptom="", timeout=120):
         from .core_service import CoreService

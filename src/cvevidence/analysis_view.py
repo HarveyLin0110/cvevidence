@@ -4,6 +4,7 @@ The caller must read a validated, user-scoped saved result. Scope checks here ar
 defence against displaying the wrong selection, not proof of evidence integrity.
 """
 import json
+from .ai_presenter import attempt_metadata, metadata_lines, receipt_lines
 from .query_display import query_ids, query_title, query_description
 from .result_summary import conclusion, query_summaries, condition_interpretation, condition_groups, pc_summaries
 
@@ -369,7 +370,7 @@ def saved_collection_guide(ai, *, context_hash, cve_id, assessment_id):
     return None
 
 
-def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
+def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
     st.subheader("AI 查核建議")
     if not isinstance(ai, dict):
         st.info("尚無 AI 調查紀錄。可先查看工程缺口、下載報告或補充資料。")
@@ -378,6 +379,9 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
         st.error("AI 紀錄與目前工程結果不符，未顯示其內容。")
         return
     st.text("模式：" + text(ai.get("mode")) + " · 狀態：" + text(ai.get("status")))
+    metadata = attempt_metadata(ai, request)
+    for line in metadata_lines(metadata):
+        st.text(line)
     if ai.get("mode") == "REPLAY":
         st.caption("這是既有紀錄播放，本次未呼叫模型。")
     if ai.get("status") in ("OFFLINE", "NOT_RUN", "CONFIG_REQUIRED"):
@@ -423,9 +427,8 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
                     st.code(text(task.get("result")), language=None)
     with st.expander("模型呼叫紀錄"):
         for call in rows(ai.get("calls")):
-            st.text("模型：" + text(call.get("model")) + " · 狀態：" + text(call.get("status")))
-            st.text("Response ID：" + text(call.get("response_id")))
-            st.text("Usage：" + text(call.get("usage")))
+            for line in receipt_lines(call, metadata["provider"]):
+                st.text(line)
 
 
 def render_analysis(st, payload, *, context_hash, cve_id, key, on_report=None, on_supplement=None):

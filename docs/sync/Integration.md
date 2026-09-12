@@ -36,3 +36,8 @@ I04–I07/I10/I11 的主要工作台路徑已接；I08/I09 正完成 LIVE 發布
 ## 下一個整合關卡
 等 Horace 正式交付 collect_evidence / verify / assess / investigate 回應與新 tests，再與 Frankie 前端/Runner新功能合入本分支。
 需確認 condition SUPPORTED/BLOCKED/UNKNOWN/衝突、InvestigationTask、工程與AI獨立status、mode/deadline與引用scope；不以模擬或空結果宣稱完成。
+# AIP 整合更新：2026-09-13
+
+依使用者本次 PM 全流程授權，`codex/ai-provider-integration` 已整合 API／Codex CLI 雙來源，PR #31。固定程式 `bebb299`：382 tests、23 subtests、5 schemas 與程式 head CI 通過；Codex 两案 LIVE 自動驗收及保存紀錄 UI QA 通過。API LIVE／同案例比較及人工內容覆核仍 NOT_RUN；沒有宣告整份 spec 結案。
+
+本機 Windows／WSL 工作台 8505 已更新，原資料保留；此功能第一版為本機單人，不改多人公開站設定。完整交付證據及限制見 [AIP 驗收紀錄](../releases/2026-09-13-ai-providers.md)。以上各段為舊整合背景，請依其日期／commit 判讀。
