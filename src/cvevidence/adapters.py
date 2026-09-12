@@ -21,6 +21,17 @@ class CollectedPackage(Model):
     limitations: list[str]
 
 class CoreAdapter:
+    def read_excerpt(self, payload, record, timeout=10):
+        if not os.environ.get("CVEVIDENCE_CORE_MODULE"):
+            raise CoreUnavailable("core adapter not configured")
+        source=Path(__file__).resolve().parents[1]
+        env=dict(os.environ)
+        env["PYTHONPATH"]=os.pathsep.join((str(source),str(source.parent)))
+        result=subprocess.run([sys.executable,"-m","cvevidence.worker",record.model_dump_json()],
+            input=payload,capture_output=True,timeout=timeout,env=env)
+        if result.returncode: raise ValueError("excerpt unavailable or invalid")
+        return result.stdout
+
     def collect(self, payload, timeout):
         if not os.environ.get("CVEVIDENCE_CORE_MODULE"):
             raise CoreUnavailable("core adapter not configured")

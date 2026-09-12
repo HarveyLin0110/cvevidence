@@ -13,7 +13,7 @@ class Runner:
         self.store = store
         self.adapter = adapter or CoreAdapter()
 
-    def start(self, payload: bytes, product_id: str, cve_id: str,
+    def _collect(self, payload: bytes, product_id: str, cve_id: str,
               mode="OFFLINE", timeout=30.0):
         if not 0 < timeout <= 300:
             raise ValueError("timeout must be between 0 and 300 seconds")
@@ -61,6 +61,44 @@ class Runner:
         except Exception:
             run = RunEnvelope(**base, status="FAILED",
                 error=RunError(code="SYSTEM_ERROR", message="Integration failed. No partial result is published."))
-        # Save errors propagate: never claim success if persistence failed.
+        return run
+
+    def start(self, payload, product_id, cve_id, mode='OFFLINE', timeout=30.0):
+        run = self._collect(payload, product_id, cve_id, mode, timeout)
+        self.store.save(run)
+        return run
+
+    def supplement(self, parent_run_id, payload=None, note="", timeout=30.0):
+        from .contracts import Supplement
+        parent = self.store.read(parent_run_id)
+        if parent.error or parent.input_package is None:
+            raise ValueError("cannot supplement a failed intake; create a new run")
+        if payload is None and not note.strip():
+            raise ValueError("provide replacement snapshot or a note")
+        metadata = Supplement(parent_run_id=parent_run_id,
+            kind="NOTE" if payload is None else "REPLACEMENT_SNAPSHOT", note=note)
+        if payload is None:
+            # A note is pending material, not new verified facts or a copied verdict.
+            values = parent.model_dump()
+            values.update(run_id=str(uuid4()), created_at=datetime.now(timezone.utc).isoformat(),
+                          status="COLLECTED", assessment=None, advice=None, mode="OFFLINE")
+            values["limitations"] = list(parent.limitations) + ["Text supplement is unverified; no rules rerun."]
+            run = RunEnvelope.model_validate(values)
+        else:
+            run = self._collect(payload, parent.input_package.product_id, parent.cve_id, "OFFLINE", timeout)
+            if not run.error:
+                old, new = parent.input_package, run.input_package
+                previous = {e.path: e.sha256 for e in parent.evidence}
+                incoming = {e.path: e.sha256 for e in run.evidence}
+                compatible = (old.release_id == new.release_id and
+                              old.declared_build_id == new.declared_build_id and
+                              all(incoming.get(path) == sha for path, sha in previous.items()))
+                if not compatible:
+                    run = RunEnvelope(run_id=run.run_id, created_at=run.created_at,
+                        cve_id=parent.cve_id, status="FAILED",
+                        error=RunError(code="INTEGRITY_ERROR", message="Replacement changes release/build or removes/changes existing evidence."))
+        values = run.model_dump()
+        values.update(parent_run_id=parent_run_id, supplement=metadata.model_dump())
+        run = RunEnvelope.model_validate(values)
         self.store.save(run)
         return run

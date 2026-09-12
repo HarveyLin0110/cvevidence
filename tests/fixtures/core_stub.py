@@ -18,3 +18,6 @@ def collect_for_runner(payload):
             sha256=hashlib.sha256(content).hexdigest(),size=len(content),kind="source")],
         missing=["test.txt"] if missing else [],
         limitations=["TEST ONLY adapter. No real material or vulnerability validation."])
+
+def read_evidence_for_runner(payload, record):
+    return json.loads(payload)["content"].encode()

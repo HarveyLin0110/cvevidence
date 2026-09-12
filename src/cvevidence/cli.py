@@ -19,6 +19,12 @@ def main(argv=None):
     read=sub.add_parser("show")
     read.add_argument("run_id")
     sub.add_parser("list")
+    supplement=sub.add_parser("supplement")
+    supplement.add_argument("parent_run_id")
+    supplement.add_argument("--package", type=Path)
+    supplement.add_argument("--note", default="")
+    export=sub.add_parser("report")
+    export.add_argument("run_id")
     args=parser.parse_args(argv)
     try:
         store=RunStore(args.store)
@@ -26,6 +32,16 @@ def main(argv=None):
             with args.package.open("rb") as handle:
                 payload=handle.read(MAX_ZIP+1)
             result=Runner(store).start(payload,args.product,args.cve,args.mode,args.timeout)
+        elif args.command=="supplement":
+            payload=None
+            if args.package:
+                with args.package.open("rb") as handle:
+                    payload=handle.read(MAX_ZIP+1)
+            result=Runner(store).supplement(args.parent_run_id,payload,args.note)
+        elif args.command=="report":
+            from .reports import report
+            print(report(store.read(args.run_id)),end="")
+            return 0
         elif args.command=="show":
             result=store.read(args.run_id)
         else:

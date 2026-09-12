@@ -27,3 +27,10 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - 未複製舊匯入器，測試使用今天編寫的 TEST_ONLY adapter；不是實際 ZIP／ROM 驗收。
 - python -m pytest -q：18 passed。CLI／Runner 一致、timeout、保存失敗、不覆寫與範圍錯誤測試通過。
 - M1 commit：360f6c9。
+
+## M3 已完成
+- 新補件、父子比較、文字報告與 scoped 原文工具呼叫已實作。
+- 未驗文字不改 facts／assessment；替換快照保留既有 bytes 並核對 release／build 宣告。
+- 原文由受信任核心模組讀取，Runner 核對 run 引用、size 與 hash，不自行解析真實工程格式。
+- python -m pytest -q：24 passed，均為今日合成整合測試。真實材料驗證仍待 Horace。
+- M2 commit：430cc70；已推送乾淨分支，沒有推送舊程式歷史。
