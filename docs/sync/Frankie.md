@@ -25,3 +25,11 @@
 - 接線具體提案：contracts/adapter-handoff.md。
 - 此分支預設不提供解析器；CoreAdapter 未設定時保存 CORE_UNAVAILABLE。請提供核心 commit 後再接 M5。
 - 下一步：先確認 adapter 的 package reference、證據定位與各階段回應，再做 ROM 真實補件閉環。
+
+## 遠端交付與驗證
+- Draft PR：https://github.com/HarveyLin0110/cvevidence/pull/1（尚未合併 main，請由此分支查看最新接線資料）。
+- M4 commit：49ddbeb；整理紀錄 d585826。
+- GitHub Actions 34673493112 在 d585826 成功：乾淨安裝、新測試、schema 再產生一致性皆通過。
+- 本機 Streamlit 已於 127.0.0.1:8505 啟動，health=ok；不公開資料服務。
+- 明確待辦：M5 真實核心接線、無 CVE 探索、多 CVE 子 run、完整來源 catalog、實際 Query/規則/AI/九格、多人授權。
+- 原本 apps/web 的公開網址仍是模擬介面，不會突然改成暴露本機資料的正式服務。

@@ -41,3 +41,10 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - python -m pytest -q：27 passed，含 Streamlit AppTest 頁面切換與補件；不是手動浏览器全流程驗收。
 - M3 commit：cb9bbd0。新 GitHub Actions 將自動執行測試與 schema 一致性檢查。
 - M5/M6 仍待 Horace 真實核心、資料與 LIVE 回應。
+
+## 遠端交付
+- M0–M4 與進度紀錄已 push 至 codex/frankie-fresh-milestones。
+- Draft PR #1：https://github.com/HarveyLin0110/cvevidence/pull/1，待協作覆核。
+- CI https://github.com/HarveyLin0110/cvevidence/actions/runs/34673493112 在 d585826 成功，含依賴安裝、pytest、schema 一致性。
+- 正式分支沒有舊基線祖先，Horace.md 保持原樣；歷史草擬分支只留本機。
+- 本機工作台 localhost:8505，預設核心未接入；未進行真實漏洞驗收。
