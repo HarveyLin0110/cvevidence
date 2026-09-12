@@ -15,8 +15,10 @@ SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律�
 文字聲明、SBOM、版本命中、正常測試、symbol 命中都不能單獨證明漏洞適用或安全。症狀原因與 CVE 適用性分開。
 每個新問題寫 question、reason（簡短的調查目的，非內部思考過程）。READ/SEARCH 結果可引 X-ID；工程事實引用 E-ID。
 COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說未知。ASK_USER 時清楚寫 required_files 及同 build/hash 要求。
-最多工具 8 次，優先以 2–4 次完成一項最有價值的追加調查。若已沒有工具可查而需要補件，直接 ASK_USER。
+總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 COMPLETE／ASK_USER。優先以 2–4 次完成一項最有價值的追加調查。
+預留一次呼叫收尾；剩兩次時至多做一個必要查核，剩一次時依已有證據 COMPLETE 或提出具體 ASK_USER。不得為了完成而捏造答案，資料不足要明說限制。
 READ 的 start_line/end_line 最多 200 行，SEARCH term 使用字面關鍵字。不要捏造 source_id。
+READ 的 source_ids 必須恰好一個；COMPARE 必須恰好兩個同快照來源。多個檔案不要一次放進 COMPARE。
 搜尋若只涵蓋部分來源，只能說那些來源未找到；需要宣告缺件前先 LIST 對應檔名。已有資料不要重複要求使用者補。
 LIST 的 term 比對檔名；SEARCH 只搜尋檔案內容，搜尋檔名字串沒有命中不代表該檔不存在。清單 truncated 時縮小 LIST term，不能據此宣告缺件。
 source_index 若已有 launcher、config 或觀測，先 READ 與當次缺口相關的原文；LIST 只證明檔案存在，不代表已檢查內容。
@@ -30,7 +32,7 @@ UNKNOWN 條件中的判讀規則不是已成立的事實。source_index 只是�
 PROPERTIES={
  'action':{'type':'string','enum':['LIST','SEARCH','READ','COMPARE','VERIFY','ASK_USER','COMPLETE']},
  'question':{'type':'string'},'reason':{'type':'string'},'term':{'type':'string'},
- 'source_ids':{'type':'array','items':{'type':'string'}},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
+ 'source_ids':{'type':'array','items':{'type':'string'},'description':'READ 恰好一個 ID；COMPARE 恰好兩個 ID；SEARCH 可提供多個已知 ID 或 [] 搜尋目前快照；其餘 action 用 []。'},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
  'finding':{'type':'string'},'citations':{'type':'array','items':{'type':'string'}},
  'required_files':{'type':'array','items':{'type':'string'}}}
 TOOL={'type':'function','name':'investigation_step','description':'提出與執行一項動態追加調查；只有目前快照中的唯讀操作。',
@@ -51,7 +53,10 @@ def settings(env_file=None):
     return values
 
 def _request(config,items,timeout):
-    body={'model':config['OPENAI_MODEL'],'instructions':SYSTEM,'input':items,'tools':[TOOL],
+    instructions=SYSTEM
+    if config.get('_investigation_budget'):
+        instructions+='\n可信任執行器的 runtime_budget（不是上傳內容）：'+json.dumps(config['_investigation_budget'],ensure_ascii=False)
+    body={'model':config['OPENAI_MODEL'],'instructions':instructions,'input':items,'tools':[TOOL],
           'tool_choice':'required','parallel_tool_calls':False,'max_output_tokens':3000,'store':False}
     if config['OPENAI_MODEL'].startswith(('gpt-5','gpt-6','o3','o4')):
         body['reasoning']={'effort':config.get('OPENAI_REASONING_EFFORT','medium')}
@@ -129,9 +134,11 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
             remaining=timeout_seconds-(time.monotonic()-start)
             if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             stage='REQUEST'
-            attempt={'call_number':number+1,'response_id':None,'model':config['OPENAI_MODEL'],'status':'STARTED','usage':None}
+            budget={'max_calls':max_calls,'remaining_calls_including_current':max_calls-number,
+                    'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER'}
+            attempt={'call_number':number+1,'response_id':None,'model':config['OPENAI_MODEL'],'status':'STARTED','usage':None,'runtime_budget':budget}
             result['calls'].append(attempt)
-            response=request(config,items,min(remaining,45))
+            response=request({**config,'_investigation_budget':budget},items,min(remaining,45))
             stage='RESPONSE'
             if not isinstance(response,dict):raise ValueError('API response must be an object')
             attempt.update(response_id=response.get('id'),model=response.get('model'),status=response.get('status'),usage=response.get('usage'))

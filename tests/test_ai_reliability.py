@@ -256,6 +256,50 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(result['tasks'][1]['status'], 'INPUT_CHANGED_OR_INVALID')
         self.assertEqual(result['errors'][0]['code'], 'IO_ERROR')
 
+    def test_real_request_budget_decreases_through_citation_repair(self):
+        now = [0.0]
+        sent = []
+        budgets = []
+        steps = [self.complete(citations=['X-invented']), self.read(), self.complete()]
+        class Response:
+            def __init__(self, data):
+                self.data = data
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, limit):
+                return json.dumps(self.data).encode()
+        def urlopen(request, timeout):
+            body = json.loads(request.data)
+            sent.append(body)
+            budget = json.loads(body['instructions'].split('：')[-1])
+            budgets.append(budget)
+            self.assertLessEqual(timeout, budget['remaining_seconds'])
+            now[0] += 2
+            return Response(response(steps[len(sent)-1], len(sent)))
+        before = digest(self.assessment)
+        with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
+             patch('cvevidence_core.ai.time.monotonic', side_effect=lambda: now[0]), \
+             patch('cvevidence_core.ai.urllib.request.urlopen', side_effect=urlopen):
+            result = investigate(self.context, self.verified, self.assessment,
+                                 mode='LIVE', max_calls=3, timeout_seconds=9)
+        self.assertEqual(result['status'], 'COMPLETED')
+        self.assertEqual([b['remaining_calls_including_current'] for b in budgets], [3, 2, 1])
+        self.assertEqual([b['remaining_seconds'] for b in budgets], [9, 7, 5])
+        self.assertEqual([x['status'] for x in result['tasks']], ['REJECTED', 'COMPLETED', 'COMPLETED'])
+        self.assertEqual(digest(self.assessment), before)
+        self.assertNotIn(CONFIG['OPENAI_API_KEY'], json.dumps(sent))
+        self.assertNotIn('_investigation_budget', CONFIG)
+
+    def test_ignoring_budget_advice_still_cannot_fake_completion(self):
+        result = self.run_ai([arguments(), self.read()], max_calls=2)
+        self.assertEqual(result['status'], 'BUDGET_EXHAUSTED')
+        self.assertEqual(len(result['calls']), 2)
+        self.assertEqual(result['calls'][-1]['runtime_budget']['remaining_calls_including_current'], 1)
+        self.assertEqual(result['tasks'][-1]['status'], 'COMPLETED')
+        self.assertTrue(result['verified_ai_facts'])
+
     def test_workflow_keeps_engineering_assessment_on_bad_api_envelope(self):
         with patch('cvevidence_core.ai.settings', return_value=CONFIG), \
              patch('cvevidence_core.ai._request', return_value=None):
