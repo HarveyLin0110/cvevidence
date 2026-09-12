@@ -56,3 +56,10 @@
 - 新增程式指紋防護，程式改動後要求重啟，不混用快取模型；scripts/workspace_service.py提供start/restart/stop/status。
 - 單筆壞紀錄可見地排除歷史列表，直接讀取仍嚴格拒絕，原檔保留。不存在的已選run可以恢復。
 - 54項測試通過；接續多CVE／情境入口、操作追蹤與ROM/curl實包整合驗收，沒有另寫Horace判定／AI。
+
+## F12 個人功能分支交付（2026-09-12）
+- session已與整合端分開；我使用codex/frankie-feature-development／8506，整合端8505。
+- Runner.submit_request/read_request＋獨立RequestSpec/Result，支援情境DRAFT、多CVE獨立run、固定archive、UUID去重、並發鎖與中斷後禁止模糊重跑。
+- UI/CLI共用、草稿延續／請求歷史／JSON下載完成；不修改RunEnvelope或core_service/core_worker/catalog。
+- 63測試通過，Horace真實06包兩CVE各260來源驗收通過，瀏覽器DRAFT確認成功。詳見docs/development/F12-request-workflow.md。
+- 未做自動解鎖／中斷續跑；Q1/AI等依整合端與Horace交付，不冒稱完成。

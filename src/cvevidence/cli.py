@@ -10,6 +10,15 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description="CVEvidence persisted OFFLINE intake; no Q1-Q5 or verdict engine yet.")
     parser.add_argument("--store", default="var")
     sub=parser.add_subparsers(dest="command", required=True)
+    request=sub.add_parser("request",help="Save a symptom draft or independent CVE intake runs")
+    request.add_argument("--package",type=Path)
+    request.add_argument("--cves",default="")
+    request.add_argument("--symptom",default="")
+    request.add_argument("--request-id")
+    request.add_argument("--parent-request-id")
+    request.add_argument("--timeout",type=float,default=120)
+    request_read=sub.add_parser("request-show")
+    request_read.add_argument("request_id")
     intake=sub.add_parser("import",help="Real Horace file-backed intake")
     intake.add_argument("package",type=Path)
     intake.add_argument("--cve",default="")
@@ -36,7 +45,17 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         store=RunStore(args.store)
-        if args.command=="import":
+        if args.command=="request":
+            from .requests import parse_cves
+            result=Runner(store).submit_request(path=args.package,cves=parse_cves(args.cves),
+                symptom=args.symptom,request_id=args.request_id,parent_request_id=args.parent_request_id,
+                timeout=args.timeout)
+            print(result.model_dump_json(indent=2))
+            return 2 if result.status in ("FAILED","PARTIAL") else 0
+        elif args.command=="request-show":
+            print(Runner(store).read_request(args.request_id).model_dump_json(indent=2))
+            return 0
+        elif args.command=="import":
             result=Runner(store).start_file(args.package,cve=args.cve,symptom=args.symptom)
         elif args.command=="delta":
             result=Runner(store).supplement_file(args.parent_run_id,path=args.package,note=args.note)
@@ -62,7 +81,7 @@ def main(argv=None):
             return 0
         print(result.model_dump_json(indent=2))
         return 2 if result.error else 0
-    except (ValueError,OSError) as exc:
+    except (ValueError,OSError,RuntimeError) as exc:
         print(type(exc).__name__ + ": request or storage failed",file=sys.stderr)
         return 2
 

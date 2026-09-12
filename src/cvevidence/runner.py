@@ -9,6 +9,14 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def submit_request(self, **kwargs):
+        from .requests import submit
+        return submit(self, **kwargs)
+
+    def read_request(self, request_id):
+        from .requests import RequestStore
+        return RequestStore(self.store).read(request_id)
+
     def start_file(self, path=None, **kwargs):
         from .core_service import CoreService
         return CoreService(self.store).start(path, **kwargs)
