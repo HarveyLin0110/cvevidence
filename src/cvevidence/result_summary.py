@@ -52,3 +52,25 @@ def conclusion(entry):
         detail = "仍待確認：" + "、".join(titles) + "。"
     return {"text": conclusions.get(verdict, "尚未提供有效判定，不能將此結果視為安全。"),
             "reason": assessment.get("reason"), "detail": detail}
+
+def conclusion_dimensions(entry):
+    """Current engineering schema has no separately verified reproduction/deployment verdict."""
+    return [
+        {"面向": "工程適用性", "本次結論": conclusion(entry)["text"],
+         "解讀邊界": "依核心對本次成品、建置與 CVE 的工程判定；不是實際攻擊成功紀錄。"},
+        {"面向": "漏洞重現", "本次結論": "尚無獨立覆核的重現結論",
+         "解讀邊界": "此報告未提供專用的重現驗收結果；不等於已重現，也不等於重現失敗。正常測試不能代替漏洞重現。"},
+        {"面向": "部署暴露與實際利用", "本次結論": "尚無獨立覆核的部署／利用結論",
+         "解讀邊界": "程式路徑可達不等於實際部署可從外部存取；需另外核對配置、網路路徑、權限與觀測證據。"},
+    ]
+
+def condition_interpretation(condition):
+    state = condition.get("state")
+    label = {"SUPPORTED": "支持此項工程條件", "BLOCKED": "此項工程條件有阻斷證據",
+             "UNKNOWN": "此項條件仍需確認"}.get(state, "此項條件仍需確認")
+    boundary = "此狀態只描述這一項主張，不能單獨代表整體受影響或安全。"
+    if condition.get("condition_id") == "trigger_prerequisites":
+        boundary = "此列只描述核心已審查的必要使用條件；不代表已實際觸發漏洞。重現與部署暴露須另行覆核。"
+    elif condition.get("condition_id") == "entry_reachable":
+        boundary = "此列描述交付程式的路徑；實際部署的外部可達性與權限仍須另行覆核。"
+    return label, boundary
