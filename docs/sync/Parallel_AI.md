@@ -9,7 +9,7 @@
 - 只修改 `src/cvevidence_core/ai.py`、`tests/test_ai_reliability.py`、`scripts/validate_ai_reliability.py`、本檔；未改 Verifier、來源、判定規則、workflow、Runner、UI 或既有 Live 驗證器。
 - 本對話沒有可呼叫的 `send_message_to_thread` 工具；此檔與交件摘要供協調／主對話讀取，未宣稱已發送訊息。
 
-## 第一個可測 checkpoint
+## 交件內容
 
 沿用既有一次引用更正機制，沒有增加重試上限。新增：
 
@@ -20,20 +20,52 @@
 - 提示模型優先 READ 已提交的 launcher/config/觀測，只要求仍缺少的觀測或綁定依據。
 - 新驗證器分 `mock`、`live`、`live-fault`。最後一種每次都呼叫真實 API，僅首次工具提案引用由測試程式破壞；依既有 API 標為 SIMULATED，明確不計正式 Live。
 
-## 驗證
+## 交件 commit
+
+- 第一個可測 commit：`ea7245b9ab3a91a5756b3fd58d7702bc02c7a371`。
+- 最終程式交件 commit：`d79143203fb6f35311dc6ff09b0ca554105e8859`（在上一個 commit 上追加來源發現提示與工具錯誤邊界）。
+- 本文件的最後紀錄 commit 在交件訊息另列；整合時取本分支基準之後的三個 commit，或檢閱整個基準至分支 HEAD 差異。
+- Git 未設定作者；提交只使用命令當次的 `Codex <codex@localhost>`，未變更任何 Git／環境設定。
+
+## 實測指令與結果
 
 所有下列命令的 cwd 都是上述指定工作區。
 
-- 修改前：`PYTHONPATH=src python3 -m unittest discover -s tests -v`，原有 31 項通過。
-- 修改後：相同命令，51 項通過（原有 31、新增 20）。
-- `python3 scripts/validate_ai_reliability.py --mode mock`：20 項通過、API 呼叫 0。
-- Mock 結果：`var/validation/parallel-ai/20260912T054544142141-mock-55e1cfc9/`。
-- 正式 Live 與真實 API 故障注入已啟動，尚未在此 checkpoint 宣稱通過；結果補在下一個紀錄 commit。
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+python3 scripts/validate_ai_reliability.py --mode mock
+python3 scripts/validate_ai_reliability.py --mode live --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local --max-calls 8 --timeout-seconds 90
+python3 scripts/validate_ai_reliability.py --mode live-fault --case early --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local --max-calls 8 --timeout-seconds 90
+python3 scripts/validate_ai_reliability.py --mode live --case missing --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local --max-calls 8 --timeout-seconds 90
+git diff --check
+```
+
+- 基準原有 31 項通過；第一個 checkpoint 為 51 項；最終 **54 項通過（原有 31、新增 23）**。
+- 新增 mock 測試涵蓋引用恢復／再次失敗拒收、剩餘工具／時間預算、hash 更正、空白與錯誤參數、無效 API envelope、缺 call_id、來源與 I/O 失敗、429、timeout／connection、工程結果保留、curl 開關原文與 API 名稱不能變 CLI。
+- 最終 mock 驗證器：23 項通過，0 API 呼叫。原始輸出在 `var/validation/parallel-ai/20260912T054856031709-mock-cca84eb8/`。早期 20 項紀錄另保留於 `20260912T054544142141-mock-55e1cfc9/`。
+- Live 均使用既有 `gpt-5.6-sol` / `medium`，不回顯、不複製 key。最多 8 次 request、90 秒調查預算；本輪實際共 18 次 API 呼叫（正式 Live 12、故障注入 6）。
+
+| 種類／情境 | 結果 | API 次數 | AI 秒數 | 閱讀核對 |
+| --- | --- | ---: | ---: | --- |
+| 正式 Live／缺資料，首次 | NEEDS_USER_INPUT | 4 | 39.320 | 傳輸／引用有效；發現 SEARCH 內容不應代替 LIST 檔名，已修正並保留原紀錄 |
+| 正式 Live／提前完整提供 | COMPLETED | 4 | 32.681 | READ launcher、config、觀測；沒有 ASK_USER，區分受影響條件與尚未重現漏洞 |
+| 真實 API 故障注入／無效引用 | COMPLETED；保留 1 筆 REJECTED | 6 | 48.670 | 明確錯誤後重新 READ，修正引用再完成；**mode=SIMULATED，不計正式 Live** |
+| 正式 Live／缺資料，修正後重驗 | NEEDS_USER_INPUT | 4 | 28.597 | 限定檔名 LIST，再 READ build 紀錄；索取實際缺少的 launcher/config/啟動綁定 |
+
+正式 Live 的兩個目標情境已通過；完整資料與故障注入使用第一個 checkpoint，後續只重驗受來源發現提示影響的缺件情境，未反覆重跑已成功案例。所有 accepted 引用核對有效、工程 assessment 未變；引文一致仍不等於工程師簽核語意。
+
+每次結果均獨立存放，未覆寫舊 run：
+
+- `var/validation/parallel-ai/20260912T054557376938-live-f2cad58e/`：首次缺資料、提前完整提供。
+- `var/validation/parallel-ai/20260912T054557474524-live-fault-5c3b0700/`：故障注入，另存注入前後 arguments 與真實 API response IDs。
+- `var/validation/parallel-ai/20260912T054906677270-live-1202c130/`：缺資料修正後重驗。
+
+每個 Live 目錄有 `summary.json`、逐案 `result.json` 與閱讀核對的 `semantic-review.json`。原始紀錄及解包資料僅存在本工作區忽略的 `var/validation/parallel-ai/`，沒有加入 Git，也沒有重建 demo。
 
 ## 限制與整合提醒
 
 - 引用存在／原文一致不等於語意推論正確，維持 `meaning_verified=false`。
 - 來源優先與避免重複索件需要人工核對 Live 問題與原文，不能只看 transport gate。
-- API timeout 與每次迴圈檢查提供有界預算；既有本機完整性掃描與同步 I/O 不是硬即時取消。
-- 未修改 assessment 的既有聲明判定相容檢查；若 A 分支改動聲明 verdict，主對話應協調該既有入口條件。
+- API timeout 與每次迴圈檢查提供有界預算；既有本機完整性掃描與同步 I/O 不是硬即時取消。遲到回應不接受為完成，已取得結果保留。
+- 未修改 assessment 的既有聲明判定相容檢查：`ai.investigate` 仍以「有 statement_reviews → NEEDS_INVESTIGATION」驗證輸入；若 A 分支允許中性聲明保留原 verdict，主對話必須協調這個既有入口條件，否则會在 AI 開始前拋 IntegrityError。此項屬 A/B 整合，尚未在本分支聲稱完成。
 - 本分支提交只代表可供主對話整合，未合入主線、未推送或部署。
