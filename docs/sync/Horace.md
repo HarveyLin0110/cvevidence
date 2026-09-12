@@ -8,6 +8,9 @@
 - 獨立分支 `codex/horace-collection-guidance`，基於 PR #23 `0d4f8ee`。沒有改既有判定或 Evidence ID；依條件引用的唯一 E-ID 找到來源、同 context／hash 的原文與行號。UNKNOWN 不改寫成命中；前端及文字報告使用同一組細節。
 - 發現 CMake 真實 AI 指引漏列 gzip 樣本：新增 CORE_PARSER_CONTRACT 收件資訊，提供三格式對應材料、角色、用途與格式。新 AI 可參照，ASK_USER 另外附核心清單；清單不當觀測或已驗事實，旧 AI 仍可讀。
 - 跨到 Frankie 呈現層的部分限結果卡片／AI 清單及報告，獨立 PR 交審，沒有修改 Runner、contracts、主站或其他人的 checkout。新實包／顯示／scope 測試已驗，完整 suite 與新 Live 接續中。
+- 16:24 交件 [PR #26](https://github.com/HarveyLin0110/cvevidence/pull/26)，`4edebaf` 已合入 main `063e581`，解決與 #25 的說明衝突並保留 OpenSSL 情境、動態 Query／公告說明。#22／#23／#24／#25 均已在 main；本 PR 未操作公開站。
+- 新 Live 已通過：`84794cc`，Sol／medium、2 calls、24.883 秒，LIST→ASK_USER，16／16。必要材料包含收據、正常日誌與原始 gzip，故障日誌為可選；原工程不變、重開可讀。合入 main 後 19 個核心檔案 hash 與此 Live 一致。34 項呈現／Queries 測試通過；`4edebaf` CI 34683108781 完整 **262 passed＋23 subtests，172.13 秒**、schema 一致。後續文件提交以 PR 最新 checks 為準。
+- 收到側邊協調：通用 CVE 調查另由 `codex/general-cve-triage` 負責，本分支沒有重複實作或更動其工作；其完成狀態以該作者交件為準。
 
 ## 最新決定：先實作與 Demo，講稿暫緩
 
