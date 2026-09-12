@@ -1,5 +1,21 @@
 # 平行任務 B：AI 調查可靠性
 
+## 第二輪正在執行：合併後 ROM Live 與工程結果保留
+
+- 固定核心基準：`44efc7bdcc533760ab167a2a005b0111b9758483`；已核對 HEAD 與分支。
+- 本輪工作區：`/home/cvevidence/work/CVEvidence_Fresh_2026-09-12/var/parallel/ai-validation-r2`；分支 `codex/parallel-ai-validation-r2`。
+- 狀態：RUNNING。只新增／修改分配的 QA 腳本、測試、本同步檔與 `docs/releases/Parallel_AI_R2.md`，不修改產品程式。
+- 目標：ROM 03 同 build 補件後，攜帶歷史中性聲明，走 `investigate_after_engineering`，保留正式工程 dict 並驗證追加原文／重判；另做明確模擬的 timeout、無效引用終止。
+- 最新程式讀取結果：中性說明目前保存在 `statement_context`，不是 `statement_reviews`；第一輪「中性聲明將被 AI 入站拒絕」警示不能沿用，待本輪實測。
+- 首筆結果：PASS，ROM 補件完成後 `NOT_AFFECTED`，9 項工程／歷史綁定檢查全部通過；保留舊 context 的中性聲明且 statement_reviews 為空，已經通過 OFFLINE 的 AI 入站檢查。Live 與兩個模擬失敗仍在執行，尚未宣稱通過。
+- 首筆 JSON：`var/validation/parallel-ai-r2/20260912T060516180542-r2-mock-b924ca36/engineering-readiness.json`、同目錄 `engineering-saved.json`。Live run：`20260912T060523891384-r2-live-3f42af5f`。
+- 已執行：`python3 scripts/validate_ai_reliability.py --mode r2-mock`；`python3 scripts/validate_ai_reliability.py --mode r2-live --env-file /home/cvevidence/work/CVEvidence_Fresh_2026-09-12/.env.local`。不重跑已通過的 CMake／curl 或 75 項全套。
+- 本對話仍沒有 `send_message_to_thread` 工具；主對話可直接讀本 MD／commit。
+
+---
+
+以下為第一輪歷史紀錄，不代表本輪最新整合狀態。
+
 ## 範圍與基準
 
 - 主對話：比賽進行時，`01a09347-f3e1-77a3-b66f-f1f2877bef7a`，唯一負責主線整合。
@@ -67,5 +83,5 @@ git diff --check
 - 引用存在／原文一致不等於語意推論正確，維持 `meaning_verified=false`。
 - 來源優先與避免重複索件需要人工核對 Live 問題與原文，不能只看 transport gate。
 - API timeout 與每次迴圈檢查提供有界預算；既有本機完整性掃描與同步 I/O 不是硬即時取消。遲到回應不接受為完成，已取得結果保留。
-- 未修改 assessment 的既有聲明判定相容檢查：`ai.investigate` 仍以「有 statement_reviews → NEEDS_INVESTIGATION」驗證輸入；若 A 分支允許中性聲明保留原 verdict，主對話必須協調這個既有入口條件，否则會在 AI 開始前拋 IntegrityError。此項屬 A/B 整合，尚未在本分支聲稱完成。
+- 【第一輪歷史風險；第二輪已發現中性聲明改存 statement_context，正在實測確認】未修改 assessment 的既有聲明判定相容檢查：`ai.investigate` 仍以「有 statement_reviews → NEEDS_INVESTIGATION」驗證輸入；若 A 分支允許中性聲明保留原 verdict，主對話必須協調這個既有入口條件，否则會在 AI 開始前拋 IntegrityError。此項屬 A/B 整合，尚未在本分支聲稱完成。
 - 本分支提交只代表可供主對話整合，未合入主線、未推送或部署。
