@@ -1,5 +1,6 @@
 """Deterministic presentation of saved findings; does not infer a verdict."""
 from .query_display import query_ids, query_title, query_description
+from .pc_context import openssl_context
 QUERY_LABELS = {
     "Q1_COMPONENT": "Q1 元件與版本",
     "Q2_BUILD": "Q2 建置身分",
@@ -108,7 +109,8 @@ def pc_summaries(entry):
         highlight = affected and not shared and all(s == "SUPPORTED" for s in states)
         tone = "affected" if highlight else "pending" if any(s not in ("SUPPORTED", "BLOCKED") for s in states) else "neutral"
         label = "受影響判定的支持條件" if highlight else "含待確認條件" if tone == "pending" else "含阻斷證據" if "BLOCKED" in states else "條件有證據支持"
-        paragraphs = []
+        context = openssl_context(entry, group['group_id'])
+        paragraphs = [context] if context else []
         for condition in group["conditions"]:
             title = str(condition.get("title") or condition.get("condition_id") or "未命名條件")
             explanation = str(condition.get("explanation") or "尚無保存說明")
