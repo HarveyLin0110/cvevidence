@@ -49,7 +49,7 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
             'discovery':discovery,'analyses':results,'engineering_status':'COMPLETED' if any(r.get('assessment') for r in results) else 'NOT_RUN',
             'ai_status':'NOT_RUN' if not executed else 'OFFLINE' if mode=='OFFLINE' else 'COMPLETED' if all(r['ai']['status'] in {'COMPLETED','NEEDS_USER_INPUT'} for r in executed) else 'INCOMPLETE'}
 
-def investigate_after_engineering(package,engineering_result,user_context='',*,env_file=None,event_callback=None):
+def investigate_after_engineering(package,engineering_result,user_context='',*,env_file=None,event_callback=None,analysis_depth='focused'):
     """Attach a later AI stage to saved engineering data, without replacing it."""
     context=package if isinstance(package,InputPackage) else ingest_package(package)
     context.assert_current()
@@ -65,7 +65,9 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
             if field in entry:collection[field]=entry[field]
         verified=verify(context,collection)
         if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
-        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file,
+        depth_options={'analysis_depth':'pc','max_calls':12,'timeout_seconds':145} if analysis_depth=='pc' else {}
+        if analysis_depth not in {'focused','pc'}:raise ValueError('Unknown AI analysis depth')
+        ai=investigate(context,verified,assessment,user_context,mode='LIVE',env_file=env_file,**depth_options,
                        **({'public_record':entry['public_cve_record']} if 'public_cve_record' in entry else {}))
         if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})
         followup=reassess_after_investigation(context,assessment,ai) if ai['status'] in {'COMPLETED','NEEDS_USER_INPUT'} else None

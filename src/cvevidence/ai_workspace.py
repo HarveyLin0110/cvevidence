@@ -45,6 +45,7 @@ def ai_workspace(st, runner, run, engineering):
     if not compatible:
         st.warning("此工程紀錄使用舊版規則。請載入其原始收件／補件紀錄重新執行 Queries，再啟動新版 AI；既有工程與 AI 紀錄仍可查閱。")
     st.text("供應者：OpenAI · 模型：" + (config.get("model") or "尚未配置"))
+    st.caption("推理強度：" + (config.get("reasoning_effort") or "未提供") + " · 逐項核對 PC1／PC2／PC3 的條件、原文與剩餘缺口。")
     if not config["configured"]:
         st.info("管理者尚未啟用本機 AI 設定；工程分析與補件仍可使用。金鑰請勿填入情境或上傳檔。")
     with st.form("ai-form-" + run.run_id):
