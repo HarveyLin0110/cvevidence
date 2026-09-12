@@ -102,3 +102,7 @@ class Runner:
         run = RunEnvelope.model_validate(values)
         self.store.save(run)
         return run
+
+    # Names requested in the shared integration proposal.
+    run_analysis = start
+    save_supplement = supplement

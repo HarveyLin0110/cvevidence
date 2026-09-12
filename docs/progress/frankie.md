@@ -34,3 +34,10 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - 原文由受信任核心模組讀取，Runner 核對 run 引用、size 與 hash，不自行解析真實工程格式。
 - python -m pytest -q：24 passed，均為今日合成整合測試。真實材料驗證仍待 Horace。
 - M2 commit：430cc70；已推送乾淨分支，沒有推送舊程式歷史。
+
+## M4 已完成
+- 本機 Streamlit 接新 Runner，含匯入、保存紀錄載入、缺件、未分析提示、證據、報告與補件。
+- 新來源讀取限制在配置 root 內；越界／symlink escape／超大檔拒絕。
+- python -m pytest -q：27 passed，含 Streamlit AppTest 頁面切換與補件；不是手動浏览器全流程驗收。
+- M3 commit：cb9bbd0。新 GitHub Actions 將自動執行測試與 schema 一致性檢查。
+- M5/M6 仍待 Horace 真實核心、資料與 LIVE 回應。
