@@ -31,5 +31,5 @@ DETAILED_SCENARIOS = {
 # Short inputs for on-stage typing; expected outcomes are never sent to the engine.
 SCENARIOS = {
     'A': '我們的設備管理介面使用 OpenSSL 1.0.1f，想確認這版韌體是否受 Heartbleed（CVE-2014-0160）影響。這次提供同一建置的韌體、編譯連結資料及正常 TLS 連線紀錄，請按 PC1、PC2、PC3 說明判定依據。',
-    'B': '更新工具解壓縮 gzip 檔案時偶爾失敗，想確認是否與 zlib 的 CVE-2022-37434 有關。目前只有成品與編譯資料，還沒有操作紀錄及輸入樣本，請先分析並告訴我還需要補什麼。',
+    'B': '設備的更新下載器使用 libcurl 8.3.0，客戶回報透過 SOCKS5 代理下載偶爾中斷，請查核 CVE-2023-38545。目前有完整成品與編譯連結資料，但還沒有當次代理設定與連線紀錄，請確認已知風險條件並列出待補資料。',
 }

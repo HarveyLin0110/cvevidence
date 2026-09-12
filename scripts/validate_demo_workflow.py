@@ -54,9 +54,13 @@ button('開啟所選 CVE')
 assert app.session_state.selected_run == second.run_id
 assert next(b for b in app.button if b.label == '04 AI 查核與補件').disabled
 button('03 分析進度與結果')
-button('執行 Queries 與正式判定')
+button('開始 CVE 調查與材料盤點')
 unknown_id = app.session_state.selected_run
-assert runner.read_engineering(unknown_id)['analyses'][0]['assessment'] is None
+general = runner.read_engineering(unknown_id)['analyses'][0]['assessment']
+assert general['assessment_kind'] == 'GENERAL_TRIAGE'
+assert general['verdict'] == 'NEEDS_INVESTIGATION'
+assert general['cve_condition_verification_status'] == 'NOT_RUN'
+assert all(c['state'] == 'UNKNOWN' for c in general['conditions'])
 assert not any('受影響判定的支持條件' in t.value for t in app.text)
 button('05 報告與後續行動')
 assert any(unknown_id in c.value and first_engineering_id not in c.value for c in app.code)
@@ -68,8 +72,8 @@ assert len(runner.store.list_runs()) == initial_count + 4  # switching did not r
 button('01 產品與資料來源')
 button('建立另一個請求')
 catalog = next(s for s in app.selectbox if s.label == '選擇已取得的產品／建置／資料包')
-catalog.set_value(next(i for i, label in enumerate(catalog.options) if 'pc3_cmake_static' in label)).run()
-next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2022-37434').run()
+catalog.set_value(next(i for i, label in enumerate(catalog.options) if 'pc3_curl_static' in label)).run()
+next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2023-38545').run()
 next(t for t in app.text_area if t.label == '情境與想確認的問題').set_value(SCENARIOS['B']).run()
 button('匯入並建立查核')
 supplement_request = app.session_state.selected_request
@@ -79,6 +83,10 @@ button('執行 Queries 與正式判定')
 missing_id = app.session_state.selected_run
 original = runner.read_engineering(missing_id)
 assert original['analyses'][0]['assessment']['verdict'] == 'NEEDS_INVESTIGATION'
+groups = {g['group_id']:g for g in pc_summaries(original['analyses'][0])}
+assert all(c['state']=='SUPPORTED' for name in ('PC1','PC2') for c in groups[name]['conditions'])
+assert [c['state'] for c in groups['PC3']['conditions']] == ['UNKNOWN']
+assert sum(c['state']=='UNKNOWN' for c in original['analyses'][0]['assessment']['conditions']) == 1
 button('04 AI 查核與補件')
 button('套用已取得的補件並建立新 run')
 button('執行 Queries 與正式判定')
@@ -96,7 +104,7 @@ button('載入請求')
 button('開啟所選 CVE')
 assert app.session_state.selected_run == completed_id
 assert not list((store / 'ai').glob('*.start.json')) if (store / 'ai').exists() else True
-result = dict(request_id=request_id, first_engineering_run=first_engineering_id, unsupported_run=unknown_id,
+result = dict(request_id=request_id, first_engineering_run=first_engineering_id, general_triage_run=unknown_id,
               request_switch='PASS', report_scope='PASS', ai_gate='PASS', repeated_analysis=False,
               real_engineering=True, live_ai_calls=0, supplement_request=supplement_request,
               missing_run=missing_id, supplemented_result=completed_id, parent_unchanged=True,

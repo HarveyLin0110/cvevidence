@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "dataset_version": "fresh-demo-openssl-curl-v4",
+  "created_at": "2026-09-12T08:35:17.547702+00:00",
+  "packages": [
+    {
+      "package_id": "demo_openssl_complete_v3",
+      "kind": "initial",
+      "format": "rom",
+      "product_id": "fresh-rom",
+      "release_id": "rom-20260912T043810-4f49ad",
+      "build_id": "rom-20260912T043810-4f49ad",
+      "primary_artifact": {
+        "path": "images/device.rom",
+        "sha256": "1285e9da60f599131c44b0f65f4b87e379d392e2a24343bbc980d5f8a5eda204"
+      },
+      "manifest_sha256": "7761388ff2093bcc7972070c47b0281695d38ded8ea4c44f50e34422e0c1b0c8",
+      "file_count": 4288,
+      "base_package_id": null,
+      "archive": {
+        "filename": "demo_openssl_complete.tar.gz",
+        "repo_path": "demo-inputs/openssl-presentation/demo_openssl_complete.tar.gz",
+        "relative_path": "demo-inputs/openssl-presentation/demo_openssl_complete.tar.gz",
+        "sha256": "e33b54dcd6cb309e62e57f4c539667894e7cddec345bdd059d9ea4a70d8adeef",
+        "size_bytes": 17019961
+      }
+    },
+    {
+      "archive": {
+        "filename": "pc3_curl_static.tar.gz",
+        "relative_path": "demo-inputs/runtime-v2/pc3_curl_static.tar.gz",
+        "repo_path": "demo-inputs/runtime-v2/pc3_curl_static.tar.gz",
+        "sha256": "654f57cf313027ed07174031133f9e3b7f76c6ff405d0b412252dd772af666c8",
+        "size_bytes": 12666002
+      },
+      "base_package_id": null,
+      "build_id": "curl-20260912T045600-d7ebd6",
+      "file_count": 6246,
+      "format": "curl",
+      "kind": "initial",
+      "manifest_sha256": "500c76f2851fba75372a9bccbaea88939034ea8420c64e66927bb8c8e6bf7fa5",
+      "package_id": "pc3_curl_static",
+      "primary_artifact": {
+        "path": "install/bin/curl",
+        "sha256": "8ed76b38c036b72d3637a543ca0d9031d2732eeec3d2e2c96ca1abe0ac3c5c2b"
+      },
+      "product_id": "fresh-curl",
+      "release_id": "curl-20260912T045600-d7ebd6"
+    }
+  ],
+  "notes": [
+    "OpenSSL TLS management and curl SOCKS5 update download are distinct use cases. Verdicts and missing conditions are computed by core."
+  ]
+}
