@@ -43,8 +43,11 @@ def apply_style(st):
     [class*="st-key-result_pending_"],[class*="st-key-pc_pending_"] {background:#fffaf0!important;border-left:4px solid #946200!important;border-radius:10px}
     [class*="st-key-result_pending_"] [data-testid="stText"],
     [class*="st-key-pc_pending_"] [data-testid="stText"] {color:#785000!important}
-    [data-baseweb="tab-list"] {gap:18px;border-bottom:1px solid #dce7e2}
-    [data-baseweb="tab"][aria-selected="true"] {color:#195b49;font-weight:700;background:#e3f0ea;border-radius:8px 8px 0 0}
+    [role="tablist"] {gap:18px;border-bottom:1px solid #dce7e2}
+    [role="tab"][aria-selected="true"] {color:#195b49!important;font-weight:700;background:#e3f0ea;border-radius:8px 8px 0 0}
+    [role="tab"][aria-selected="true"] p {color:#195b49!important}
+    [role="tab"] .react-aria-SelectionIndicator {background:#246e5c!important}
+    [role="tab"]:focus-visible {outline:3px solid #337fac;outline-offset:2px}
     [data-testid="stMain"] input,[data-testid="stMain"] textarea {color:#203a35;background:#fff}
     .stApp button[kind="primary"], .stApp button[data-testid="stBaseButton-primary"] {background:#246e5c!important;border-color:#246e5c!important;color:white}
     button[kind="secondary"] {border-color:#cadbd3;border-radius:8px}
