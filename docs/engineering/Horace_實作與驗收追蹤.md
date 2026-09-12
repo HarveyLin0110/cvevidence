@@ -10,10 +10,10 @@
 
 | 必須交付 | 證明方式 | 目前 |
 |---|---|---|
-| ROM 真實 on/off 兩次 build、SquashFS 打包/解包、TLS/備份還原 | 今日完整建置紀錄、解包 hash、正常功能實跑 | 第一版完成；TCP 新版建置中 |
+| ROM 真實 on/off 兩次 build、SquashFS 打包/解包、TLS/備份還原 | 今日完整建置紀錄、解包 hash、正常功能實跑 | TCP 新版 r2 的兩次 build/正常連線/資料驗收完成 |
 | CMake zlib 1.2.12/1.2.13 靜態 build | link/map、正常 gzip/截短錯誤實跑、ELF | 兩版完成，資料 r2 通過 |
 | curl 8.3.0 官方修補前後 build | patch、source/object/library 綁定、正常本機 SOCKS5 下載 | 兩版 build/正常下載完成，正式 binding 規則仍待完成 |
-| 九包與三組同次補件、不可變 catalog/壓縮包 | archive/hash/lineage 驗收 | 首輪九包與三組補件通過；新版 ROM 待驗 |
+| 九包與三組同次補件、不可變 catalog/壓縮包 | archive/hash/lineage 驗收 | 九包與三組補件通過；新版 ROM r2 另驗通過 |
 | 三種解析、Q1–Q5、原文工具、Evidence ID/Verifier | 真包驗收與篡改/混版/隔離測試 | 待完成 |
 | 三個 CVE profile/候選、確定性判定、Claim/缺口 | 九格實測；未知 CVE/多元件/衝突測試 | 待完成 |
 | AI 真實呼叫、動態工具/補件、引用驗證 | 至少三次 Live 紀錄；失敗/逾時/變體測試 | 待完成 |

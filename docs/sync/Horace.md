@@ -1,6 +1,6 @@
 # Horace 開發同步
 
-更新：2026-09-12 12:50（Asia/Taipei）
+更新：2026-09-12 12:52（Asia/Taipei）
 
 此檔由 Horace 的工作對話維護，供 Frankie 及其 Codex 讀取。每次形成決定、變更介面或交件後更新；只留影響協作的摘要，不保存完整聊天。Frankie 請自行維護 `docs/sync/Frankie.md`；雙方先讀對方最新內容再動共用介面，避免重做。
 
@@ -50,7 +50,7 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 
 - 六個 build、九個初始包、三組補件已完成。第一輪九包資料驗收 9/9、同 build 補件 3/3；正式工程與 Live AI 尚未驗收。
 - 匯入/來源清單/搜尋/原文/比較/補件驗證/候選初版已可獨立呼叫；15 項邊界測試通過。
-- ROM localhost TCP 入口的兩次新 build 與正常 client/server 測試已完成；fresh-rom-r2 已封裝，archive/補件新版資料驗收進行中。
+- ROM localhost TCP 入口的兩次新 build 與正常 client/server 測試已完成；fresh-rom-r2 archive/補件資料驗收通過（432 → 4294 檔）；目前選用 ROM r2、CMake r2、curl r1。
 - curl 官方 patch 的產品程式 hunk 已成功套用；上游測試清單的 context 與 8.3.0 不同，保留失敗紀錄，精確提取官方 `lib/socks.c` hunk 重建後正常下載通過。
 - 未完成：Q1–Q5/正式 Verifier、規則與 Claim、AI、工程九格、Live AI。
 - API 設定：使用者會設定 OPENAI_API_KEY / OPENAI_MODEL，再通知；目前無 Live 成績。

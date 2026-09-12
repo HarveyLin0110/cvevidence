@@ -5,7 +5,7 @@
 ## 已驗證
 
 - 六個新 build 完成：ROM OpenSSL 1.0.1f on/off、CMake zlib 1.2.12/1.2.13、curl 8.3.0 官方產品程式修補前後。
-- ROM 有真正 SquashFS 映像、解包 hash、正常 TLS 與設定備份還原。第一版正常 TLS 使用 socketpair；實際 localhost TCP 入口的新版正在另外建置，不把它算已通過。
+- ROM 有真正 SquashFS 映像、解包 hash、正常 TLS 與設定備份還原。新版 r2 已另外從乾淨來源重建，實際 localhost TCP client/server 正常連線通過，保留 SSL_read 原始位址與載入映射。
 - CMake 的 zlib 為靜態連結。合法 gzip 額外標頭正常讀取；截短檔實際返回不完整錯誤，未執行漏洞攻擊。
 - curl 正常經本機 SOCKS5 遠端名稱解析下載 HTTP 測試資料，保存實際觀測。此 build 不含 TLS；依賴平台的 libc/zlib。
 - 九個初始包與三個補件 archive 均通過解壓/manifest/hash 核對。三組補件同成品合併通過。
@@ -16,13 +16,13 @@
 
 | Dataset | 初始包資料驗收 | 同 build 補件驗收 | 工程判定 | Live AI |
 |---|---|---|---|---|
-| fresh-rom-r1 | 3/3 | 1/1；429 → 4291 檔 | 未執行 | 未執行 |
+| fresh-rom-r2 | 3/3 | 1/1；432 → 4294 檔 | 未執行 | 未執行 |
 | fresh-cmake-r2 | 3/3 | 1/1；260 → 409 檔 | 未執行 | 未執行 |
 | fresh-curl-r1 | 3/3 | 1/1；6245 → 6250 檔 | 未執行 | 未執行 |
 
-完整原始報告：`var/validation/data-acceptance-20260912T043942.json`。當次資料驗收耗時 89.602 秒，包含 12 個 archive 解壓及驗證；不是單次產品查核耗時。Git 只保留此摘要與 catalog，完整工程包不進 Git。
+完整原始報告：`var/validation/data-acceptance-20260912T043942.json`（首輪三種資料）及 `var/validation/data-acceptance-20260912T045055.json`（新版 ROM r2；15.528 秒）。當次資料驗收耗時 89.602 秒，包含 12 個 archive 解壓及驗證；不是單次產品查核耗時。Git 只保留此摘要與 catalog，完整工程包不進 Git。
 
-`fresh-cmake-r1` 是較早未附 SBOM 的封裝，請用 r2。ROM 新增 TCP 入口後會另發版本；既有 r1 保留為歷史資料，不能拿 r1 成績當新版通過。
+`fresh-cmake-r1` 是較早未附 SBOM 的封裝，請用 r2。ROM 請用已另驗的 r2；既有 r1 保留為歷史資料。選定六個產品 build，另有兩個早期 ROM build/失敗嘗試保留於 build 紀錄，不混算成九格工程通過數。
 
 ## Frankie 可先接的介面
 
@@ -46,10 +46,10 @@ from cvevidence_core.catalog import discover_candidates
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
-PYTHONPATH=src python3 -m cvevidence_core inspect var/artifacts/datasets/fresh-rom-r1/packages/03_rom
-PYTHONPATH=src python3 -m cvevidence_core sources var/artifacts/datasets/fresh-rom-r1/packages/03_rom --contains sdk
-PYTHONPATH=src python3 -m cvevidence_core validate-supplement var/artifacts/datasets/fresh-rom-r1/packages/03_rom var/artifacts/datasets/fresh-rom-r1/supplements/supplement_03_rom
-python3 scripts/validate_datasets.py data/catalogs/fresh-rom-r1.json data/catalogs/fresh-cmake-r2.json data/catalogs/fresh-curl-r1.json
+PYTHONPATH=src python3 -m cvevidence_core inspect var/artifacts/datasets/fresh-rom-r2/packages/03_rom
+PYTHONPATH=src python3 -m cvevidence_core sources var/artifacts/datasets/fresh-rom-r2/packages/03_rom --contains sdk
+PYTHONPATH=src python3 -m cvevidence_core validate-supplement var/artifacts/datasets/fresh-rom-r2/packages/03_rom var/artifacts/datasets/fresh-rom-r2/supplements/supplement_03_rom
+python3 scripts/validate_datasets.py data/catalogs/fresh-rom-r2.json data/catalogs/fresh-cmake-r2.json data/catalogs/fresh-curl-r1.json
 ```
 
 Frankie 目前還需先取得 catalog 對應 archive；`download_url` 尚為 null，不宣稱他已能直接下載。可在自己的機器依全新 factory 重建，或後續接團隊 artifact 交件。
