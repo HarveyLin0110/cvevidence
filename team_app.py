@@ -43,9 +43,5 @@ if not current():
 from cvevidence.workspace import workspace
 st.sidebar.caption("團隊測試站 · " + release_label(os.environ.get("CVEVIDENCE_RELEASE_SHA")))
 st.sidebar.button("登出", on_click=st.logout)
-guide = (Path(__file__).resolve().parent / "docs/demo/test-scenarios.md").read_text(encoding="utf-8")
-with st.sidebar.expander("Demo 測試手冊／可貼上的情境"):
-    st.markdown(guide)
-st.sidebar.download_button("下載測試手冊", guide, file_name="CVEvidence-Demo-測試手冊.md", mime="text/markdown")
 root = Path(os.environ.get("CVEVIDENCE_WEB_STORE", "var/team-runtime"))
 workspace(st, store_root=root / identity)
