@@ -143,6 +143,7 @@ class CoreService:
 
     def analyze_offline(self, parent_id, *, cve_id=None, symptom="", timeout=120):
         from .engineering import validate_payload
+        from .analysis_context import read_analysis_context
         parent = self.store.read(parent_id)
         package = parent.input_package
         cve = parent.cve_id if cve_id is None else cve_id
@@ -154,10 +155,14 @@ class CoreService:
             raise ValueError("A real collected snapshot is required")
         if not 0 < timeout <= 300 or not isinstance(symptom, str) or len(symptom) > 4000:
             raise ValueError("Invalid deadline or symptom")
+        deadline = monotonic() + timeout
         try:
+            history = read_analysis_context(self.store, parent_id, cve_id=cve,
+                check_budget=lambda: self.remaining(deadline))
             payload = self.invoke("analyze_offline", package.archive_sha256, package.context_hash,
-                timeout=timeout, cve_id=cve, symptom=symptom,
-                statements=[parent.supplement.note] if parent.supplement and parent.supplement.note.strip() else [])
+                timeout=self.remaining(deadline), cve_id=cve,
+                symptom=symptom if symptom.strip() else history["symptom"],
+                statements=history["statements"])
             engineering, ai = validate_payload(payload, package, cve)
             digest = self.store.put_blob(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode())
             run = RunEnvelope(run_id=str(uuid4()), parent_run_id=parent_id,
