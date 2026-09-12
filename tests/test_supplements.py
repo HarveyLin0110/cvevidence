@@ -27,7 +27,7 @@ class SupplementTests(unittest.TestCase):
   self.assertEqual(result['candidates'],[]);self.assertTrue(result['intake_questions'])
  def test_unsupported_cve_is_retained(self):
   result=discover_candidates(requested_cves=['CVE-2099-12345'])
-  self.assertEqual(result['candidates'][0]['status'],'UNSUPPORTED_CVE');self.assertIsNone(result['candidates'][0]['assessment'])
+  self.assertEqual(result['candidates'][0]['status'],'GENERAL_TRIAGE');self.assertIsNone(result['candidates'][0]['assessment'])
  def test_vendor_suffix_is_not_silently_safe(self):
   self.assertEqual(version_hint('CVE-2014-0160','1.0.1f-vendor'),'VERSION_UNRESOLVED')
   self.assertEqual(version_hint('CVE-2014-0160','1.0.1f'),'MATCHES_ADVISORY')

@@ -40,11 +40,11 @@ def discover_candidates(context=None,symptom='',requested_cves=None,scanner_cand
   if not matches and cve_id not in requested:continue
   candidates.append({'cve_id':cve_id,**item,'match_basis':[{**c,'version_hint':version_hint(cve_id,c['version'])} for c in matches],'requested':cve_id in requested,'assessment':None,'status':'CANDIDATE_ONLY'})
  for cve_id in requested:
-  if cve_id not in CATALOG:candidates.append({'cve_id':cve_id,'status':'UNSUPPORTED_CVE','profile_status':'UNSUPPORTED','sources':[],'assessment':None})
+  if cve_id not in CATALOG:candidates.append({'cve_id':cve_id,'status':'GENERAL_TRIAGE','profile_status':'AWAITING_RULE_REVIEW','sources':[],'assessment':None})
  scanner_notes=[]
  for item in scanner_candidates or []:
   scanner_notes.append({'input':item,'trust':'UNVERIFIED_SCANNER_CANDIDATE','assessment':None})
  intake_questions=[]
  if not context or not components:
   intake_questions=[{'question':'哪個操作出錯、產品版本為何？','purpose':'定位工程情境，尚不判定 CVE。'},{'question':'請提供相關 log、元件清單或 SBOM，以及成品 hash；能取得 source/build 記錄時一併提供。','purpose':'依實際元件找有來源的候選，而不是從症狀猜漏洞。'}]
- return {'symptom':symptom,'candidates':candidates,'scanner_candidates':scanner_notes,'intake_questions':intake_questions,'scope':'Three-entry reviewed demo catalog; no match does not mean no vulnerabilities.','symptom_causation':'NOT_ESTABLISHED'}
+ return {'symptom':symptom,'candidates':candidates,'scanner_candidates':scanner_notes,'intake_questions':intake_questions,'scope':'Three reviewed engineering profiles; other requested CVEs enter general investigation. Automatic component discovery is still limited to this catalog; no match does not mean no vulnerabilities.','symptom_causation':'NOT_ESTABLISHED'}

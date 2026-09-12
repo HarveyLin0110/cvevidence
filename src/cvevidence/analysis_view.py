@@ -169,7 +169,13 @@ def render_engineering(st, entry, *, package=None):
     st.caption("CVE：" + text(entry.get("cve_id")) + " · 執行狀態：" + text(entry.get("status")))
     assessment = entry.get("assessment")
     if not isinstance(assessment, dict):
-        st.info("尚未產生工程判定；未知 CVE 或未完成分析不能視為安全。")
+        st.info("尚未產生工程判定；未完成分析不能視為安全。")
+        if entry.get('status') == 'UNSUPPORTED_CVE':
+            st.warning('需要進一步調查：此為舊版未支援紀錄，當時未執行 CVE 條件驗證。請從原收件紀錄重新分析以啟動通用調查；歷史結果保留。')
+        return
+    if assessment.get('assessment_kind') == 'GENERAL_TRIAGE':
+        from .general_triage_view import render
+        render(st, entry)
         return
     if package:
         with st.expander("本次建置與輸入材料", expanded=False):

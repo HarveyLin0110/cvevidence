@@ -49,7 +49,8 @@ MATERIALS = {
 def prepare_queries(cve_id, package_format=None):
     cve_id = cve_id.strip().upper()
     if cve_id not in CATALOG:
-        return dict(cve_id=cve_id,status='UNSUPPORTED',queries=[],message='此 CVE 尚無已審查核心規則；不會套用其他 CVE 的 Queries。執行只保存不支援紀錄，不產生正式判定。')
+        from cvevidence_core.general_triage import plan
+        return plan(cve_id)
     mismatch = package_format is not None and package_format != FORMAT[cve_id]
     rows = []
     for qid in QUERY_IDS:
@@ -68,7 +69,10 @@ def render_preparation(st,cve_id,package_format=None):
     st.subheader('準備執行的 Queries')
     st.text(plan['cve_id']+' · '+plan['message'])
     if not plan['queries']: return plan
-    st.caption('目前各已支援 CVE 共用查核類別，但查核內容、規則與所需材料依 CVE 決定；不是 AI 任意生成的測試。')
+    if plan['status']=='GENERAL_TRIAGE':
+        st.caption('將向 CVE 公開 API 查詢此編號；只送出 CVE ID，不送出產品檔案。盤點後再依公告與現有材料細化計畫；模型調查另由 AI 步驟啟動。')
+    else:
+        st.caption('目前各已支援 CVE 共用查核類別，但查核內容、規則與所需材料依 CVE 決定；不是 AI 任意生成的測試。')
     for q in plan['queries']:
         status='格式尚未支援' if q['status']=='FORMAT_GAP' else '待執行'
         with st.expander(q['query_id']+' · '+q['pc_layer']+' · '+status,expanded=True):

@@ -14,7 +14,6 @@ NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites'
 
 def describe_condition_groups(cve_id):
     """Presentation semantics only; groups never replace profile conditions or rules."""
-    if cve_id not in CATALOG:raise ValueError('No reviewed condition grouping for this CVE')
     return {'schema_version':'2.0','cve_id':cve_id,'grouping_only':True,
             'shared_prerequisite_ids':['build_identity','library_binding','product_binding','scope_complete'],
             'groups':[
@@ -82,6 +81,9 @@ def _review_statements(context,facts,states,statements,conflicts):
 
 def assess(context,verified,statements=()):
     require_verified(context,verified)
+    if verified.cve_id not in CATALOG:
+        from .general_triage import assess as assess_general
+        return assess_general(context,verified,statements)
     facts={r['fact_key']:r for r in verified.records};conditions=[]
     for key,title in LABELS.items():
         r=facts.get(key);value=r['value'] if r else None
