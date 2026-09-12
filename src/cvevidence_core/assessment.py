@@ -2,6 +2,7 @@
 from .catalog import CATALOG
 from .verifier import require_verified
 from .integrity import digest
+from .supplements import interpret_statement,statement_parts
 
 LABELS={'build_identity':'同一成品與 build 身分','component':'元件與已審查版本',
         'library_binding':'元件 source／object／library 綁定','product_binding':'產品實際連結綁定',
@@ -9,6 +10,60 @@ LABELS={'build_identity':'同一成品與 build 身分','component':'元件與�
         'entry_reachable':'外部輸入可進入相關程式路徑','trigger_prerequisites':'漏洞特有的必要使用條件'}
 GUARDS=('build_identity','component','library_binding','product_binding','scope_complete')
 NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites')
+
+def _review_statements(context,facts,states,statements,conflicts):
+    """Recheck original text against this receipt, never trust supplied review flags."""
+    history=[];pending=[]
+    guards=all(states[k]=='SUPPORTED' for k in GUARDS) and not conflicts
+    for statement in statements:
+        if isinstance(statement,str):statement=interpret_statement(statement,context.context_hash)
+        # Validate text even when workflow receives a persisted material dictionary.
+        material=interpret_statement(statement.get('text',''),statement.get('source_context_hash',context.context_hash))
+        checks=[]
+        for part in statement_parts(material['text'],context.manifest['format']):
+            kind=part['kind'];ids=[];blocking=True;status=kind
+            if kind=='OPERATIONAL_CONTEXT':
+                blocking=False;reason='操作說明未新增工程主張，不改變已驗條件。'
+            elif kind=='CONDITION_CLAIM':
+                key=part['condition_id'];record=facts.get(key)
+                ids=[record['evidence_id']] if record else []
+                expected='SUPPORTED' if part['claimed_value'] else 'BLOCKED'
+                if states[key]==expected and guards:
+                    blocking=False;status='CONSISTENT_WITH_VERIFIED_EVIDENCE'
+                    reason='目前同 build 證據與此工程主張一致；文字本身仍非工程證據。'
+                    ids += [facts[k]['evidence_id'] for k in GUARDS]
+                elif states[key] not in ('UNKNOWN',expected):
+                    status='CONFLICTS_WITH_VERIFIED_EVIDENCE'
+                    reason='文字與已驗條件「'+LABELS[key]+'」相反；請核對同 build 原始工程資料及聲明範圍。'
+                else:
+                    status='UNVERIFIED_ENGINEERING_CLAIM'
+                    reason='請補同 build 的「'+LABELS[key]+'」及成品綁定／範圍證據；口述不能補足工程條件。'
+            elif kind=='ARTIFACT_SCOPE':
+                path=part['path']
+                # Merely uploading a named file is insufficient: both the verified
+                # delivery inventory and product binding must cover its exact path.
+                covered=guards and all(any(w['path']==path for w in facts[k]['witnesses']) for k in ('scope_complete','product_binding'))
+                if covered:
+                    blocking=False;status='CONSISTENT_WITH_VERIFIED_EVIDENCE'
+                    ids=[facts[k]['evidence_id'] for k in GUARDS]
+                    reason='所指成品已包含於目前已驗交付清單與產品綁定；文字本身仍非工程證據。'
+                else:
+                    status='UNRESOLVED_SCOPE'
+                    reason='請補 '+path+' 的同 build 成品、source／link 綁定與入口證據，確認它納入已審查範圍。'
+            elif kind=='UNRESOLVED_SCOPE':
+                reason='此段指出額外或未涵蓋的入口／成品；請提供具體路徑及同 build 的交付、編譯連結與入口證據：'+part['text']
+            else:
+                reason='此段尚無可完整核對的語意規則；請釐清它涉及的工程條件、入口或成品，並提供同 build 證據：'+part['text']
+            checks.append({**part,'status':status,'blocks_verdict':blocking,'reason':reason,'evidence_ids':list(dict.fromkeys(ids))})
+        blocking=any(c['blocks_verdict'] for c in checks)
+        entry={'statement_id':statement.get('material_id') or material['material_id'],'text':material['text'],
+               'source_context_hash':material['source_context_hash'],'assessed_context_hash':context.context_hash,
+               'verified_engineering_fact':False,'review_required':True,'blocks_verdict':blocking,
+               'reason':'；'.join(dict.fromkeys(c['reason'] for c in checks if c['blocks_verdict']==blocking)),
+               'checks':checks}
+        history.append(entry)
+        if blocking:pending.append(entry)
+    return history,pending
 
 def assess(context,verified,statements=()):
     require_verified(context,verified)
@@ -20,11 +75,10 @@ def assess(context,verified,statements=()):
         conditions.append({'condition_id':key,'title':title,'state':state,'evidence_ids':[r['evidence_id']] if r else [],'explanation':r['reason'] if r else '缺少本格式可驗證的取證規則。'})
     states={x['condition_id']:x['state'] for x in conditions}
     conflicts=[{'query_id':q['query_id'],'message':m} for q in verified.queries for m in q['conflicts']]
-    # Free text is never verified. A correction is conservatively held for review.
-    reviews=[{'statement_id':s.get('material_id'),'text':s.get('text',''),'reason':'文字聲明未核對原始工程資料；請補同 build 證據。'} for s in statements]
+    statement_context,reviews=_review_statements(context,facts,states,statements,conflicts)
     guards=all(states[k]=='SUPPORTED' for k in GUARDS)
     blocked=[k for k in NECESSARY if states[k]=='BLOCKED']
-    if conflicts or reviews:verdict='NEEDS_INVESTIGATION';reason='證據有矛盾或收到尚未驗證的新聲明，需覆核。'
+    if conflicts or reviews:verdict='NEEDS_INVESTIGATION';reason='證據有矛盾或文字補充仍有具體工程／範圍事項待覆核。'
     elif guards and blocked:verdict='NOT_AFFECTED';reason='已核對成品範圍與綁定，且有必要條件被有效阻斷。'
     elif guards and all(states[k]=='SUPPORTED' for k in NECESSARY):verdict='AFFECTED';reason='目前交付成品的所有必要工程條件均有可核對證據支持。'
     else:verdict='NEEDS_INVESTIGATION';reason='尚有必要證據、綁定或分析範圍缺口，不能判為安全。'
@@ -40,6 +94,7 @@ def assess(context,verified,statements=()):
             'source_advisories':CATALOG[verified.cve_id]['sources'],'human_review_required':True,'provenance_verified':False,
             'scope':'只涵蓋目前提交的成品與已審查程式路徑；未證明實際部署暴露、漏洞已被利用或異常由此 CVE 造成。',
             'symptom_causation':'NOT_ESTABLISHED','verification_hash':verified.collection_hash}
+    if statement_context:result['statement_context']=statement_context
     result['assessment_id']='A-'+digest(result)
     return result
 
