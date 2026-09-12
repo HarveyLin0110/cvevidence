@@ -6,6 +6,21 @@ core evidence. Comparisons describe differences, never infer why verdicts change
 from .analysis_view import QUERIES, VERDICTS, rows, select_analysis, text
 
 
+def previous_engineering_run(store, run):
+    """Follow explicit local parent IDs, with cycle/depth guard; never search by CVE."""
+    seen = {run.run_id}
+    current = run.parent_run_id
+    for _ in range(32):
+        if not current: return None
+        if current in seen: raise ValueError("Cyclic run lineage")
+        seen.add(current)
+        parent = store.read(current)
+        if parent.cve_id and parent.cve_id != run.cve_id: raise ValueError("Parent CVE mismatch")
+        if parent.engineering_payload_sha256: return parent
+        current = parent.parent_run_id
+    raise ValueError("Run lineage exceeds display limit")
+
+
 def export_analysis(payload, *, context_hash, cve_id, run_id):
     entry = select_analysis(payload, context_hash=context_hash, cve_id=cve_id)
     assessment = entry.get("assessment") or {}

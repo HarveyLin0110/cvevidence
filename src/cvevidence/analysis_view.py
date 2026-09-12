@@ -83,10 +83,13 @@ def render_engineering(st, entry):
     conditions = rows(assessment.get("conditions"))
     if not conditions:
         st.info("未提供條件明細。")
-    for condition in conditions:
-        st.text(text(condition.get("title")) + " · " + text(condition.get("state")))
-        st.text(text(condition.get("explanation")))
-        lines(st, condition.get("evidence_ids"))
+    else:
+        st.dataframe([{"條件": text(c.get("title")), "狀態": text(c.get("state"))} for c in conditions],hide_index=True)
+        with st.expander("條件明細與引用"):
+            for condition in conditions:
+                st.text(text(condition.get("title")) + " · " + text(condition.get("state")))
+                st.text(text(condition.get("explanation")))
+                lines(st, condition.get("evidence_ids"))
     with st.expander("證據原值與來源"):
         st.caption("以下為保存結果的內容；引用原文需由同 run/context 的來源工具重新核對。")
         for evidence in rows(entry.get("evidence")):
@@ -100,7 +103,11 @@ def render_engineering(st, entry):
                          ("gaps", "缺少資料"), ("next_steps", "建議下一步")):
         if assessment.get(field):
             st.subheader(title)
-            lines(st, assessment[field])
+            for item in assessment[field]:
+                if field == "gaps" and isinstance(item, dict):
+                    st.text(text(item.get("needed")))
+                    st.caption(text(item.get("query_id")) + (" · 需同 build 資料" if item.get("same_build_required") else ""))
+                else: st.text(text(item))
 
 
 def render_ai(st, ai, *, context_hash, cve_id, assessment_id):

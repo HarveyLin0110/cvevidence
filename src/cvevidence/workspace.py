@@ -8,8 +8,10 @@ from .core_service import catalog_entries
 from .requests import parse_cves
 from .request_ui import request_sidebar, request_summary, reset_request
 from uuid import uuid4
-
-PAGES = ["01 產品與資料來源", "02 資料確認與缺件", "03 分析進度與結果", "04 報告與後續行動"]
+from .workflow_navigation import PAGES, sidebar_steps
+from .analysis_view import render_engineering, render_ai, VERDICTS
+from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
+from .candidate_view import render_candidates
 
 def controlled_path(value):
     root = Path(os.environ.get("CVEVIDENCE_ARTIFACT_ROOT", "var/artifacts")).resolve()
@@ -73,16 +75,15 @@ def workspace(st, *, store_root=None):
     store=RunStore(store_root if store_root is not None else os.environ.get("CVEVIDENCE_STORE","var/runtime"))
     runner=Runner(store)
     st.title("CVEvidence · 工程查核")
-    st.caption("Horace 核心已接通：工程包匯入、候選、原文工具、同 build 補件。工程判定與 AI 尚未執行。")
+    st.caption("從工程包建立證據鏈：Q1–Q5、工程初判、來源查閱與同 build 補件。AI 狀態與工程結果分開呈現。")
     st.session_state.setdefault("selected_run",None)
-    page=st.sidebar.radio("查核步驟",PAGES,key="step")
     runs, rejected=store.inspect_history()
     if rejected:
         st.sidebar.warning(f"{len(rejected)} 筆歷史紀錄無法核對，已排除顯示；原檔保留。")
         with st.sidebar.expander("歷史紀錄問題"):
             st.json(rejected)
     if runs:
-        labels={r.run_id:((r.input_package.package_id if r.input_package else "匯入失敗")+" · "+r.created_at[:19]+" · "+r.run_id[:8]) for r in runs}
+        labels={r.run_id:((r.input_package.package_id if r.input_package else "匯入失敗")+" · "+(r.cve_id or "候選探索")+" · "+r.status+" · "+r.created_at[:19]+" · "+r.run_id[:8]) for r in runs}
         chosen=st.sidebar.selectbox("保存的查核紀錄",["—"]+list(labels),
             format_func=lambda value: labels.get(value,value),key="history_select")
         if chosen!="—" and st.sidebar.button("載入查核紀錄"):
@@ -95,7 +96,12 @@ def workspace(st, *, store_root=None):
         except (ValueError,OSError):
             st.error("選取紀錄不存在、版本不相容或已損壞。請重新選擇紀錄，原檔未修改。")
             st.session_state.selected_run=None
-    st.sidebar.caption("01 匯入 → 02 確認 → 03 來源調查 → 04 匯出與補件。Q1–Q5／AI 尚未交付。")
+    payload=None
+    if run and run.engineering_payload_sha256:
+        try: payload=runner.read_engineering(run.run_id)
+        except (ValueError,OSError,TypeError,KeyError):
+            st.error("工程結果無法核對；未顯示判定或 AI 內容，原紀錄保留。")
+    page=sidebar_steps(st,has_run=run is not None,failed=bool(run and run.error),has_engineering=payload is not None)
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
@@ -164,8 +170,8 @@ def workspace(st, *, store_root=None):
     st.caption("Run: "+run.run_id+" · "+run.status)
     if run.error:
         st.error(run.error.code+"：本次操作失敗；父 run 與原始資料保留。")
-        if page!=PAGES[3]:
-            next_button(st,PAGES[3],"查看失敗紀錄")
+        if page!=PAGES[4]:
+            next_button(st,PAGES[4],"查看失敗紀錄")
             return
     if page==PAGES[1]:
         st.subheader("資料確認與缺件")
@@ -176,32 +182,53 @@ def workspace(st, *, store_root=None):
             cols[1].metric("資料包",p.package_id)
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
-        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠須等待 Q1–Q5 查核。")
+        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由 Q1–Q5 工程分析確認。")
         if run.missing:
             for item in run.missing: st.text(item)
-        st.subheader("候選 CVE")
         candidates=run.candidates.get("candidates",[])
-        if candidates:
-            for item in candidates:
-                st.text(item["cve_id"]+" · "+item["status"])
-                with st.expander("查看候選來源 "+item["cve_id"]): st.json(item)
-        else: st.info("目前三項 profile 沒有候選命中，不代表沒有漏洞。")
-        st.caption("候選命中 ≠ 產品受影響 ≠ 異常原因。")
+        if payload: candidates=payload.get("discovery",{}).get("candidates",[])
+        render_candidates(st,candidates,run.cve_id)
         next_button(st,PAGES[2],"下一步：調查來源")
     elif page==PAGES[2]:
-        st.subheader("分析進度")
-        st.dataframe([{"查核":q,"對應":pc,"狀態":"NOT_RUN · 等待 Horace 交付"} for q,pc in
-            [("Q1_COMPONENT","PC1"),("Q2_BUILD","PC2"),("Q3_IMPLEMENTATION","PC2"),
-             ("Q4_BINDING","PC3"),("Q5_PATH","PC3")]],hide_index=True)
-        st.button("執行 Q1–Q5 與正式判定（待核心交付）",disabled=True)
+        if payload:
+            render_engineering(st,payload["analyses"][0])
+            next_button(st,PAGES[3],"下一步：AI 查核與補件")
+        else:
+            st.subheader("執行工程分析")
+            cve=run.cve_id
+            if not cve:
+                options=[item["cve_id"] for item in run.candidates.get("candidates",[])]
+                selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
+                cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
+            else: st.text("本次分析："+cve)
+            symptom=st.text_area("本次調查情境",value=request.spec.symptom if request else "",max_chars=4000,key="analysis-symptom-"+run.run_id)
+            can_analyze=run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
+            st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
+            if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
+                try:
+                    with st.spinner("核對本次工程資料並執行 Q1–Q5…"):
+                        child=runner.analyze_offline(run.run_id,cve_id=cve,symptom=symptom)
+                    st.session_state.selected_run=child.run_id
+                    st.rerun()
+                except (ValueError,OSError,RuntimeError): st.error("工程分析未完成，請確認 CVE 與收件狀態。")
         source_viewer(st,runner,run)
-        st.subheader("AI 查核建議")
-        st.info("AI NOT_RUN；沒有呼叫模型、沒有產生 AI 建議。可先補來源材料或工程師說明。")
-        next_button(st,PAGES[3],"下一步：查核紀錄與補件")
+        next_button(st,PAGES[4],"下一步：查核紀錄與補件")
     else:
+        if page==PAGES[3] and payload:
+            entry=payload["analyses"][0]
+            render_ai(st,entry.get("ai"),context_hash=run.input_package.context_hash,cve_id=run.cve_id,
+                assessment_id=(entry.get("assessment") or {}).get("assessment_id"))
+            st.info("LIVE 調查入口尚未接線；可依工程缺口補資料，或先下載本次工程報告。")
+            next_button(st,PAGES[4],"查看目前報告")
+            for gap in (entry.get("assessment") or {}).get("gaps",[]): st.text(str(gap.get("needed",gap)))
         st.subheader("查核紀錄與後續行動")
-        text=report(run)
-        st.code(text,language=None)
+        text=export_analysis(payload,context_hash=run.input_package.context_hash,cve_id=run.cve_id,run_id=run.run_id) if payload else report(run)
+        if payload:
+            assessment=payload["analyses"][0].get("assessment") or {}
+            st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))
+            st.text(assessment.get("reason","請查看紀錄中的未完成原因。"))
+        with st.expander("完整報告預覽"):
+            st.code(text,language=None)
         st.download_button("下載查核紀錄",text,file_name=run.run_id+".txt",mime="text/plain")
         with st.expander("來源操作紀錄"):
             try:
@@ -220,6 +247,16 @@ def workspace(st, *, store_root=None):
         if run.parent_run_id:
             st.subheader("與父 run 比較")
             st.json(compare(store.read(run.parent_run_id),run))
+        if payload:
+            try:
+                previous=previous_engineering_run(store,run)
+                if previous:
+                    st.subheader("補件前後工程結果")
+                    st.text("前次工程 Run："+previous.run_id)
+                    st.json(compare_analyses(runner.read_engineering(previous.run_id),payload,
+                        parent_context=previous.input_package.context_hash,child_context=run.input_package.context_hash,cve_id=run.cve_id))
+            except (ValueError,OSError,TypeError,KeyError):
+                st.warning("前後工程結果無法核對，不顯示未確認的比較。")
         if not run.error:
             st.subheader("補充資料，保留前後紀錄")
             real=bool(run.input_package and run.input_package.context_hash)
@@ -235,6 +272,7 @@ def workspace(st, *, store_root=None):
                         child=runner.supplement_file(run.run_id,path=item["local_path"],
                             archive_sha256=item["archive"]["sha256"],manifest_sha256=item["manifest_sha256"])
                     st.session_state.selected_run=child.run_id
+                    st.session_state.step=PAGES[2] if not child.error else PAGES[4]
                     st.rerun()
             with st.form("supplement-"+run.run_id):
                 delta=st.file_uploader("同 build 增量補件 tar.gz / ZIP" if real else "完整替換快照 ZIP",
@@ -250,6 +288,7 @@ def workspace(st, *, store_root=None):
                             child=runner.supplement_file(run.run_id,stream=delta,note=note)
                         else: child=runner.supplement(run.run_id,delta.getvalue() if delta else None,note)
                     st.session_state.selected_run=child.run_id
+                    st.session_state.step=PAGES[2] if not child.error else PAGES[4]
                     st.rerun()
                 except (ValueError,OSError): st.error("補件未保存，請提供資料或說明。")
             next_button(st,PAGES[1],"回到資料確認")
