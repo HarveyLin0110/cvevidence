@@ -47,8 +47,8 @@ def test_each_query_has_findings_or_explicit_unknown_without_cross_query_leak():
     entry={"queries":[{"query_id":"Q1_COMPONENT","status":"COMPLETED","evidence_ids":["E-test"]}],
            "evidence":[{"evidence_id":"E-test","reason":"TEST_ONLY found component"}]}
     rows=query_summaries(entry)
-    assert len(rows)==5 and rows[0]["findings"]==["TEST_ONLY found component"]
-    assert all(not row["findings"] and row["state"]=="未提供可用結果" for row in rows[1:])
+    assert len(rows)==1 and rows[0]["findings"]==["TEST_ONLY found component"]
+    assert query_summaries({}) == []
     entry["queries"].append(deepcopy(entry["queries"][0]))
     assert query_summaries(entry)[0]["state"]=="結果重複，需覆核"
     assert not query_summaries(entry)[0]["findings"]
@@ -63,8 +63,8 @@ def test_missing_and_conflict_are_not_hidden_by_completed_status():
 def test_runtime_v2_summary_uses_saved_query_semantics():
     entry={"queries":[{"query_id":"Q5_PATH","title":"實際部署與運作證據",
                        "pc_layer":"PC3","query_plan_version":"2.0"}]}
-    assert query_summaries(entry)[4]["label"]=="Q5 實際部署與運作證據"
-    assert query_summaries({})[4]["label"]=="Q5 輸入路徑與必要條件"
+    assert query_summaries(entry)[0]["label"]=="實際部署與運作證據"
+    assert query_summaries({})==[]
 
 def test_dimensions_do_not_invent_reproduction_from_positive_engineering():
     from cvevidence.result_summary import conclusion_dimensions, condition_interpretation

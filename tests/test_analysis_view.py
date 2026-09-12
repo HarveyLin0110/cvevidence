@@ -51,7 +51,7 @@ def test_ai_timeout_keeps_engineering_and_both_exits():
     app = app_for(payload, callbacks=True)
     assert not app.exception
     assert "需要進一步調查" in displayed(app) and "TIMED_OUT" in displayed(app)
-    assert len([e for e in app.expander if e.label.startswith("Q")]) == 5
+    assert len([e for e in app.expander if e.label.startswith("Q")]) == 1
     assert "未提供" in displayed(app)
     app.button[0].click().run()
     assert app.session_state.destination == "report"

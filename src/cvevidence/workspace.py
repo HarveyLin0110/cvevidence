@@ -13,6 +13,7 @@ from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
 from .ai_workspace import ai_workspace, selected_ai, with_ai_result
+from .query_preparation import render_preparation
 
 def controlled_path(value):
     root = Path(os.environ.get("CVEVIDENCE_ARTIFACT_ROOT", "var/artifacts")).resolve()
@@ -131,6 +132,15 @@ def workspace(st, *, store_root=None):
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
         cve=st.text_input("CVE ID（最多 5 個，逗號或空白分隔；可留白）",placeholder="CVE-2022-37434, CVE-2023-38545")
         symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
+        if cve.strip():
+            try:
+                preview_cves = parse_cves(cve)
+            except ValueError:
+                st.info("請輸入合法 CVE ID，最多五個，才能準備對應的 Queries。")
+            else:
+                with st.expander("依 CVE 預覽查核計畫",expanded=True):
+                    for preview_cve in preview_cves:
+                        render_preparation(st,preview_cve,selected.get('format') if selected else None)
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
         signature=(kind,selected["archive"]["sha256"] if selected else None,
@@ -174,6 +184,10 @@ def workspace(st, *, store_root=None):
         return
     with st.expander("本次查核識別資訊"):
         st.caption("Run: "+run.run_id+" · "+run.status)
+    saved_context = (payload.get("discovery") or {}).get("symptom", "") if payload else run.candidates.get("symptom", "")
+    if saved_context:
+        with st.expander("本次情境描述", expanded=False):
+            st.text(saved_context)
     if run.error:
         st.error(run.error.code+"：本次操作失敗；父 run 與原始資料保留。")
         if page!=PAGES[4]:
@@ -188,7 +202,7 @@ def workspace(st, *, store_root=None):
             cols[1].metric("資料包",p.package_id)
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
-        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由 Q1–Q5 工程分析確認。")
+        st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
         if run.missing:
             for item in run.missing: st.text(item)
         candidates=run.candidates.get("candidates",[])
@@ -218,10 +232,15 @@ def workspace(st, *, store_root=None):
                     st.error("本次查核的歷史材料無法核對；請保留原紀錄並確認歷程，暫停建立新判定。")
             symptom=st.text_area("本次調查情境",value=saved_symptom or symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
             can_analyze=history_ok and run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
-            st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
-            if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
+            st.caption("執行目前核心的 Queries、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
+            with st.expander("Queries 如何執行：本次查核內容",expanded=True):
+                if cve:
+                    render_preparation(st,cve,run.input_package.format if run.input_package else None)
+                else:
+                    st.info("先選擇或輸入 CVE，這裡會列出對應的查核項目。")
+            if st.button("執行 Queries 與正式判定",type="primary",disabled=not can_analyze):
                 try:
-                    with st.spinner("核對本次工程資料並執行 Q1–Q5…"):
+                    with st.spinner("核對本次工程資料並執行 Queries…"):
                         child=runner.analyze_offline(run.run_id,cve_id=cve,symptom=symptom)
                     st.session_state.selected_run=child.run_id
                     st.rerun()

@@ -4,7 +4,8 @@ The caller must read a validated, user-scoped saved result. Scope checks here ar
 defence against displaying the wrong selection, not proof of evidence integrity.
 """
 import json
-from .result_summary import conclusion, query_summaries, conclusion_dimensions, condition_interpretation, condition_groups, pc_summaries
+from .query_display import query_ids, query_title, query_description
+from .result_summary import conclusion, query_summaries, condition_interpretation, condition_groups, pc_summaries
 
 QUERIES = {
     "Q1_COMPONENT": "元件與版本",
@@ -49,16 +50,6 @@ def lines(st, value):
     if isinstance(value, list):
         for item in value:
             st.text(text(item))
-
-
-def query_title(query, query_id):
-    """Use saved titles/metadata; never assign new semantics to a legacy query."""
-    metadata = query.get("metadata")
-    metadata = metadata if isinstance(metadata, dict) else {}
-    for title in (query.get("title"), metadata.get("title")):
-        if isinstance(title, str) and title.strip():
-            return title
-    return QUERIES[query_id]
 
 
 def scoped_followup_queries(entry, *, context_hash):
@@ -210,7 +201,7 @@ def render_engineering(st, entry, *, package=None):
     metrics[0].metric("有證據支持的條件", sum(c.get("state") == "SUPPORTED" for c in conditions))
     metrics[1].metric("有證據阻斷的條件", sum(c.get("state") == "BLOCKED" for c in conditions))
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
-    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "起始查核與追加問題", "證據與引用", "待補資料與覆核"])
+    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "Queries 執行紀錄", "證據與引用", "待補資料與覆核"])
     with overview:
         st.subheader("PC1／PC2／PC3 綜合結果")
         groups = pc_summaries(entry)
@@ -219,6 +210,7 @@ def render_engineering(st, entry, *, package=None):
             for index, group in enumerate(g for g in groups if not g["shared"]):
                 with st.container(border=True, key="pc_" + group["tone"] + "_" + scope_key + "_" + str(index)):
                     st.text(text(group.get("group_id")) + " · " + text(group.get("title")) + " ｜ " + group["label"])
+                    if group["context"]: st.text(group["context"])
                     for finding in group["findings"]:
                         st.text(finding["headline"])
                         if finding["locations"]:
@@ -246,31 +238,11 @@ def render_engineering(st, entry, *, package=None):
                         st.caption("本段是交付程式路徑與必要條件的工程證據；不代表漏洞已觸發、實際部署可達或已遭利用。")
             shared = next(g for g in groups if g["shared"])
             count = "＋".join(str(len(g["conditions"])) for g in groups)
-            st.caption("條件數：共用前提＋各 PC = " + count + " = " + str(len(conditions)) + " 項。五個 Query 是蒐集證據的查核工作，與條件數不同。")
+            st.caption("條件數：共用前提＋各 PC = " + count + " = " + str(len(conditions)) + " 項。Queries 是蒐集證據的查核工作，與條件數不同。")
             with st.expander("共用前提 · " + shared["label"], expanded=shared["tone"] == "pending"):
                 st.text(shared["summary"])
         else:
             st.info("此保存紀錄未提供完整且不重複的 PC 分組；保留原始條件，重新分析後可取得新版分組。")
-        st.subheader("這份結果能回答什麼")
-        for dimension in conclusion_dimensions(entry):
-            with st.container(border=True):
-                st.text(dimension["面向"] + "：" + dimension["本次結論"])
-                st.caption(dimension["解讀邊界"])
-        st.subheader("五項查核告訴我們什麼")
-        st.caption("下列統整來自本次保存的查核發現；「查核已完成」不是「產品安全」或「漏洞成立」。")
-        for query_summary in query_summaries(entry):
-            with st.container(border=True):
-                st.text(query_summary["label"] + " · " + query_summary["state"])
-                for finding in query_summary["findings"][:2]:
-                    st.text(finding)
-                if not query_summary["findings"]:
-                    st.text("尚無可展示的查核發現，不能據此推論產品是否受影響。")
-                for item in query_summary["missing"][:2]:
-                    st.text("尚缺：" + text(item))
-                for item in query_summary["conflicts"][:2]:
-                    st.text("待釐清：" + text(item))
-                if any(len(query_summary[field]) > 2 for field in ("findings", "missing", "conflicts")):
-                    st.caption("此處呈現重點；完整發現與缺件請見「起始查核與追加問題」。")
         if (entry.get("condition_groups") or {}).get("schema_version") == "2.0":
             st.caption("PC2：成品實作與靜態輸入路徑。PC3：實際部署與運作證據；靜態路徑不等於已觀測到實際運作。")
         for line in runtime_summary(entry):
@@ -295,18 +267,24 @@ def render_engineering(st, entry, *, package=None):
             st.info("未提供條件明細。")
     with queries_tab:
         st.caption("每項查核顯示當次保存的狀態；查核完成不代表產品不受影響。")
+        summaries = query_summaries(entry)
+        st.text("本次保存 " + str(len(summaries)) + " 項工程 Queries；數量依本次紀錄，不代表全部成功。")
+        if summaries:
+            st.dataframe([{"Query": q["query_id"], "名稱": q["label"], "用途": q["description"],
+                           "層級": q["pc_layer"] or "未提供", "狀態": q["state"]} for q in summaries],
+                         hide_index=True, use_container_width=True)
+        else: st.info("本次沒有保存工程 Queries，不補造已執行項目。")
         query_rows = rows(entry.get("queries"))
         evidence_by_id = {e.get("evidence_id"): e for e in rows(entry.get("evidence"))}
         status_names = {"COMPLETED": "已完成", "COMPLETED_WITH_GAPS": "已執行・有缺件", "CONFLICT": "有矛盾待覆核"}
-        for qid in QUERIES:
+        for qid in query_ids(entry):
             matches = [q for q in query_rows if q.get("query_id") == qid]
             query = matches[0] if len(matches) == 1 else {}
             label = query_title(query, qid)
             status = status_names.get(query.get("status"), text(query.get("status")))
             with st.expander(qid + " · " + label + " ｜ " + status):
                 st.text("狀態：" + text(query.get("status")))
-                if query.get("description"):
-                    st.text(text(query["description"]))
+                st.text(query_description(query))
                 if query.get("pc_layer"):
                     st.caption("核心查核層級：" + text(query["pc_layer"]))
                 if isinstance(query.get("metadata"), dict):

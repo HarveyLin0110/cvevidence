@@ -1,4 +1,6 @@
 """Deterministic presentation of saved findings; does not infer a verdict."""
+from .query_display import query_ids, query_title, query_description
+from .pc_context import openssl_context
 QUERY_LABELS = {
     "Q1_COMPONENT": "Q1 元件與版本",
     "Q2_BUILD": "Q2 建置身分",
@@ -14,11 +16,10 @@ def query_summaries(entry):
     for item in objects(entry.get("evidence")):
         evidence.setdefault(item.get("evidence_id"), []).append(item)
     result = []
-    for qid, label in QUERY_LABELS.items():
+    for qid in query_ids(entry):
         matches = [q for q in objects(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}
-        if isinstance(query.get("title"), str) and query["title"].strip():
-            label = qid.split("_", 1)[0] + " " + query["title"].strip()
+        label = query_title(query, qid)
         status = query.get("status")
         state = {"COMPLETED": "查核已完成", "COMPLETED_WITH_GAPS": "有缺件，尚未查清",
                  "CONFLICT": "存在矛盾，需覆核"}.get(status, "未提供可用結果")
@@ -32,7 +33,7 @@ def query_summaries(entry):
         conflicts = query.get("conflicts") if isinstance(query.get("conflicts"), list) else []
         if conflicts: state = "存在矛盾，需覆核"
         elif missing: state = "有缺件，尚未查清"
-        result.append({"query_id": qid, "label": label, "state": state, "findings": findings,
+        result.append({"query_id": qid, "label": label, "description": query_description(query), "pc_layer": query.get("pc_layer"), "state": state, "findings": findings,
                        "missing": missing, "conflicts": conflicts})
     return result
 
@@ -180,7 +181,9 @@ def pc_summaries(entry):
         highlight = affected and not shared and all(s == "SUPPORTED" for s in states)
         tone = "affected" if highlight else "pending" if any(s not in ("SUPPORTED", "BLOCKED") for s in states) else "neutral"
         label = "受影響判定的支持條件" if highlight else "含待確認條件" if tone == "pending" else "含阻斷證據" if "BLOCKED" in states else "條件有證據支持"
-        paragraphs, findings = [], []
+        context = openssl_context(entry, group['group_id'])
+        paragraphs = [context] if context else []
+        findings = []
         for condition in group["conditions"]:
             finding = condition_finding(entry, condition)
             findings.append(finding)
@@ -193,5 +196,6 @@ def pc_summaries(entry):
             paragraphs.extend("尚缺：" + item for item in finding["missing"][:3])
             paragraphs.extend("矛盾：" + item for item in finding["conflicts"][:3])
         summaries.append({**group, "shared": shared, "tone": tone, "label": label,
-                          "summary": "\n\n".join(paragraphs), "findings": findings})
+                          "summary": "\n\n".join(paragraphs), "findings": findings,
+                          "context": context})
     return summaries
