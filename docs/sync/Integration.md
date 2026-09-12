@@ -10,6 +10,13 @@
 - 全部整合任務I00–I15與每15分鐘巡檢見 docs/integration/plan.md；本機heartbeat cvevidence-main已啟用。
 - Horace.md 僅由 Horace 維護；本 session 後續更新此檔，避免與另一個 Frankie 開發 session 同改 Frankie.md。
 
+## 最新整合更新：2026-09-12 14:58
+
+以下舊里程碑段落保留歷史；以本段及 docs/releases/integrated-ai-20260912.md 為最新接線狀態。
+main e9cc996 已發布 OFFLINE 工程／補件／報告與產品 UI。codex/integration-ai-release 已合 Horace9863b1b、Frankie c8c1128，並呈現 PC 分組與原文段落。
+合併程式 c278130 真實 Sol/medium LIVE：5 calls、34.365秒、NEEDS_USER_INPUT；保存後讀取／報告／補件重判AFFECTED及原紀錄不變均驗收。公開站仍須通過目標 CI／部署／瀏覽器驗收，結果補 PR，不混同本機測試。
+I04–I07/I10/I11 的主要工作台路徑已接；I08/I09 正完成 LIVE 發布驗收，Replay UI、取消、總額度控制未完成；I14 Google多人隔離／公開固定版已運行。I12/I13/I15 仍需範圍化最終驗收，不宣稱全部結案。
+
 ## 本次接收與結果
 - Frankie 基線 44dc613：51項整合基礎測試＋3項服務恢復／歷史容錯測試。
 - Horace b71926f：Git 提供 demo-inputs 的9初始＋3補件，以及 repo_path catalog；完整分析核心仍未交付。
