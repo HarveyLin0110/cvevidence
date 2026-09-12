@@ -146,11 +146,7 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
              'gaps':assessment['gaps'][:30],'evidence':compact,'source_index':index[:40],
              'statement_context':statement_context,'statement_context_total':len(history),
              'statement_context_truncated':len(history)>len(selected),
-             'scope':assessment['scope'],'advisories':assessment['source_advisories'],
-             'assessment_kind':assessment.get('assessment_kind','REVIEWED_ENGINEERING'),
-             'public_cve_record':public_brief}
-    if public_brief is not None:
-        result['public_cve_record']=public_brief
+             'scope':assessment['scope'],'advisories':assessment['source_advisories']}
     items=[{'role':'user','content':json.dumps(payload,ensure_ascii=False)}]
     start=time.monotonic();request=transport or _request;repairs=0;attempt=None;stage='REQUEST'
     def failure(status,code,**details):
@@ -158,6 +154,11 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
         error={'code':code,'stage':stage,'call_number':len(result['calls']),**details}
         result['errors'].append(error)
         if attempt is not None:attempt['error']=error
+    # Public advisory content is low-trust user data, never system instructions.
+    payload.update(assessment_kind=assessment.get('assessment_kind','REVIEWED_ENGINEERING'),public_cve_record=public_brief)
+    items[0]['content']=json.dumps(payload,ensure_ascii=False)
+    if public_brief is not None:
+        result['public_cve_record']=public_brief
     try:
         for number in range(max_calls):
             remaining=timeout_seconds-(time.monotonic()-start)
