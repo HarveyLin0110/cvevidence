@@ -1,5 +1,7 @@
 # AIP：OpenAI API／Codex CLI 執行來源規格
 
+本次實際證據：[2026-09-13 交付與驗收](../releases/2026-09-13-ai-providers.md)。Codex 兩案 LIVE PASS；API LIVE 與人工內容覆核仍為 NOT_RUN。
+
 更新：2026-09-13。狀態：**開發中**。入口：[主規格](../../spec.md)。
 
 共用 Provider、兩個 Adapter、v2 保存／worker、逐筆版本追溯與來源選擇 UI 已實作；M5 聯合驗收仍須完成。以下明確區分現有介面與交付要求；程式、模擬測試、最小 CLI probe 或既有 API 歷史紀錄不等於本次完整 Codex／API 調查驗收通過。
@@ -12,10 +14,10 @@
 
 | 位置 | 已實作介面 | 仍須驗收／補齊 |
 | --- | --- | --- |
-| [核心 AI](../../src/cvevidence_core/ai.py)／[providers](../../src/cvevidence_core/providers.py)／[Codex Adapter](../../src/cvevidence_core/codex_provider.py) | `ProviderStep`、`ProviderError`、OpenAIAdapter／CodexCLIAdapter；兩來源接同一工具／引用循環 | 兩來源完整真實調查 |
-| [AIService](../../src/cvevidence/ai_service.py)／[worker](../../src/cvevidence/ai_worker.py) | 來源與 `config_id` 路由、白名單設定、v2 串流上限／期限、執行前後版本核對 | 整合版本的實際環境与程序驗收 |
-| [AIStore](../../src/cvevidence/ai_store.py) | AIRequest v1.0／v2.0 分派、每筆版本關聯、來源原生收據驗證、原子新建紀錄 | 聯合相容與歷史驗收 |
-| [AI 工作台](../../src/cvevidence/ai_workspace.py) | 來源選擇、readiness、同意失效、歷史／報告來源呈現 | 整合版本的實際 UI 與保存紀錄核對 |
+| [核心 AI](../../src/cvevidence_core/ai.py)／[providers](../../src/cvevidence_core/providers.py)／[Codex Adapter](../../src/cvevidence_core/codex_provider.py) | `ProviderStep`、`ProviderError`、兩個 Adapter 與同一工具／引用循環 | Codex 兩案 LIVE 已通過；API LIVE 待設定 |
+| [AIService](../../src/cvevidence/ai_service.py)／[worker](../../src/cvevidence/ai_worker.py) | 來源／版本路由、白名單設定、串流上限／期限與版本核對 | WSL 真實調查及 Linux 程序測試通過 |
+| [AIStore](../../src/cvevidence/ai_store.py) | v1／v2 分派、版本關聯、原生收據、不可變紀錄 | 相容測試與 Codex LIVE 歷史重開通過；API v2 LIVE 待執行 |
+| [AI 工作台](../../src/cvevidence/ai_workspace.py) | 來源選擇、readiness、同意失效、歷史／報告呈現 | 瀏覽器來源選擇及保存 LIVE 紀錄 UI QA 通過 |
 
 未傳 `provider` 的原入口維持 v1；既有 `transport` 或 OpenAIAdapter 的測試 transport 一律標示 SIMULATED，不能拿來假裝 LIVE 接線。
 
@@ -250,8 +252,8 @@ python scripts/validate_ai_providers.py --provider codex_cli --output-dir var/va
 
 ## 12. 尚待完成的交付
 
-- M0／M3 的固定 CLI 政策、原生事件與大小上限已接線；實際工具／程序專項證據见 [CLI 設定與驗證](../setup/codex-cli.md)，不从 read-only 或單一旗標推定所有隔離成立。
-- M1 的逐筆 versions 與 worker 比對已接線；在最終整合版本重驗程式變更、舊同意拒絕與 v1／v2 讀取相容。
-- M5：兩來源真實調查、同版本完整 pytest／schema 檢查、UI／重開紀錄核對及人工語意覆核；帳號、模型或外送前提缺失時明記 NOT_RUN。
+- M0／M3 的固定 CLI 政策、原生事件、大小上限及程序清理已有專項驗證與兩案 LIVE；不從 read-only 或單一旗標推定所有隔離成立。
+- M1 的逐筆版本、worker 比對、舊同意拒絕與 v1／v2 相容已納入本次完整回歸；尚無須遷移 main 基線不存在的 v2 紀錄。
+- M5 尚待 API Key／model 設定後的真實回歸、兩來源同案例比較及人工內容覆核；Codex LIVE、完整 pytest／schema、UI／重開紀錄已通過。帳號或外送前提缺失時明記 NOT_RUN。
 
 本功能維持開發中；以上條件完成前，不把相鄰模組的測試、既有 API 歷史 Live 或 TEST_ONLY 收據宣稱為本次完整驗收。

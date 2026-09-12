@@ -1,4 +1,6 @@
 # CVEvidence：AI 協作、安全邊界與可驗證亮點
+
+2026-09-13 執行來源更新：產品內 AI 已實作 OpenAI API／Codex CLI 共用調查路徑；CLI 使用後端 ChatGPT 登入，無須 API Key。本檔下方歷史基線不代表目前交付範圍；新介面、實測及尚待 API LIVE／人工覆核事項，以 [AIP 規格](../specs/ai-providers.md) 及 [交付紀錄](../releases/2026-09-13-ai-providers.md) 為準。D／R 規則仍適用。
 更新：2026-09-12。整理者：Frankie。依使用者先前目標、分工文件、舊規劃概念、今日 repo 程式與官方文件重新統整；未複製舊實作或舊工程資料。
 
 ## 1. 共同目標
