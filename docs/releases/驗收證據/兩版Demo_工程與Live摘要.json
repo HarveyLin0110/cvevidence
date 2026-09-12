@@ -375,5 +375,39 @@
     "subtests_passed": 23,
     "seconds": 300.4,
     "schema_unchanged": true
+  },
+  "latest_ui_saved_record_render": {
+    "code_commit": "dff052f1c9270d08e8a61f72b906884e15ac7cf9",
+    "checks": {
+      "no_ui_exception": true,
+      "shows_affected": true,
+      "shows_needs_investigation": true,
+      "shows_collection_instructions": true,
+      "shows_reason": true,
+      "shows_required_files": true,
+      "shows_waiting_for_user": true
+    }
+  },
+  "archive_material_diff": {
+    "complete_files": 408,
+    "incomplete_files": 405,
+    "added": [
+      "runtime/normal.gz",
+      "runtime/normal.log",
+      "runtime/observation.json"
+    ],
+    "changed": [],
+    "removed": []
+  },
+  "final_integrated_validation": {
+    "code_equivalent_to_commit": "dff052f1c9270d08e8a61f72b906884e15ac7cf9",
+    "pytest_passed": 244,
+    "subtests_passed": 23,
+    "seconds": 178.07,
+    "schema_unchanged": true,
+    "ci_run_id": 34681852725,
+    "ci_result": "SUCCESS",
+    "core_directory_unchanged_from_live_validation": true,
+    "scope": "已合 c6bdf9f 的本機與CI驗收；不是公開網站部署結果。"
   }
 }

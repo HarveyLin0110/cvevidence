@@ -1,13 +1,13 @@
 # Horace 開發同步
 
-更新：2026-09-12 15:48（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
+更新：2026-09-12 15:56（Asia/Taipei）。Horace 只維護本檔，Frankie 維護自己的同步檔；詳細測試歷史放交件報告，不在此重貼完整對話。
 
 ## 最新決定：先實作與 Demo，講稿暫緩
 
 - 使用者修正：現場兩版 Demo；第一版資料齊全直接確認有影響，第二版需要補件，只展示 AI 提供「缺什麼、為何需要、如何取得」後結束。**第二版不在現場補件上傳或重新判定**。這取代較早文件要求現場完整補件閉環的展示安排；後端補件能力仍保留驗收。
 - 新輸入位於 `demo-inputs/two-flows/`，兩個獨立初始包使用今日同一個 CMake 成品。第一版已在包內備妥運作資料；第二版只有 PC2。catalog 可直接由現有網頁樣品索引讀取，沒有另建 API 或重写前端。
-- 本分支 `codex/horace-v2-acceptance` 已合入 PR #20 `da0a4c2` 與 PR #22 `1ca3834`，固定組合 `46b8904`。兩包真 Runner 已分別得到 Affected／Needs Investigation；第二版 Live 為 Sol／medium，4 calls、32.968 秒 → NEEDS_USER_INPUT；沒有補件或重判。兩版實際 Runner 16／16、實際保存結果 UI 呈現 7／7、完整 pytest 239 passed＋23 subtests（300.40 秒），schema 一致。這是本機固定組合驗收，網站仍需整合發布。
-- 前一個固定預覽核心 `3ddb6dc`＋Runner `30719a3` 的三格式／歷史驗收為 43／43；新版修補後在 `46b8904` 再跑 43／43 亦通過；已合入 `c6bdf9f` 的最新 UI／導航，核心 bytes 不變，整合後完整測試進行中。公開站由整合端發布。第一版基線完整測試為 197 passed、23 subtests，165.34 秒；不當成第二版測試數。
+- 交件 **PR #23**：`codex/horace-v2-acceptance` 已合入 PR #20 `da0a4c2` 與 PR #22 `1ca3834`，固定組合 `46b8904`。兩包真 Runner 已分別得到 Affected／Needs Investigation；第二版 Live 為 Sol／medium，4 calls、32.968 秒 → NEEDS_USER_INPUT；沒有補件或重判。兩版實際 Runner 16／16、實際保存結果 UI 呈現 7／7、完整 pytest 239 passed＋23 subtests（300.40 秒），schema 一致。這是本機固定組合驗收，網站仍需整合發布。
+- 前一個固定預覽核心 `3ddb6dc`＋Runner `30719a3` 的三格式／歷史驗收為 43／43；新版修補後在 `46b8904` 再跑 43／43 亦通過；已合入 `c6bdf9f` 的最新 UI／導航，核心 bytes 不變，整合後完整測試 **244 passed＋23 subtests，178.07 秒**，schema 一致；實際保存結果再次通過 UI 呈現 7／7。`dff052f` CI 34681852725 成功。公開站由整合端合入 #22／#23 後發布，沒有自行操作服務。第一版基線完整測試為 197 passed、23 subtests，165.34 秒；不當成第二版測試數。
 
 ## 可立即接線的版本
 
