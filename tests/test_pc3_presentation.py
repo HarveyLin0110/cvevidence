@@ -162,14 +162,14 @@ def test_bad_followup_scope_or_identity_hides_contents_but_keeps_engineering(mut
     assert "FOLLOWUP_SCOPE_MISMATCH" in exported
 
 
-def test_rejected_rule_gap_not_presented_as_a_current_request():
+def test_rejected_evidence_keeps_correction_request_visible():
     payload = pc3_sample()
-    payload["analyses"][0]["followup_queries"][0].update(status="REJECTED", required_files=["DO_NOT_RECOMMEND"])
+    payload["analyses"][0]["followup_queries"][0].update(status="REJECTED", required_files=["runtime/corrected.log"])
     app = app_for(payload)
     assert not app.exception
     for output in (displayed(app), report(payload)):
-        assert "DO_NOT_RECOMMEND" not in output
-        assert "已拒絕，不列為目前補件要求" in output
+        assert "runtime/corrected.log" in output
+        assert "此證據未通過驗證" in output
 
 
 def test_model_ask_user_waits_while_tool_completion_is_not_condition_verification():

@@ -11,6 +11,11 @@ class EvidenceBuilder:
         self.context=context
         self.evidence=[]
         self.queries={qid:{'query_id':qid,'status':'COMPLETED','evidence_ids':[],'missing':[],'conflicts':[]} for qid in QUERY_IDS}
+        self.followup_queries=[]
+        self.runtime_observation={'status':'MISSING','evidence_basis':'NOT_OBSERVED','description':'此格式尚無可核對的運作資料。','provenance_verified':False}
+        titles=['元件與 CVE 候選','建置身分與功能設定','脆弱實作與修補','成品綁定與靜態輸入路徑','實際部署與運作證據']
+        for qid,title,layer in zip(QUERY_IDS,titles,['PC1','PC2','PC2','PC2','PC3']):
+            self.queries[qid].update(title=title,pc_layer=layer,query_plan_version='2.0')
 
     def emit(self,query_id,key,value,source_ids=(),reason='',excerpts=()):
         if value is None or (isinstance(value,dict) and value.get('confirmed') is False):
@@ -45,7 +50,8 @@ class EvidenceBuilder:
         return None
 
     def result(self,cve_id,profile_version):
-        return {'schema_version':'1.0','cve_id':cve_id,'profile_version':profile_version,'context_hash':self.context.context_hash,'queries':list(self.queries.values()),'evidence':self.evidence}
+        return {'schema_version':'1.0','cve_id':cve_id,'profile_version':profile_version,'context_hash':self.context.context_hash,'queries':list(self.queries.values()),'evidence':self.evidence,
+                'followup_queries':self.followup_queries,'runtime_observation':self.runtime_observation}
 
 @dataclass(frozen=True)
 class VerifiedEvidence:

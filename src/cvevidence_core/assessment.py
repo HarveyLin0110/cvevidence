@@ -7,22 +7,23 @@ from .supplements import interpret_statement,statement_parts
 LABELS={'build_identity':'同一成品與 build 身分','component':'元件與已審查版本',
         'library_binding':'元件 source／object／library 綁定','product_binding':'產品實際連結綁定',
         'scope_complete':'交付成品的分析範圍完整','vulnerable_implementation':'受影響實作存在且未有效排除',
-        'entry_reachable':'外部輸入可進入相關程式路徑','trigger_prerequisites':'漏洞特有的必要使用條件'}
+        'entry_reachable':'成品的靜態輸入路徑','trigger_prerequisites':'實作中的漏洞必要條件',
+        'runtime_observation':'同成品的部署／運作條件觀測'}
 GUARDS=('build_identity','component','library_binding','product_binding','scope_complete')
-NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites')
+NECESSARY=('vulnerable_implementation','entry_reachable','trigger_prerequisites','runtime_observation')
 
 def describe_condition_groups(cve_id):
     """Presentation semantics only; groups never replace profile conditions or rules."""
     if cve_id not in CATALOG:raise ValueError('No reviewed condition grouping for this CVE')
-    return {'schema_version':'1.0','cve_id':cve_id,'grouping_only':True,
+    return {'schema_version':'2.0','cve_id':cve_id,'grouping_only':True,
             'shared_prerequisite_ids':['build_identity','library_binding','product_binding','scope_complete'],
             'groups':[
                 {'group_id':'PC1','title':'元件適用性','condition_ids':['component'],
                  'meaning':'核對元件與已審查版本，並由共用綁定證據確認它屬於目前成品。'},
-                {'group_id':'PC2','title':'實作與修補','condition_ids':['vulnerable_implementation'],
-                 'meaning':'核對脆弱實作、功能停用或有效修補；仍須對應到已綁定的 library 與成品。'},
-                {'group_id':'PC3','title':'產品輸入路徑','condition_ids':['entry_reachable','trigger_prerequisites'],
-                 'meaning':'核對外部輸入路徑及各 CVE 特有使用條件，並使用共用的產品實際連結綁定。'}],
+                {'group_id':'PC2','title':'成品實作與靜態路徑','condition_ids':['vulnerable_implementation','entry_reachable','trigger_prerequisites'],
+                 'meaning':'這份成品編入什麼：核對原碼、修補、功能設定、成品綁定及靜態輸入路徑；不代表設備已如此運作。'},
+                {'group_id':'PC3','title':'部署與實際運作','condition_ids':['runtime_observation'],
+                 'meaning':'這個成品如何運作：核對同成品的命令、正常交互原始紀錄及配置；缺件保持未知，受控觀測不冒充客戶實機。'}],
             'note':'PC 分組僅供呈現，沒有另算三個布林值；正式判定仍看所有條件、共用前提、範圍與衝突。'}
 
 def _review_statements(context,facts,states,statements,conflicts):

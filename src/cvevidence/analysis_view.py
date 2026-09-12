@@ -133,7 +133,8 @@ def render_followup_queries(st, entry, *, context_hash):
             st.caption("來源：RULE_GAP · 目標條件：" + query["target_condition_id"])
             st.text("問題狀態：" + query["status"])
             if query["status"] == "REJECTED":
-                st.warning("此追加 Query 已拒絕，不列為目前補件要求。")
+                st.warning("此證據未通過驗證，請覆核或補回正確的同成品資料。")
+                lines(st, query["required_files"])
             else:
                 st.text("需提供的資料（同 build／成品）" if query["status"] == "WAITING_USER_INPUT"
                         else "此問題要求的資料（保存紀錄）")
@@ -218,7 +219,7 @@ def render_engineering(st, entry, *, package=None):
     metrics[0].metric("有證據支持的條件", sum(c.get("state") == "SUPPORTED" for c in conditions))
     metrics[1].metric("有證據阻斷的條件", sum(c.get("state") == "BLOCKED" for c in conditions))
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
-    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "五項工程查核", "證據與引用", "待補資料與覆核"])
+    overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "起始查核與追加問題", "證據與引用", "待補資料與覆核"])
     with overview:
         groups = condition_groups(entry)
         if groups:
@@ -291,6 +292,7 @@ def render_engineering(st, entry, *, package=None):
                             render_excerpts(st, evidence)
                 with st.expander("追溯識別碼與查核原始資料"):
                     st.json(query)
+        render_followup_queries(st, entry, context_hash=assessment.get("context_hash"))
     with evidence_tab:
         st.caption("以下為保存的工程證據；如需重新核對原文，可使用本頁下方的來源檢視。")
         with st.expander("條件明細與引用"):
@@ -308,7 +310,6 @@ def render_engineering(st, entry, *, package=None):
                     st.text("SHA256：" + text(witness.get("sha256")))
                 render_excerpts(st, evidence)
     with gaps_tab:
-        render_followup_queries(st, entry, context_hash=assessment.get("context_hash"))
         any_pending = False
         for field, title in (("conflicts", "矛盾待覆核"), ("statement_reviews", "人工說明待覆核"),
                              ("gaps", "缺少資料")):

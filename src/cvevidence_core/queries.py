@@ -8,7 +8,7 @@ from .evidence import EvidenceBuilder
 from .integrity import IntegrityError,UnsupportedError
 
 REVIEW=json.loads(files('cvevidence_core').joinpath('reviewed_sources.json').read_text())
-PROFILE_VERSION=REVIEW['profile_revision']
+PROFILE_VERSION=REVIEW['profile_revision']+'-runtime-v2'
 FORMAT={'CVE-2014-0160':'rom','CVE-2022-37434':'cmake','CVE-2023-38545':'curl'}
 
 def reviewed(context,name,exclude=()):
@@ -103,11 +103,11 @@ def _rom(b,proof):
     state=states[0] if known and len(states)==2 and len(set(states))==1 else None
     if len(set(states))>1:b.conflict('Q3_IMPLEMENTATION','Heartbeat 實作與 dispatch 的編譯狀態不一致')
     b.emit('Q3_IMPLEMENTATION','vulnerable_implementation',state,witnesses,'核對 heartbeat 函式、TLS record dispatch 及兩者實際編譯旗標；off 必須兩處一起排除。',excerpts)
-    entry,eids=_review(b,'Q5_PATH','reviewed-demo-entry')
-    b.emit('Q5_PATH','entry_reachable',True if entry and known and product['valid'] else None,[*eids,*sids],
+    entry,eids=_review(b,'Q4_BINDING','reviewed-demo-entry')
+    b.emit('Q4_BINDING','entry_reachable',True if entry and known and product['valid'] else None,[*eids,*sids],
            'TCP accept → SSL_set_fd/SSL_accept → SSL_read → method ssl3_read → ssl3_read_bytes → heartbeat dispatch；表示交付程式的可達能力，未判定外部部署暴露。',
            _excerpts(b,[('source/device.c','SSL_read(connection'),('source/openssl/ssl/ssl_lib.c','s->method->ssl_read'),('source/openssl/ssl/s3_lib.c','s->method->ssl_read_bytes'),('source/openssl/ssl/s3_pkt.c','tls1_process_heartbeat(s)')]))
-    b.emit('Q5_PATH','trigger_prerequisites',True if entry and known else None,[*eids,*sids],'已審查 TLS1.2 method dispatch 可處理 heartbeat record；正常連線不等於已重現漏洞。')
+    b.emit('Q4_BINDING','trigger_prerequisites',True if entry and known else None,[*eids,*sids],'已審查 TLS1.2 method dispatch 可處理 heartbeat record；正常連線不等於已重現漏洞。')
 
 def _cmake(b,proof):
     c=b.context;version=None;sids=[]
@@ -122,10 +122,10 @@ def _cmake(b,proof):
     _proof(b,'Q4_BINDING','product_binding',product,'產品 object 與 linker 實際輸入的 libz.a hash 一致。')
     _proof(b,'Q4_BINDING','scope_complete',runtime_scope(c,'product/',['product/update-reader']),'目前交付 product 目錄的 ELF 範圍。')
     b.emit('Q3_IMPLEMENTATION','vulnerable_implementation',None if not version else version=='1.2.12',sids,'核對 EXTRA copy 的 len/extra_max 條件；1.2.13 包含上游修正。',_excerpts(b,[('source/zlib/inflate.c','case EXTRA:')]))
-    entry,eids=_review(b,'Q5_PATH','reviewed-gzip-entry')
+    entry,eids=_review(b,'Q4_BINDING','reviewed-gzip-entry')
     path=True if entry and product['valid'] else None
-    b.emit('Q5_PATH','entry_reachable',path,eids,'命令列提供任意 gzip 檔案，經 inflateInit2(31)、inflateGetHeader 進入 gzip 解碼。',_excerpts(b,[('source/update_reader.c','inflateGetHeader')]))
-    b.emit('Q5_PATH','trigger_prerequisites',path,eids,'gz_header.extra 容量 32 bytes、每次輸入 8 bytes；程式未拒絕超長 extra，可跨次進入 EXTRA 複製。正常截短檔錯誤不是漏洞重現。',_excerpts(b,[('source/update_reader.c','unsigned char extra')]))
+    b.emit('Q4_BINDING','entry_reachable',path,eids,'命令列提供任意 gzip 檔案，經 inflateInit2(31)、inflateGetHeader 進入 gzip 解碼。',_excerpts(b,[('source/update_reader.c','inflateGetHeader')]))
+    b.emit('Q4_BINDING','trigger_prerequisites',path,eids,'gz_header.extra 容量 32 bytes、每次輸入 8 bytes；程式未拒絕超長 extra，可跨次進入 EXTRA 複製。正常截短檔錯誤不是漏洞重現。',_excerpts(b,[('source/update_reader.c','unsigned char extra')]))
 
 def _curl(b,proof):
     c=b.context;socks='source/curl/lib/socks.c'
@@ -150,29 +150,14 @@ def _curl(b,proof):
     if not(old or fixed):b.gap('Q3_IMPLEMENTATION','socks.c 未符合已審查版本或官方修補，需重新審查')
     b.emit('Q3_IMPLEMENTATION','vulnerable_implementation',True if old else False if fixed else None,[*oldids,*fixids],
            '檢查 SOCKS5 async state 的本地 DNS 旗標與 hostname > 255 路徑；修補版會直接拒絕過長 hostname。',_excerpts(b,[(socks,'hostname_len > 255')]))
-    entry,eids=_review(b,'Q5_PATH','reviewed-curl-entry');conf=c.by_path('install/etc/download.conf');ob=read_json(c,'observations/socks5.json')
-    config={};remote=False;small=False
-    if conf:
-        eids.append(conf[1]['source_id'])
-        for line in conf[0].read_text().splitlines():
-            if '=' in line:
-                k,v=line.split('=',1);config[k.strip()]=v.strip().strip('"')
-        remote=bool(re.fullmatch(r'127\.0\.0\.1:[0-9]+',config.get('socks5-hostname','')))
-        small=config.get('limit-rate')=='16384' and config.get('noproxy')==''
-    else:b.gap('Q5_PATH','同 build 的 launcher/config，確認 SOCKS5 DNS 與 buffer 設定')
-    observation=False
-    if ob:
-        eids.append(c.by_path('observations/socks5.json')[1]['source_id'])
-        productrow=c.by_path('install/bin/curl')[1];librow=c.by_path('install/lib/libcurl.so.4.8.0')[1]
-        if ob.get('product_sha256')!=productrow['sha256'] or ob.get('library_sha256')!=librow['sha256']:b.conflict('Q5_PATH','SOCKS5 觀測屬於不同成品/library')
-        else:observation=any(e.get('atyp')==3 and e.get('greeting_delay_seconds',0)>0 for e in ob.get('events',[]))
-    else:b.gap('Q5_PATH','同成品的正常 SOCKS5 remote-DNS/延迟握手觀測')
-    ready=entry and known and product['valid'] and remote and small and observation
-    if not ready:b.gap('Q5_PATH','尚未完整支持目前 launcher 的輸入、DNS、buffer 與 async 路徑')
-    b.emit('Q5_PATH','entry_reachable',True if ready else None,[*eids,*sids],
-           '已審查 launcher 接受外部 URL，固定載入交付 libcurl 並讀取 config；host parser 不強制 DNS 的 255-byte 上限。',_excerpts(b,[('install/download-update.sh','--url'),('source/curl/lib/urlapi.c','static CURLUcode hostname_check')]))
-    b.emit('Q5_PATH','trigger_prerequisites',True if ready else None,[*eids,*sids],
-           '查核 SOCKS5 remote DNS、limit-rate=16384 對 CURLOPT_BUFFERSIZE 的設定、外部長 hostname 與非阻塞握手。正常觀測不代表溢位或已利用。',_excerpts(b,[('source/curl/src/tool_operate.c','config->recvpersecond < BUFFER_SIZE'),(socks,'case CONNECT_SOCKS_READ:')]))
+    entry,eids=_review(b,'Q4_BINDING','reviewed-curl-entry')
+    ready=entry and known and product['valid']
+    b.emit('Q4_BINDING','entry_reachable',True if ready else None,[*eids,*sids],
+           '靜態查核：已審查 launcher 接受外部 URL、載入交付 libcurl；host parser 未強制 DNS 255-byte 上限。尚未觀測部署配置。',
+           _excerpts(b,[('install/download-update.sh','--url'),('source/curl/lib/urlapi.c','static CURLUcode hostname_check')]))
+    b.emit('Q4_BINDING','trigger_prerequisites',True if ready else None,[*eids,*sids],
+           '靜態查核：SOCKS5 async state、hostname 與 buffer 設定分支存在；是否真的使用 remote DNS、buffer 設定及延遲交互另由 PC3 查核。',
+           _excerpts(b,[('source/curl/src/tool_operate.c','config->recvpersecond < BUFFER_SIZE'),(socks,'case CONNECT_SOCKS_READ:')]))
 
 def collect_evidence(context,cve_id):
     context.assert_current()
@@ -184,6 +169,21 @@ def collect_evidence(context,cve_id):
     b.emit('Q2_BUILD','build_identity',True if proof.record and not proof.conflicts else None,[record[1]['source_id']] if record else [],'比對 build/product/release/primary artifact；此為交付紀錄內部一致性，不是供應商簽章。')
     if context.manifest['format']!=FORMAT[cve_id]:
         for q in b.queries:b.gap(q,'此 CVE 尚未支援該交付格式的深入分析；不能推定安全')
-    else:{'rom':_rom,'cmake':_cmake,'curl':_curl}[context.manifest['format']](b,proof)
+    else:
+        {'rom':_rom,'cmake':_cmake,'curl':_curl}[context.manifest['format']](b,proof)
+        # Report actual captured compiler configuration; no inference from names.
+        source={'rom':'source/device.c','cmake':'source/update_reader.c','curl':'source/curl/src/tool_operate.c'}[context.manifest['format']]
+        config_records=proof.source_records(source)
+        config_ids=[];config_values=[]
+        for rec in config_records:
+            check=proof.check_record(rec)
+            if check['valid']:
+                config_ids+=check['source_ids']
+                config_values.append({'record':rec['record_path'],'argv':rec['argv']})
+        if not config_values:b.gap('Q2_BUILD','缺少同成品主要入口的實際編譯／功能設定紀錄')
+        b.emit('Q2_BUILD','feature_configuration',config_values or None,config_ids,
+               '核對實際編譯命令及來源／產物 hash；功能是否排除另與 Q3 的實作及 Q4 綁定交叉核對。')
+        from .operational import collect_operational
+        collect_operational(b,cve_id)
     context.assert_current()
     return b.result(cve_id,PROFILE_VERSION)

@@ -61,9 +61,8 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
                            "問題狀態: " + FOLLOWUP_STATES[query["status"]] + "（" + query["status"] + "）",
                            "Context: " + query["context_hash"], "evidence_ids: " + text(query["evidence_ids"])]
                 if query["status"] == "REJECTED":
-                    output.append("此追加 Query 已拒絕，不列為目前補件要求。")
-                else:
-                    output.append("required_files（問題要求的資料）: " + text(query["required_files"]))
+                    output.append("此證據未通過驗證，請覆核或補回正確的同成品資料。")
+                output.append("required_files（問題要求的資料）: " + text(query["required_files"]))
     output += ["", "證據原值（保存紀錄；此匯出沒有重新驗證原文）"]
     for evidence in rows(entry.get("evidence")):
         for field in ("evidence_id", "value", "reason", "witnesses", "excerpts"):
