@@ -54,6 +54,24 @@ def readiness_reason(config):
         "（" + value(code) + "）" if code else "")
 
 
+def receipt_model(call, provider):
+    """A queued/failed call may contain a legacy configured-model placeholder.
+
+Only a model attached to a native receipt is presented as provider-reported.
+This display check does not validate the receipt or imply successful execution.
+"""
+    kind = provider or call.get("provider")
+    if call.get("provider") not in (None, kind):
+        return None
+    key = "thread_id" if kind == "codex_cli" else "response_id"
+    identity, model = call.get(key), call.get("model")
+    if (kind not in (None, "openai_api", "codex_cli")
+            or not isinstance(identity, str) or not identity.strip()
+            or not isinstance(model, str) or not model.strip()):
+        return None
+    return model
+
+
 def attempt_metadata(ai=None, request=None, *, status=None):
     """Identity comes only from a saved request/AI, not today's selector."""
     ai = ai if isinstance(ai, dict) else {}
@@ -63,11 +81,9 @@ def attempt_metadata(ai=None, request=None, *, status=None):
     if legacy:
         provider = "openai_api"
     label = "舊版 OpenAI API" if legacy else PROVIDERS.get(provider, "未知來源")
-    calls = [call for call in ai.get("calls", []) if isinstance(call, dict)]
-    reported = ai.get("actual_model")
-    if not reported:
-        models = list(dict.fromkeys(call["model"] for call in calls if isinstance(call.get("model"), str) and call["model"]))
-        reported = "、".join(models) or None
+    calls = [call for call in (ai.get("calls") or []) if isinstance(call, dict)]
+    models = list(dict.fromkeys(model for call in calls if (model := receipt_model(call, provider))))
+    reported = "、".join(models) or None
     return {
         "ai_id": request.get("ai_id"), "status": status or ai.get("status"),
         "provider": provider if provider in PROVIDERS else None, "provider_label": label,
@@ -84,7 +100,7 @@ def metadata_lines(metadata):
 
 
 def receipt_lines(call, provider):
-    output = ["回報模型：" + value(call.get("model")), "狀態：" + value(call.get("status"))]
+    output = ["回報模型：" + value(receipt_model(call, provider)), "狀態：" + value(call.get("status"))]
     if provider == "codex_cli":
         output += ["Thread ID：" + value(call.get("thread_id")),
                    "結束事件：" + value(call.get("terminal_event")),

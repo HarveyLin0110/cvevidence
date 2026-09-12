@@ -278,3 +278,33 @@ def test_unknown_history_identity_and_literal_metadata_are_not_inferred():
     metadata = attempt_metadata({"provider": "codex_cli", "model": marker, "calls": [{"model": None}]})
     assert metadata["actual_model"] is None and marker in "\n".join(metadata_lines(metadata))
     assert "Response ID" not in "\n".join(receipt_lines({"exit_code": 0}, "codex_cli"))
+
+
+@pytest.mark.parametrize("version,provider", [("1.0", "openai_api"), ("2.0", "openai_api"), ("2.0", "codex_cli")])
+@pytest.mark.parametrize("status", ["STARTED", "FAILED", "TIMED_OUT"])
+def test_actual_model_requires_native_receipt_even_for_old_failed_calls(version, provider, status):
+    request = {"schema_version": version, "model": "TEST_ONLY_CONFIGURED"}
+    if version == "2.0":
+        request["provider"] = provider
+    call = {"model": "TEST_ONLY_CONFIGURED", "status": status}
+    if version == "2.0":
+        call["provider"] = provider
+    ai = {"model": "TEST_ONLY_CONFIGURED", "actual_model": "TEST_ONLY_UNBACKED_SUMMARY", "calls": [call]}
+    before = deepcopy((ai, request))
+    metadata = attempt_metadata(ai, request)
+    assert metadata["configured_model"] == "TEST_ONLY_CONFIGURED" and metadata["actual_model"] is None
+    assert "實際回報模型：未知" in metadata_lines(metadata)
+    assert "回報模型：未知" in receipt_lines(call, provider)
+    assert (ai, request) == before
+    # A receipt can report a model even if the overall investigation later fails.
+    identity = "thread_id" if provider == "codex_cli" else "response_id"
+    call.update({identity: "TEST_ONLY_NATIVE_ID", "model": "TEST_ONLY_REPORTED"})
+    assert attempt_metadata(ai, request)["actual_model"] == "TEST_ONLY_REPORTED"
+    assert "回報模型：TEST_ONLY_REPORTED" in receipt_lines(call, provider)
+
+
+def test_actual_model_does_not_use_another_providers_receipt():
+    call = {"provider": "openai_api", "response_id": "TEST_ONLY_RESPONSE", "model": "TEST_ONLY_MODEL"}
+    metadata = attempt_metadata({"calls": [call]}, {"schema_version": "2.0", "provider": "codex_cli"})
+    assert metadata["actual_model"] is None
+    assert "回報模型：未知" in receipt_lines(call, "codex_cli")
