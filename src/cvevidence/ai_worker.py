@@ -35,7 +35,7 @@ def execute(request):
         if context.context_hash != request["context_hash"] or saved.get("archive_sha256") != actual:
             raise ValueError("AI archive context mismatch")
         # This entry re-verifies collection in this process before calling investigate.
-        result = investigate_after_engineering(context, saved, request["user_context"])
+        result = investigate_after_engineering(context, saved, request["user_context"], analysis_depth="pc")
         if file_hash(archive) != actual or hashlib.sha256(blob.read_bytes()).hexdigest() != request["engineering_payload_sha256"]:
             raise ValueError("AI inputs changed during execution")
         return result

@@ -383,6 +383,14 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id):
     if ai.get("status") in ("OFFLINE", "NOT_RUN", "CONFIG_REQUIRED"):
         st.info("本次沒有完成模型調查；工程结果仍可查閱與下載。")
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
+    if ai.get("analysis_depth") == "PC_EVIDENCE_REVIEW":
+        st.caption("本次採 PC1／PC2／PC3 原文查核；各層是否完成及限制，以保存的調查說明為準。")
+        if ai.get("status") in ("COMPLETED", "NEEDS_USER_INPUT"):
+            final = next((task for task in reversed(rows(ai.get("tasks")))
+                          if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER")), None)
+            if final and final.get("finding"):
+                st.subheader("PC1／PC2／PC3 查核說明")
+                st.text(text(final["finding"]))
     st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
     guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id, assessment_id=assessment_id)
     if guide:
