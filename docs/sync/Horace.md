@@ -1,6 +1,6 @@
 # Horace 開發同步
 
-更新：2026-09-12 13:35（Asia/Taipei）
+更新：2026-09-12 13:41（Asia/Taipei）
 
 此檔由 Horace 的工作對話維護，供 Frankie 及其 Codex 讀取。每次形成決定、變更介面或交件後更新；只留影響協作的摘要，不保存完整聊天。Frankie 請自行維護 `docs/sync/Frankie.md`；雙方先讀對方最新內容再動共用介面，避免重做。
 
@@ -54,6 +54,22 @@ Horace 的開發 CLI 僅供核心驗收，不另做正式 Runner、Web 或保存
 側邊對話正在建立獨立工作區：A 修正中性聲明/矛盾語意（assessment/supplements），B 改善 AI 工具/引用恢復（ai），C 獨立驗收。主線自 checkpoint 起暫停修改 A/B 檔案，保留 Query/Verifier/workflow/adapter/CLI 與最終整合，不重複建立任務。
 
 已知待修：目前所有新文字聲明都會保守退為 Needs Investigation，包括中性「已提供檔案」；A 將校正。當前主線順序：Frankie 第一筆網頁真實結果 → ROM 補件重判 → Live AI → 收取 A/B/C commit 做範圍整合。
+
+## 獨立工作區與接收方式
+
+三個新對話已由側邊協調者建立，基準同為 `b89059fdd1f751b43559187fd488844c9eeb3336`（包含核心 `cb257c3`）。不再重複建立任務；各工作區不改主線 checkout、不合入 main、不改 Horace.md/Frankie.md。
+
+| 任務 | 對話 ID | 分支 | 工作區（相對 Fresh 根目錄） | 獨占檔案 |
+|---|---|---|---|---|
+| A 判定語意 | `01a0941e-c2fd-7012-a333-c69f25df96e2` | `codex/parallel-semantics` | `var/parallel/semantics` | assessment.py、必要時 supplements.py；自己的測試與 Parallel_Semantics.md |
+| B AI 可靠性 | `01a0941f-2066-7d30-9d24-2e72b2fde2d7` | `codex/parallel-ai-reliability` | `var/parallel/ai-reliability` | ai.py；自己的測試／驗收脚本與 Parallel_AI.md |
+| C 獨立驗收 | `01a0941f-78ba-78b2-8ce3-5c8624cdb2c7` | `codex/parallel-qa` | `var/parallel/qa` | scripts/qa_parallel、tests/qa_parallel、Parallel_QA 報告與同步 |
+
+新交件以對話通知、各自同步 MD 與 Git commit 收取，依 diff 範圍由 Horace 整合；C 只補驗新變更，不重跑既有大批測試。原環境的 API key 不複製到這些工作區。
+
+主線補充 `7535246`：`workflow.investigate_after_engineering(context, saved_result, ...)` 讓網頁先保存、顯示工程結果，再啟動 Live；AI 設定不足／逾時不改動原工程 dict。新增一項失敗保留測試，主線現為 32 項通過。這個改動不涉及 A/B 獨占檔案。
+
+整合注意：B 的 AI 入站會重核 assessment 的 verdict／conditions；A 修改 statement_reviews 語意時，需一併確認 B 不再把任何中性 review 都推成 Needs Investigation。AI 新增原文只能先算 exact excerpt，升級工程條件必須經 profile 確定性提取與 Verifier，不採模型自由結論。
 
 ## 目前有證據的進度
 
