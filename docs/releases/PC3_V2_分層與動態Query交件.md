@@ -48,3 +48,9 @@ ca55381 使用新 curl 初始包，正式 Runner → gpt-5.6-sol **5 次真實 A
 此 Live 是 ca55381 的具名結果；隨後獨立對話指出的命令／材料綁定、gzip 截斷與 Query 拒絕歸屬問題另已修正並新增回歸測試。修正要求 ROM 精確命令、curl／CMake 命令使用已核對材料 path、gzip 有界完整解壓／CRC／trailer／output_bytes 一致；資料組合未驗證完成前不標 VERIFIED。未將先前 Live 冒稱為每個後續 commit 重新呼叫 API。
 
 合併 main 的第一次完整測試為 212 passed／6 failed（23 subtests）：六個失敗皆為新 UI 支線預期舊 UNKNOWN 中文措辭，而 Frankie 的新結論畫面已改字。採用 main 的較清楚文案並同步該六個測試；沒有放寬判定或刪除未知／作用域測試。最終完整測試結果另追加。
+
+### 收斂與最新主線整合
+
+1ca3834 的完整 pytest **226 passed、23 subtests，144.71 秒**；46 項聚焦案例57.09秒通過，schema重產一致。独立唯讀覆核已確認原三項缺口封住，未見新增重大回歸；该覆核沒有冒稱另跑測試。
+
+15:46 合入最新 main 7cd00e6（含 PR21 的 PC 摘要卡、請求導航及 PR20 歷史修正），解決兩個 UI 檔衝突。保留主線更嚴格的 PC 條件分組核對與摘要卡，接上 v2 Query／運作狀態；不再顯示重複的舊 PC 區塊。既有驗收腳本 validate_demo_workflow.py 改用 runtime-v2，第一個請求如實待查、第二個請求 runtime 補件後再受影響，仍驗證多CVE隔離、報告、請求切換與父紀錄不變。最新整合 head 的完整測試以 PR22 後續 checks 為準。
