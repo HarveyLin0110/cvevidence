@@ -28,7 +28,7 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 3,
+          "maxItems": 100,
           "title": "Questions",
           "type": "array"
         }
@@ -193,10 +193,28 @@
           "type": "string"
         },
         "format": {
-          "const": "core-adapter-v0.2",
           "default": "core-adapter-v0.2",
+          "enum": [
+            "core-adapter-v0.2",
+            "rom",
+            "cmake",
+            "curl"
+          ],
           "title": "Format",
           "type": "string"
+        },
+        "context_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Hash"
         },
         "provenance_verified": {
           "const": false,
@@ -241,6 +259,58 @@
       "title": "RunError",
       "type": "object"
     },
+    "SourceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "symlink"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        }
+      },
+      "required": [
+        "source_id",
+        "path",
+        "sha256",
+        "size",
+        "kind"
+      ],
+      "title": "SourceRecord",
+      "type": "object"
+    },
     "Supplement": {
       "additionalProperties": false,
       "properties": {
@@ -251,7 +321,8 @@
         "kind": {
           "enum": [
             "REPLACEMENT_SNAPSHOT",
-            "NOTE"
+            "NOTE",
+            "DELTA"
           ],
           "title": "Kind",
           "type": "string"
@@ -306,7 +377,7 @@
       "type": "string"
     },
     "cve_id": {
-      "pattern": "^CVE-\\d{4}-\\d{4,}$",
+      "pattern": "^(CVE-\\d{4}-\\d{4,})?$",
       "title": "Cve Id",
       "type": "string"
     },
@@ -346,6 +417,30 @@
       },
       "title": "Evidence",
       "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceRecord"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "engineering_status": {
+      "const": "NOT_RUN",
+      "default": "NOT_RUN",
+      "title": "Engineering Status",
+      "type": "string"
+    },
+    "ai_status": {
+      "const": "NOT_RUN",
+      "default": "NOT_RUN",
+      "title": "Ai Status",
+      "type": "string"
+    },
+    "candidates": {
+      "additionalProperties": true,
+      "title": "Candidates",
+      "type": "object"
     },
     "missing": {
       "items": {

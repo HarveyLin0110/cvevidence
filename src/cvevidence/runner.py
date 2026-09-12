@@ -9,6 +9,18 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def start_file(self, path=None, **kwargs):
+        from .core_service import CoreService
+        return CoreService(self.store).start(path, **kwargs)
+
+    def source_tool(self, run_id, operation, **arguments):
+        from .core_service import CoreService
+        return CoreService(self.store).tool(run_id, operation, **arguments)
+
+    def supplement_file(self, parent_id, **kwargs):
+        from .core_service import CoreService
+        return CoreService(self.store).supplement(parent_id, **kwargs)
+
     def __init__(self, store: RunStore, adapter=None):
         self.store = store
         self.adapter = adapter or CoreAdapter()

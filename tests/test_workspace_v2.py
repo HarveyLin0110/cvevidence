@@ -35,7 +35,7 @@ def test_workspace_supplement_note(tmp_path,monkeypatch):
     app.session_state["selected_run"]=parent.run_id
     app.sidebar.radio[0].set_value("04 報告與後續行動").run()
     app.text_area[0].set_value("TEST ONLY: supplier statement").run()
-    app.button[-1].click().run()
+    next(button for button in app.button if button.label=="保存補件並建立新 run").click().run()
     assert not app.exception
     child=store.read(app.session_state["selected_run"])
     assert child.parent_run_id==parent.run_id

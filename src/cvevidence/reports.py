@@ -14,7 +14,12 @@ def report(run):
             "Declared build: "+p.declared_build_id, "Archive SHA256: "+p.archive_sha256]
     lines += ["Assessment: "+(run.assessment.verdict if run.assessment else "NOT_ASSESSED — 尚未完成漏洞判定")]
     if run.error: lines += ["Error: "+run.error.code+" — "+run.error.message]
-    lines += ["", "Evidence (hash consistency only):"]
+    lines += ["Engineering: "+run.engineering_status, "AI: "+run.ai_status]
+    if p and p.context_hash:
+        lines += ["Context hash: "+p.context_hash]
+    lines += ["", "Sources (hash consistency only; not engineering facts):"]
+    lines += [f"{s.source_id} | {s.path} | {s.sha256}" for s in run.sources]
+    lines += ["", "Evidence (legacy records / verified facts only when a verifier is connected):"]
     lines += [f"{e.evidence_id} | {e.path} | {e.sha256}" for e in run.evidence]
     lines += ["", "Missing:"] + (run.missing or ["No missing manifest entries; this does not establish complete CVE evidence."])
     if run.supplement:
@@ -28,8 +33,8 @@ def compare(parent, child):
     if child.error:
         return {"status":"REJECTED", "error":child.error.code,
                 "added":[], "removed":[], "changed":[], "resolved_missing":[]}
-    old={e.path:e.sha256 for e in parent.evidence}
-    new={e.path:e.sha256 for e in child.evidence}
+    old={e.path:e.sha256 for e in (parent.sources or parent.evidence)}
+    new={e.path:e.sha256 for e in (child.sources or child.evidence)}
     return {"status":"COMPARED",
         "added":sorted(new.keys()-old.keys()), "removed":sorted(old.keys()-new.keys()),
         "changed":sorted(p for p in old.keys() & new.keys() if old[p]!=new[p]),

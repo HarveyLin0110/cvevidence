@@ -10,6 +10,14 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description="CVEvidence persisted OFFLINE intake; no Q1-Q5 or verdict engine yet.")
     parser.add_argument("--store", default="var")
     sub=parser.add_subparsers(dest="command", required=True)
+    intake=sub.add_parser("import",help="Real Horace file-backed intake")
+    intake.add_argument("package",type=Path)
+    intake.add_argument("--cve",default="")
+    intake.add_argument("--symptom",default="")
+    delta=sub.add_parser("delta",help="Real same-build delta supplement")
+    delta.add_argument("parent_run_id")
+    delta.add_argument("--package",type=Path)
+    delta.add_argument("--note",default="")
     run=sub.add_parser("run")
     run.add_argument("package", type=Path)
     run.add_argument("--product", required=True)
@@ -28,7 +36,11 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         store=RunStore(args.store)
-        if args.command=="run":
+        if args.command=="import":
+            result=Runner(store).start_file(args.package,cve=args.cve,symptom=args.symptom)
+        elif args.command=="delta":
+            result=Runner(store).supplement_file(args.parent_run_id,path=args.package,note=args.note)
+        elif args.command=="run":
             with args.package.open("rb") as handle:
                 payload=handle.read(MAX_ZIP+1)
             result=Runner(store).start(payload,args.product,args.cve,args.mode,args.timeout)

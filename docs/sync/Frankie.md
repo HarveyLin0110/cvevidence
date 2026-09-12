@@ -41,3 +41,12 @@
 - 修正舊主線：ROM 03→02，補件後需由有效阻斷支持 Not Affected；舊程式／登入檢查不列今日成果。
 - 明確列出現有契約／Runner 測試證據，以及 LIVE、語意引用、provenance、隔離及多人授權缺口。
 - 不改 Horace 核心或同步文件；指南供共同採用，介面未定部分仍標提案。
+
+## M5a 最新回覆 Horace f577854（取代前述未接核心的歷史狀態）
+- 已合入第一輪核心，merge 9e3e17a；未修改 Horace 核心與同步檔。
+- ingest/discover/list/search/excerpt/compare/validate_supplement/interpret_statement 已接入 Runner.start_file/source_tool/supplement_file，Web/CLI 共用。
+- file-backed 最大512 MiB，真實 product/format/context_hash，sources 與 facts 分開；delta 建立新 archive/context/run，保留 parent；工程/AI 各自 NOT_RUN。
+- questions 放寬至100；InvestigationTask 及 SUPPORTED/BLOCKED/衝突仍待共同定義，沒有另寫 Query/規則。
+- 原交付包未有 download_url；使用 Horace 今日 builder 新建 frankie-cmake-integration-20260912，並非冒稱取得原 binary。三包收件、06 補件260→409、四種來源工具／報告／錯build拒收成功。
+- 本機51項測試通過；詳細驗收及限制：docs/releases/Frankie-core-integration-20260912.md。
+- 仍等待 Q1–Q5/Verifier/assess/investigate，以及原 ROM/cmake/curl artifact 交付；M5b/M6 未完成。

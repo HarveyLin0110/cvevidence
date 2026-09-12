@@ -13,7 +13,8 @@ class InputPackage(Model):
     declared_build_id: str = Field(min_length=1, max_length=100)
     package_id: str = Field(min_length=1, max_length=100)
     archive_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    format: Literal["core-adapter-v0.2"] = "core-adapter-v0.2"
+    format: Literal["core-adapter-v0.2", "rom", "cmake", "curl"] = "core-adapter-v0.2"
+    context_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     provenance_verified: Literal[False] = False
 
 class EvidenceRecord(Model):
@@ -28,11 +29,19 @@ class AIProposal(Model):
     mode: Literal["OFFLINE", "LIVE"]
     explanation: str = Field(max_length=4000)
     evidence_ids: list[str] = Field(default_factory=list, max_length=30)
-    questions: list[str] = Field(default_factory=list, max_length=3)
+    questions: list[str] = Field(default_factory=list, max_length=100)
+
+class SourceRecord(Model):
+    source_id: str
+    path: str
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    size: int = Field(ge=0)
+    kind: Literal["file", "symlink"]
+    target: str | None = None
 
 class Supplement(Model):
     parent_run_id: str
-    kind: Literal["REPLACEMENT_SNAPSHOT", "NOTE"]
+    kind: Literal["REPLACEMENT_SNAPSHOT", "NOTE", "DELTA"]
     note: str = Field(default="", max_length=4000)
     review_required: Literal[True] = True
 
@@ -57,11 +66,15 @@ class RunEnvelope(Model):
     run_id: str
     parent_run_id: str | None = None
     created_at: str
-    cve_id: str = Field(pattern=r"^CVE-\d{4}-\d{4,}$")
+    cve_id: str = Field(pattern=r"^(CVE-\d{4}-\d{4,})?$")
     mode: Literal["OFFLINE", "LIVE"] = "OFFLINE"
     status: Literal["COLLECTED", "COMPLETED", "FAILED", "TIMED_OUT"]
     input_package: InputPackage | None = None
     evidence: list[EvidenceRecord] = Field(default_factory=list)
+    sources: list[SourceRecord] = Field(default_factory=list)
+    engineering_status: Literal["NOT_RUN"] = "NOT_RUN"
+    ai_status: Literal["NOT_RUN"] = "NOT_RUN"
+    candidates: dict = Field(default_factory=dict)
     missing: list[str] = Field(default_factory=list)
     assessment: Assessment | None = None
     advice: AIProposal | None = None
@@ -77,6 +90,11 @@ class RunEnvelope(Model):
             if self.parent_run_id == self.run_id:
                 raise ValueError("run cannot parent itself")
         ids = [e.evidence_id for e in self.evidence]
+        source_ids = [s.source_id for s in self.sources]
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("duplicate source IDs")
+        if self.sources and (not self.input_package or not self.input_package.context_hash):
+            raise ValueError("sources require bound context hash")
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate evidence IDs")
         legal = set(ids)
@@ -86,6 +104,8 @@ class RunEnvelope(Model):
                 raise ValueError("AI mode differs from run")
             refs += self.advice.evidence_ids
         if self.assessment:
+            if not self.cve_id:
+                raise ValueError("assessment requires a selected CVE")
             refs += self.assessment.evidence_ids
             for condition in self.assessment.conditions:
                 refs += condition.evidence_ids
@@ -96,7 +116,7 @@ class RunEnvelope(Model):
         failed = self.status in ("FAILED", "TIMED_OUT")
         if failed != (self.error is not None):
             raise ValueError("execution failure must carry an error")
-        if failed and (self.assessment is not None or self.evidence):
+        if failed and (self.assessment is not None or self.evidence or self.sources or self.candidates):
             raise ValueError("failed run cannot expose partial evidence or verdict")
         if not failed and self.input_package is None:
             raise ValueError("successful intake requires package metadata")

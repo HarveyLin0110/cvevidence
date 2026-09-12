@@ -53,3 +53,10 @@ docs/product/frankie-plan.md 保留此前規劃供參考；實際現況以本檔
 - 整理先前安全邊界、SDLC、競賽目標與最新官方資料，新增三份 docs/ai 文件。
 - 共 10 項開發規則、12 項 runtime 邊界、16 項驗收情境；已實作／待驗證分開。
 - 僅改文件與導覽，不變更 runtime 判定。既有 CI 在 a5f9e65 已通過。
+
+## M5a 真實收件與補件接線（最新；取代上方 M5 等待核心狀態）
+- 2026-09-12：合入 Horace f577854，merge 9e3e17a；合併基線42項測試通過。
+- 完成 file-backed archive、context/source、候選、原文工具、delta、UI/CLI 共用 Runner。
+- 新建真實 CMake 兩個版本，三包收件3/3，06補件260→409，新增149，父run不變，錯build拒收。
+- 51項測試通過，另有真實資料驗收腳本與摘要。詳見 ../releases/Frankie-core-integration-20260912.md。
+- M5b ROM完整判定閉環與M6三格式/LIVE/九格尚未完成，不把本次收件成果宣稱完整分析。

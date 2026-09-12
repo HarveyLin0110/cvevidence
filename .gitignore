@@ -9,3 +9,4 @@ __pycache__/
 **/.streamlit/secrets.toml
 **/client_secret*.json
 node_modules/
+/apps/web/dist/
