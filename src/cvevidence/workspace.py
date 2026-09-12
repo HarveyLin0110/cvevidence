@@ -6,7 +6,7 @@ from .storage import RunStore
 from .reports import report, compare, excerpt
 from .core_service import catalog_entries
 from .requests import parse_cves
-from .request_ui import request_sidebar, request_summary, reset_request
+from .request_ui import request_sidebar, request_summary, reset_request, symptom_for_run
 from uuid import uuid4
 from .workflow_navigation import PAGES, sidebar_steps
 from .analysis_view import render_engineering, render_ai, VERDICTS
@@ -204,7 +204,7 @@ def workspace(st, *, store_root=None):
                 selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
                 cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
             else: st.text("本次分析："+cve)
-            symptom=st.text_area("本次調查情境",value=request.spec.symptom if request else "",max_chars=4000,key="analysis-symptom-"+run.run_id)
+            symptom=st.text_area("本次調查情境",value=symptom_for_run(request,run.run_id),max_chars=4000,key="analysis-symptom-"+run.run_id)
             can_analyze=run.status=="COLLECTED" and bool(run.input_package and run.input_package.context_hash and cve)
             st.caption("執行 Q1–Q5、重新核對證據並保存工程初判；OFFLINE 不呼叫模型。")
             if st.button("執行 Q1–Q5 與正式判定",type="primary",disabled=not can_analyze):
