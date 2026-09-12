@@ -104,7 +104,7 @@ def test_runtime_summary_is_saved_status_not_an_extra_verdict(status):
         assert "（" + status + "）" in output
         assert "受控環境本機觀測" in output and "不代表實體客戶 FW 認證" in output
         assert "需要進一步調查" in output
-    assert "TEST_ONLY 運作觀測（此項條件仍需確認）" in displayed(app)
+    assert "尚未確認：TEST_ONLY 運作觀測" in displayed(app)
     assert payload == before
 
 
