@@ -24,7 +24,7 @@
 
 | 功能 ID | 功能 | 狀態 | 規格 |
 | --- | --- | --- | --- |
-| AIP | OpenAI API／Codex CLI 執行來源選擇與接線 | 草案 | [AI 執行來源規格](docs/specs/ai-providers.md) |
+| AIP | OpenAI API／Codex CLI 執行來源選擇與接線 | 開發中 | [AI 執行來源規格](docs/specs/ai-providers.md) |
 
 此索引先納入本次新增需求，並非完整的既有功能清單。狀態表示該項規格的交付進度，不表示整個專案狀態。
 
@@ -35,7 +35,7 @@
 - [README](README.md)：專案介紹、安裝與執行。
 - [AGENTS.md](AGENTS.md)：開發者及 coding agent 必須遵循的專案指引。
 - [Horace 同步](docs/sync/Horace.md)／[Frankie 同步](docs/sync/Frankie.md)：共享介面與責任背景；歷史完成狀態須對照其版本。
-- [現有契約](contracts/schemas/)：目前程式輸出的 schema；功能 spec 中的提案不代表契約已改動。
+- [現有契約](contracts/schemas/)：包含 AIRequest v1.0／v2.0；讀取版本分派、實作介面與待補項目見功能 spec。
 - [AI 驗收清單](docs/ai/acceptance.md)：共用案例與證據要求。
 - [驗收與發布紀錄](docs/releases/)：具名版本的實測結果與限制。
 
