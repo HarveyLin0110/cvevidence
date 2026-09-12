@@ -23,7 +23,7 @@ def select(label, value):
     next(s for s in app.selectbox if s.label == label).set_value(value).run(timeout=30)
     assert not app.exception
 catalog = next(s for s in app.selectbox if s.label == '選擇已取得的產品／建置／資料包')
-idx = next(i for i, label in enumerate(catalog.options) if 'pc3_cmake_static' in label)
+idx = next(i for i, label in enumerate(catalog.options) if 'demo_cmake_complete_v2' in label)
 catalog.set_value(idx).run()
 next(t for t in app.text_input if t.label.startswith('CVE ID')).set_value('CVE-2022-37434, CVE-2099-9999').run()
 next(t for t in app.text_area if t.label == '情境與想確認的問題').set_value(SCENARIOS['A']).run()
@@ -34,11 +34,6 @@ request = runner.read_request(request_id)
 first, second = request.runs
 button('開啟所選 CVE')
 button('03 分析進度與結果')
-button('執行 Queries 與正式判定')
-first_engineering_id = app.session_state.selected_run
-assert runner.read_engineering(first_engineering_id)['analyses'][0]['assessment']['verdict'] == 'NEEDS_INVESTIGATION'
-button('04 AI 查核與補件')
-button('套用已取得的補件並建立新 run')
 button('執行 Queries 與正式判定')
 first_engineering_id = app.session_state.selected_run
 assert runner.read_engineering(first_engineering_id)['analyses'][0]['assessment']['verdict'] == 'AFFECTED'
@@ -61,7 +56,7 @@ select('此請求的 CVE 紀錄', first.run_id)
 button('開啟所選 CVE')
 assert app.session_state.selected_run == first_engineering_id  # regression: used to reopen intake
 assert any('PC3' in t.value for t in app.text)
-assert len(runner.store.list_runs()) == initial_count + 6  # switching did not run analysis again
+assert len(runner.store.list_runs()) == initial_count + 4  # switching did not run analysis again
 button('01 產品與資料來源')
 button('建立另一個請求')
 catalog = next(s for s in app.selectbox if s.label == '選擇已取得的產品／建置／資料包')

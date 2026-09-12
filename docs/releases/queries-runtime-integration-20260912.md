@@ -30,7 +30,7 @@
 
 ## 主 Demo 更新
 
-A：新版完整材料查核。同成品 static＋runtime 材料實際取證後 Affected，展示 PC1／2／3 支持條件。
+A：新版完整材料查核。另整合 Horace PR23 固定交付 0d4f8eef6bc5eefe8c633b2d30dd69efde841d8c 的 two-flows 初始包；完整包已包含同成品 static＋runtime 材料，首次查核即可依實際證據產生 Affected，展示 PC1／2／3 支持條件，無須先操作補件。
 
 B：新版缺少運作材料。先 Needs Investigation，PC2 與 PC3 明確區分；依追加 Queries 補 runtime delta，再重新查核、比较前後。公開 B 保留在待補件階段供現場操作。舊 A/B 保留，不能把舊版八條件的 Affected 當成新版已驗收。
 
