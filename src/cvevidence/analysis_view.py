@@ -4,7 +4,7 @@ The caller must read a validated, user-scoped saved result. Scope checks here ar
 defence against displaying the wrong selection, not proof of evidence integrity.
 """
 import json
-from .result_summary import conclusion, query_summaries, conclusion_dimensions, condition_interpretation
+from .result_summary import conclusion, query_summaries, conclusion_dimensions, condition_interpretation, condition_groups, pc_summaries
 
 QUERIES = {
     "Q1_COMPONENT": "元件與版本",
@@ -145,24 +145,6 @@ def render_followup_queries(st, entry, *, context_hash):
             st.caption("Context：" + query["context_hash"])
 
 
-def condition_groups(entry):
-    """Use the core's presentation mapping; never derive a new PC verdict."""
-    mapping = entry.get("condition_groups")
-    if not isinstance(mapping, dict) or mapping.get("cve_id") != entry.get("cve_id") or mapping.get("grouping_only") is not True:
-        return []
-    conditions = rows((entry.get("assessment") or {}).get("conditions"))
-    by_id = {c.get("condition_id"): c for c in conditions}
-    if len(by_id) != len(conditions): return []
-    groups = [{"group_id": "共用前提", "title": "建置、綁定與範圍", "condition_ids": mapping.get("shared_prerequisite_ids", [])}, *rows(mapping.get("groups"))]
-    result = []
-    for group in groups:
-        ids = group.get("condition_ids")
-        if not isinstance(ids, list) or not ids or any(not isinstance(cid, str) or cid not in by_id for cid in ids):
-            return []
-        result.append({**group, "conditions": [by_id[cid] for cid in ids]})
-    return result
-
-
 def render_excerpts(st, evidence):
     excerpts = rows(evidence.get("excerpts"))
     if not excerpts:
@@ -212,7 +194,11 @@ def render_engineering(st, entry, *, package=None):
                 st.caption("輸入材料")
                 st.text(str(len(rows(package.get("sources")))) + " 個已收件來源；來源數不等於有效證據數。")
     verdict = assessment.get("verdict")
-    with st.container(border=True):
+    tone = "affected" if verdict == "AFFECTED" else "pending" if verdict == "NEEDS_INVESTIGATION" else "neutral"
+    # Keys select static CSS only. Evidence continues to use literal st.text.
+    import hashlib
+    scope_key = hashlib.sha256(str(assessment.get("assessment_id", entry.get("cve_id"))).encode()).hexdigest()[:16]
+    with st.container(border=True, key="result_" + tone + "_" + scope_key):
         st.text(VERDICTS.get(verdict, "未提供有效工程判定"))
         summary = conclusion(entry)
         st.text(summary["text"])
@@ -226,6 +212,24 @@ def render_engineering(st, entry, *, package=None):
     metrics[2].metric("尚待確認的條件", sum(c.get("state") == "UNKNOWN" for c in conditions))
     overview, queries_tab, evidence_tab, gaps_tab = st.tabs(["結果摘要", "起始查核與追加問題", "證據與引用", "待補資料與覆核"])
     with overview:
+        st.subheader("PC1／PC2／PC3 綜合結果")
+        groups = pc_summaries(entry)
+        if groups:
+            st.caption("紅字標示本次受影響判定的支持條件；共用前提本身不代表風險。各 PC 不另產生獨立安全判定。")
+            for index, group in enumerate(g for g in groups if not g["shared"]):
+                with st.container(border=True, key="pc_" + group["tone"] + "_" + scope_key + "_" + str(index)):
+                    st.text(text(group.get("group_id")) + " · " + text(group.get("title")) + " ｜ " + group["label"])
+                    st.text(group["summary"])
+                    if group.get("meaning"): st.caption(text(group["meaning"]))
+                    if any(c.get("condition_id") in ("entry_reachable", "trigger_prerequisites") for c in group["conditions"]):
+                        st.caption("本段是交付程式路徑與必要條件的工程證據；不代表漏洞已觸發、實際部署可達或已遭利用。")
+            shared = next(g for g in groups if g["shared"])
+            count = "＋".join(str(len(g["conditions"])) for g in groups)
+            st.caption("條件數：共用前提＋各 PC = " + count + " = " + str(len(conditions)) + " 項。五個 Query 是蒐集證據的查核工作，與條件數不同。")
+            with st.expander("共用前提 · " + shared["label"], expanded=shared["tone"] == "pending"):
+                st.text(shared["summary"])
+        else:
+            st.info("此保存紀錄未提供完整且不重複的 PC 分組；保留原始條件，重新分析後可取得新版分組。")
         st.subheader("這份結果能回答什麼")
         for dimension in conclusion_dimensions(entry):
             with st.container(border=True):
@@ -246,23 +250,8 @@ def render_engineering(st, entry, *, package=None):
                     st.text("待釐清：" + text(item))
                 if any(len(query_summary[field]) > 2 for field in ("findings", "missing", "conflicts")):
                     st.caption("此處呈現重點；完整發現與缺件請見「起始查核與追加問題」。")
-        st.subheader("深入查核：PC 條件")
-        groups = condition_groups(entry)
-        if groups:
-            st.subheader("PC 工程條件")
-            st.caption("依核心定義分組；每個條件各自保留狀態，不另推算 PC 通過或安全分數。")
-            if entry["condition_groups"].get("schema_version") == "2.0":
-                st.caption("PC2：成品實作與靜態輸入路徑。PC3：實際部署與運作證據；靜態路徑不等於已觀測到實際運作。")
-            for group in groups:
-                with st.expander(text(group.get("group_id")) + " · " + text(group.get("title")), expanded=False):
-                    if group.get("meaning"): st.text(text(group["meaning"]))
-                    for condition in group["conditions"]:
-                        state, boundary = condition_interpretation(condition)
-                        st.text(text(condition.get("title")) + "：" + state)
-                        st.text(text(condition.get("explanation")))
-                        st.caption(boundary)
-        else:
-            st.caption("此保存紀錄未提供可核對的 PC 分組；以下保留原始條件，重新分析後可取得新版分組。")
+        if (entry.get("condition_groups") or {}).get("schema_version") == "2.0":
+            st.caption("PC2：成品實作與靜態輸入路徑。PC3：實際部署與運作證據；靜態路徑不等於已觀測到實際運作。")
         for line in runtime_summary(entry):
             st.text(line)
         st.subheader("下一步可以做什麼")
@@ -273,10 +262,10 @@ def render_engineering(st, entry, *, package=None):
         lines(st, assessment.get("next_steps"))
         st.subheader("適用範圍")
         st.text(text(assessment.get("scope")))
-        states = {"SUPPORTED": "有證據支持", "BLOCKED": "有證據阻斷", "UNKNOWN": "尚待確認"}
         if conditions:
             with st.expander("所有條件與詳細說明"):
-                st.dataframe([{"條件": text(c.get("title")),
+                association = {c["condition_id"]: g["group_id"] for g in groups for c in g["conditions"]}
+                st.dataframe([{"分組": association.get(c.get("condition_id"), "未提供分組"), "條件": text(c.get("title")),
                                "狀態": condition_interpretation(c)[0],
                                "說明": text(c.get("explanation")),
                                "尚不能據此認定": condition_interpretation(c)[1]} for c in conditions],

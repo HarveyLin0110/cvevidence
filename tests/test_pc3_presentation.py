@@ -71,15 +71,16 @@ def test_static_pc2_cannot_fill_unknown_pc3_and_new_titles_follow_saved_queries(
     assert not app.exception
     labels = [e.label for e in app.expander]
     entry = payload["analyses"][0]
-    assert "PC2 · 成品實作與靜態路徑" in labels and "PC3 · 部署與實際運作" in labels
+    assert "PC2 · 成品實作與靜態路徑" in displayed(app) and "PC3 · 部署與實際運作" in displayed(app)
     for query in entry["queries"]:
         assert any(query["query_id"] + " · " + query["title"] in label for label in labels)
         assert query["query_id"] + " · " + query["title"] in report(payload)
-    pc2 = next(e for e in app.expander if e.label.startswith("PC2 ·"))
-    pc3 = next(e for e in app.expander if e.label.startswith("PC3 ·"))
-    assert "entry_reachable" in " ".join(t.value for t in pc2.text)
-    assert "entry_reachable" not in " ".join(t.value for t in pc3.text)
-    assert "TEST_ONLY 運作觀測：此項條件仍需確認" in displayed(app)
+    from cvevidence.result_summary import pc_summaries
+    pc2 = next(g for g in pc_summaries(entry) if g['group_id']=='PC2')
+    pc3 = next(g for g in pc_summaries(entry) if g['group_id']=='PC3')
+    assert 'entry_reachable' in pc2['summary'] and 'entry_reachable' not in pc3['summary']
+    assert pc2['summary'] in displayed(app) and pc3['summary'] in displayed(app)
+    assert "TEST_ONLY 運作觀測（此項條件仍需確認）" in displayed(app)
     assert "缺少實際運作證據（MISSING）" in displayed(app)
     assert "需要進一步調查" in displayed(app)
     assert "RULE_GAP" in displayed(app) and "runtime/observation.json" in displayed(app)
@@ -100,7 +101,7 @@ def test_runtime_summary_is_saved_status_not_an_extra_verdict(status):
         assert "（" + status + "）" in output
         assert "受控環境本機觀測" in output and "不代表實體客戶 FW 認證" in output
         assert "需要進一步調查" in output
-    assert "TEST_ONLY 運作觀測：此項條件仍需確認" in displayed(app)
+    assert "TEST_ONLY 運作觀測（此項條件仍需確認）" in displayed(app)
     assert payload == before
 
 
@@ -120,7 +121,7 @@ def test_legacy_groups_and_query_labels_are_not_reinterpreted():
     app = app_for(payload)
     assert not app.exception
     labels = [e.label for e in app.expander]
-    assert "PC3 · 產品輸入路徑" in labels
+    assert "PC3 · 產品輸入路徑" in displayed(app)
     for qid, title in QUERIES.items():
         assert any(qid + " · " + title in label for label in labels)
         assert qid + " · " + title in report(payload)

@@ -7,7 +7,7 @@ from .analysis_view import (
     QUERIES, VERDICTS, FOLLOWUP_STATES, rows, select_analysis, text, condition_groups,
     query_title, scoped_followup_queries, runtime_summary, model_task_status,
 )
-from .result_summary import conclusion_dimensions
+from .result_summary import conclusion_dimensions, pc_summaries
 
 
 def previous_engineering_run(store, run):
@@ -36,6 +36,9 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
     output += ["", "結論面向與證據邊界"]
     for dimension in conclusion_dimensions(entry):
         output += [dimension["面向"] + ": " + dimension["本次結論"], dimension["解讀邊界"]]
+    output += ["", "PC 綜合說明（共用前提與各 PC 合計為全部條件；不是獨立 PC 判定）"]
+    for group in pc_summaries(entry):
+        output += [group["group_id"] + " · " + group["title"] + " · " + group["label"], group["summary"]]
     for qid in QUERIES:
         matches = [q for q in rows(entry.get("queries")) if q.get("query_id") == qid]
         query = matches[0] if len(matches) == 1 else {}

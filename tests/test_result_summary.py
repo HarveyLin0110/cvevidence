@@ -1,6 +1,39 @@
 from copy import deepcopy
 from cvevidence.result_summary import conclusion, query_summaries
 
+def grouped_entry(verdict):
+    return {"cve_id": "CVE-2099-0001", "assessment": {"verdict": verdict, "conditions": [
+        {"condition_id": cid, "state": "SUPPORTED", "title": cid, "explanation": "TEST_ONLY " + cid}
+        for cid in ("build", "component", "implementation", "path", "trigger")
+    ]}, "condition_groups": {"cve_id": "CVE-2099-0001", "grouping_only": True,
+        "shared_prerequisite_ids": ["build"], "groups": [
+            {"group_id": "PC1", "title": "component", "condition_ids": ["component"]},
+            {"group_id": "PC2", "title": "implementation", "condition_ids": ["implementation"]},
+            {"group_id": "PC3", "title": "path", "condition_ids": ["path", "trigger"]}]}}
+
+def test_pc_summary_combines_conditions_without_promoting_neutral_evidence():
+    from cvevidence.result_summary import pc_summaries
+    for verdict in ("AFFECTED", "NOT_AFFECTED", "NEEDS_INVESTIGATION", None):
+        entry = grouped_entry(verdict)
+        before = deepcopy(entry)
+        groups = pc_summaries(entry)
+        assert groups[0]["tone"] == "neutral"
+        assert all((g["tone"] == "affected") == (verdict == "AFFECTED") for g in groups[1:])
+        assert "TEST_ONLY path" in groups[3]["summary"] and "TEST_ONLY trigger" in groups[3]["summary"]
+        assert entry == before
+    entry = grouped_entry("AFFECTED")
+    entry["assessment"]["conditions"][-1]["state"] = "UNKNOWN"
+    assert pc_summaries(entry)[3]["tone"] == "pending"
+
+def test_pc_mapping_rejects_overlap_and_omitted_conditions():
+    from cvevidence.result_summary import pc_summaries
+    entry = grouped_entry("AFFECTED")
+    entry["condition_groups"]["groups"][0]["condition_ids"].append("build")
+    assert pc_summaries(entry) == []
+    entry = grouped_entry("AFFECTED")
+    entry["condition_groups"]["groups"][-1]["condition_ids"].remove("trigger")
+    assert pc_summaries(entry) == []
+
 def test_summary_never_infers_verdict_from_conditions():
     entry={"assessment":{"verdict":"NEEDS_INVESTIGATION","reason":"TEST_ONLY uncertain",
         "conditions":[{"title":"TEST_ONLY blocked","state":"BLOCKED"}]}}
