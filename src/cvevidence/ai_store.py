@@ -63,6 +63,8 @@ def parse_ai_request(raw):
 def _validate_v2_receipts(ai, request):
     if ai.get("schema_version") != "2.0" or ai.get("provider") != request.provider or ai.get("auth_type") != request.auth_type:
         raise ValueError("AI provider or version mismatch")
+    if ai.get("reasoning_effort") != request.reasoning_effort:
+        raise ValueError("AI reasoning configuration mismatch")
     calls = ai.get("calls")
     if not isinstance(calls, list):
         raise ValueError("AI calls must be a list")
@@ -119,8 +121,9 @@ def validate_ai_payload(payload, request):
         ("engineering_assessment_id", request.assessment_id), ("mode", "LIVE"), ("model", request.model))):
         raise ValueError("AI result scope mismatch")
     if isinstance(request, AIRequestV2):
-        if payload.get("schema_version") != "2.0":
-            raise ValueError("AI wrapper version mismatch")
+        if (payload.get("schema_version") != "2.0" or payload.get("provider") != request.provider
+                or payload.get("auth_type") != request.auth_type):
+            raise ValueError("AI wrapper version or provider mismatch")
         _validate_v2_receipts(ai, request)
     status = ai.get("status")
     # Pydantic validates the finite status set, without treating unknown values as success.

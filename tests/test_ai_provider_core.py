@@ -193,6 +193,7 @@ def test_structured_provider_error_is_safe_and_no_retry(case):
     provider = SimulatedProvider([ProviderError('FAILED', 'PROVIDER_RATE_OR_QUOTA_LIMIT')])
     result = run(case, provider)
     assert result['status'] == 'FAILED' and len(provider.seen) == 1
+    assert result['calls'][0]['model'] is None
     assert result['errors'][0]['code'] == 'PROVIDER_RATE_OR_QUOTA_LIMIT'
     error = ProviderError('SUCCESS', 'TEST_ONLY secret / header')
     assert error.status == 'FAILED' and str(error) == 'PROVIDER_ERROR'

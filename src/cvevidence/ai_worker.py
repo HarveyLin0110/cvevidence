@@ -9,6 +9,7 @@ from time import monotonic
 from .core_worker import checked_archive
 from cvevidence_core.integrity import safe_extract, ingest_package, file_hash
 from cvevidence_core.workflow import investigate_after_engineering
+from cvevidence_core.providers import ProviderError
 
 
 def execute(request):
@@ -77,6 +78,9 @@ def main():
         if len(raw) > 32000: raise ValueError("AI request too large")
         result = execute(json.loads(raw))
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+        return 0
+    except ProviderError as exc:
+        print(json.dumps({"worker_error": {"status": exc.status, "code": exc.code}}))
         return 0
     except (ValueError, OSError, KeyError, TypeError):
         # Never print exception strings, uploaded content or credentials.

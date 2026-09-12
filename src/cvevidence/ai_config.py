@@ -25,7 +25,7 @@ def operator_settings():
         if len(data) > 65536:
             raise ValueError("Operator configuration too large")
         for raw in data.splitlines():
-            line = raw.strip()
+            line = raw.strip().removeprefix("export ").strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)

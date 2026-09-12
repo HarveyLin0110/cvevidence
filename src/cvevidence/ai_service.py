@@ -28,18 +28,9 @@ def now():
 
 
 def operator_config():
-    from cvevidence_core.ai import settings
-    # Only operator process configuration may name this file; there is no UI/API path parameter.
-    try: config = settings(env_file=os.environ.get("CVEVIDENCE_AI_ENV_FILE"))
-    except (ValueError, OSError): config = {}
-    model = config.get("OPENAI_MODEL", "")
-    valid_model = bool(re.fullmatch(r"[A-Za-z0-9._:-]{1,100}", model))
-    effort = config.get("OPENAI_REASONING_EFFORT", "medium")
-    valid_effort = effort in ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
-    config["OPENAI_REASONING_EFFORT"] = effort
-    ready = os.name == "posix" and os.environ.get("CVEVIDENCE_AI_ENABLED") == "1" and valid_model and valid_effort and bool(config.get("OPENAI_API_KEY"))
-    return config, {"configured": bool(ready), "model": model if valid_model else None,
-                    "reasoning_effort": effort if valid_effort else None, "provider": "OpenAI", "mode": "LIVE"}
+    # Legacy API calls retain their v1 record format, but obey current operator policy.
+    config, public = provider_configuration("openai_api")
+    return config, {**public, "provider": "OpenAI"}
 
 
 class AIService:

@@ -248,7 +248,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             stage='REQUEST'
             budget={'max_calls':max_calls,'remaining_calls_including_current':max_calls-number,
                     'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER'}
-            attempt={'call_number':number+1,'model':result['model'],'status':'STARTED','usage':None,'runtime_budget':budget}
+            attempt={'call_number':number+1,'model':result['model'] if provider is None else None,'status':'STARTED','usage':None,'runtime_budget':budget}
             if provider is None:attempt['response_id']=None
             else:attempt['provider']=provider.provider_id
             result['calls'].append(attempt)

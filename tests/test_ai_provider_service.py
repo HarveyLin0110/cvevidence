@@ -47,9 +47,10 @@ def synthetic(req):
     ai = {"schema_version": "2.0", "provider": req.provider, "auth_type": req.auth_type,
           "mode": "LIVE", "status": "NEEDS_USER_INPUT", "context_hash": req.context_hash,
           "cve_id": req.cve_id, "engineering_assessment_id": req.assessment_id,
-          "model": req.model, "calls": [call], "tasks": [], "excerpts": []}
+          "model": req.model, "reasoning_effort": req.reasoning_effort, "calls": [call], "tasks": [], "excerpts": []}
     ai["record_hash"] = hashlib.sha256(json.dumps(ai, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
-    return {"schema_version": "2.0", "context_hash": req.context_hash, "mode": "LIVE", "status": "COMPLETED",
+    return {"schema_version": "2.0", "provider": req.provider, "auth_type": req.auth_type,
+            "context_hash": req.context_hash, "mode": "LIVE", "status": "COMPLETED",
             "analyses": [{"cve_id": req.cve_id, "engineering_assessment_id": req.assessment_id, "ai": ai}]}
 
 
@@ -84,6 +85,9 @@ def test_native_receipts_and_mode_are_checked(provider):
     payload = synthetic(req)
     assert validate_ai_payload(payload, req) == "NEEDS_USER_INPUT"
     payload["analyses"][0]["ai"]["mode"] = "SIMULATED"
+    with pytest.raises(ValueError): validate_ai_payload(payload, req)
+    payload = synthetic(req)
+    payload["provider"] = "wrong"
     with pytest.raises(ValueError): validate_ai_payload(payload, req)
     payload = synthetic(req)
     payload["analyses"][0]["ai"]["calls"][0]["provider"] = "wrong"
@@ -148,3 +152,42 @@ def test_codex_worker_never_receives_api_key(settings, monkeypatch, tmp_path):
     obj.store = store
     obj.invoke(req, "question", {"model": "TEST_ONLY_MODEL", "OPENAI_API_KEY": "TEST_ONLY_SECRET"}, 5)
     assert captured
+
+
+def test_legacy_api_caller_cannot_bypass_provider_allowlist(settings, monkeypatch):
+    from cvevidence.ai_service import operator_config
+    monkeypatch.setenv("CVEVIDENCE_AI_PROVIDERS", "codex_cli")
+    assert provider_configuration("openai_api")[1]["reason_code"] == "PROVIDER_DISABLED"
+    assert operator_config()[1]["configured"] is False
+
+
+def test_operator_env_file_preserves_export_syntax(settings, monkeypatch, tmp_path):
+    config = tmp_path / "operator.env"
+    config.write_text('export OPENAI_API_KEY="TEST_ONLY_FILE_SECRET"\nexport OPENAI_MODEL=TEST_ONLY_FILE_MODEL\n')
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.delenv("OPENAI_MODEL")
+    monkeypatch.setenv("CVEVIDENCE_AI_ENV_FILE", str(config))
+    private, public = provider_configuration("openai_api")
+    assert public["configured"] and public["model"] == "TEST_ONLY_FILE_MODEL"
+    assert private["OPENAI_API_KEY"] == "TEST_ONLY_FILE_SECRET"
+    assert "TEST_ONLY_FILE_SECRET" not in json.dumps(public)
+
+
+def test_v2_rejects_changed_reasoning_setting():
+    req = request()
+    payload = synthetic(req)
+    payload["analyses"][0]["ai"]["reasoning_effort"] = "high"
+    with pytest.raises(ValueError): validate_ai_payload(payload, req)
+def test_worker_constructor_provider_error_remains_structured(monkeypatch, capsys):
+    import io
+    from cvevidence import ai_worker
+    from cvevidence_core.providers import ProviderError
+
+    def fail(request):
+        raise ProviderError("CONFIG_REQUIRED", "CHATGPT_LOGIN_REQUIRED")
+
+    monkeypatch.setattr(ai_worker, "execute", fail)
+    monkeypatch.setattr(ai_worker.sys, "stdin", io.StringIO("{}"))
+    assert ai_worker.main() == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "worker_error": {"status": "CONFIG_REQUIRED", "code": "CHATGPT_LOGIN_REQUIRED"}}
