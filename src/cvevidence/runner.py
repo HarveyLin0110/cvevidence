@@ -24,14 +24,16 @@ class Runner:
 
     def discover_public(self, run_id, *, consent=False):
         from .core_service import CoreService
-        import json
+        from .discovery_store import save
         run=self.store.read(run_id)
         if not run.input_package:raise ValueError("Input required")
         result=CoreService(self.store).invoke("discover_public",run.input_package.archive_sha256,
             run.input_package.context_hash,consent=consent,symptom=run.candidates.get("symptom",""),timeout=30)
-        receipt={"parent_run_id":run_id,"discovery":result}
-        sha=self.store.put_blob(json.dumps(receipt,ensure_ascii=False,sort_keys=True).encode())
-        return {**receipt,"record_sha256":sha}
+        return save(self.store, run_id, result)
+
+    def public_discovery(self, run_id):
+        from .discovery_store import latest
+        return latest(self.store, run_id)
 
     def investigate_ai(self, parent_run_id, **kwargs):
         from .ai_service import AIService
@@ -44,6 +46,14 @@ class Runner:
     def ai_history(self, parent_run_id):
         from .ai_store import AIStore
         return AIStore(self.store).history(parent_run_id)
+
+    def review_conditions(self, run_id, ai_id, decision, **kwargs):
+        from .reviews import ReviewStore
+        return ReviewStore(self.store).save(run_id, ai_id, decision, **kwargs)
+
+    def condition_reviews(self, run_id, ai_id):
+        from .reviews import ReviewStore
+        return ReviewStore(self.store).history(run_id, ai_id)
 
     def ai_configuration(self):
         from .ai_config import public_configuration

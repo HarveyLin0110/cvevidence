@@ -12,7 +12,7 @@ from .workflow_navigation import PAGES, sidebar_steps
 from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
-from .ai_workspace import ai_workspace, selected_ai, with_ai_result
+from .ai_workspace import ai_workspace, selected_ai, with_ai_result, report_ai_selector
 from .ai_presenter import attempt_metadata
 from .query_preparation import render_preparation
 
@@ -109,6 +109,10 @@ def workspace(st, *, store_root=None):
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
+        left, right = st.columns(2)
+        left.info("不知道是哪個 CVE：描述發生了什麼，先交手邊材料；CVE 留白，再從候選選擇要深入查核的項目。")
+        right.info("已知想查的 CVE：輸入 CVE 編號與產品材料，逐項核對元件、實作及部署證據。")
+        st.caption("目前没有檔案可選「先描述情境」保存草稿；有零散檔案可選「部分材料」，不必先製作工程包。")
         source_options=["產品／版本樣品","上傳工程包","部分材料（SBOM／日誌／原碼／設定）"]
         if store_root is None: source_options.append("受控路徑")
         source_options.append("先描述情境")
@@ -132,9 +136,10 @@ def workspace(st, *, store_root=None):
         elif kind.startswith("部分材料"):
             st.info("可先提交手上已有的檔案；不需要自製 manifest。產品與 build 只記為聲明，不冒充已驗成品。")
             partial_files=st.file_uploader("部分材料（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
-            partial_product=st.text_input("產品名稱",value="未提供")
-            partial_release=st.text_input("產品版本",value="未提供")
-            partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認")
+            st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
+            partial_product=st.text_input("產品名稱",value="未提供",max_chars=200)
+            partial_release=st.text_input("產品版本",value="未提供",max_chars=200)
+            partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認",max_chars=200)
         elif kind=="受控路徑":
             st.caption("根目錄："+os.environ.get("CVEVIDENCE_ARTIFACT_ROOT","var/artifacts"))
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
@@ -201,6 +206,12 @@ def workspace(st, *, store_root=None):
         if page!=PAGES[4]:
             next_button(st,PAGES[4],"查看失敗紀錄")
             return
+    discovery_key = "public-discovery-" + run.run_id
+    if discovery_key not in st.session_state:
+        try:
+            st.session_state[discovery_key] = runner.public_discovery(run.run_id)
+        except (ValueError, OSError, KeyError, TypeError):
+            st.error("公開候選歷史無法核對，未顯示未驗證結果；原紀錄保留，可重新查詢。")
     if page==PAGES[1]:
         st.subheader("資料確認與缺件")
         if run.input_package:
@@ -217,18 +228,27 @@ def workspace(st, *, store_root=None):
             st.caption("支援 CycloneDX／SPDX 的套件 purl。只外送套件名稱、生態系統與版本至 OSV；症狀與原碼留在本機，症狀僅用於排序，不能證明原因。")
             public_consent=st.checkbox("同意將已提交的套件名稱及版本查詢 OSV",key="osv-consent-"+run.run_id)
             if st.button("查詢公開候選",disabled=not public_consent):
-                st.session_state["public-discovery-"+run.run_id]=runner.discover_public(run.run_id,consent=True)
+                try:
+                    st.session_state[discovery_key]=runner.discover_public(run.run_id,consent=True)
+                except (ValueError, OSError, RuntimeError, KeyError, TypeError):
+                    st.error("本次公開查詢未完成；先前保存結果仍保留，未把失敗當成沒有漏洞。")
             public_result=st.session_state.get("public-discovery-"+run.run_id)
             if public_result:
                 import json
                 st.download_button('下載公開候選查詢紀錄',json.dumps(public_result,ensure_ascii=False,indent=2),file_name=run.run_id+'-public-candidates.json',mime='application/json')
                 st.text("查詢狀態："+public_result["discovery"]["status"])
+                st.caption("已保存本次查詢；重新整理後可還原，查看紀錄不會重新連網。重新查詢才會更新候選。")
                 st.caption(public_result["discovery"]["scope"])
-                st.json(public_result)
-        candidates=run.candidates.get("candidates",[])
-        if st.session_state.get("public-discovery-"+run.run_id):
-            candidates=candidates+st.session_state["public-discovery-"+run.run_id]["discovery"]["candidates"]
-        if payload: candidates=payload.get("discovery",{}).get("candidates",[])
+                st.caption(f"找到 {len(public_result['discovery']['candidates'])} 個候選；下方可查看漏洞摘要與命中套件。")
+                with st.expander("完整公開查詢紀錄（JSON）", expanded=False):
+                    st.json(public_result)
+        candidates=(payload.get("discovery",{}) if payload else run.candidates).get("candidates",[])
+        public_candidates=(st.session_state.get("public-discovery-"+run.run_id) or {}).get("discovery",{}).get("candidates",[])
+        # Prefer public summaries while retaining the selected inventory's scope fields.
+        merged={item["cve_id"]:dict(item) for item in public_candidates}
+        for item in candidates:
+            merged[item["cve_id"]]={**merged.get(item["cve_id"],{}),**item}
+        candidates=list(merged.values())
         render_candidates(st,candidates,run.cve_id)
         next_button(st,PAGES[2],"下一步：調查來源")
     elif page==PAGES[2]:
@@ -291,6 +311,8 @@ def workspace(st, *, store_root=None):
         report_payload=payload
         if payload:
             try:
+                if page == PAGES[4]:
+                    report_ai_selector(st,runner,run)
                 ai_record=selected_ai(st,runner,run)
                 report_payload=with_ai_result(payload,ai_record)
             except (ValueError,OSError,KeyError,TypeError):
@@ -301,6 +323,11 @@ def workspace(st, *, store_root=None):
             metadata=ai_record["request"]
             text="AI 獨立紀錄："+metadata["ai_id"]+" · "+metadata["created_at"]+" · "+ai_record["status"]+"\n原工程紀錄未覆寫。\n\n"+text
             st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+attempt_metadata(request=metadata)["provider_label"]+" · "+ai_record["status"])
+        if ai_record and page == PAGES[4]:
+            from .review_workspace import review_workspace, report_text
+            selected_review = review_workspace(st, runner, run, ai_record)
+            if selected_review:
+                text += "\n\n" + report_text(selected_review)
         if payload:
             assessment=payload["analyses"][0].get("assessment") or {}
             st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))
@@ -323,8 +350,17 @@ def workspace(st, *, store_root=None):
                     file_name=run.run_id+"-events.json",mime="application/json")
             except (ValueError,OSError): st.error("操作紀錄無法讀取，沒有顯示未核對內容。")
         if run.parent_run_id:
-            st.subheader("與父 run 比較")
-            st.json(compare(store.read(run.parent_run_id),run))
+            st.subheader("本次與前次材料差異")
+            difference = compare(store.read(run.parent_run_id),run)
+            if difference['status'] == 'REJECTED':
+                st.warning("補件未接受；前次材料與結果保留。")
+            else:
+                columns = st.columns(3)
+                for column, field, label in zip(columns, ('added','removed','changed'), ('新增檔案','移除檔案','內容變更')):
+                    column.metric(label, len(difference[field]))
+                st.caption("檔案變化不等於漏洞條件已證實；補件仍需執行查核。")
+            with st.expander("材料差異明細與完整紀錄"):
+                st.json(difference)
         if payload:
             try:
                 previous=previous_engineering_run(store,run)
@@ -340,6 +376,7 @@ def workspace(st, *, store_root=None):
             st.subheader("補充資料，保留前後紀錄")
             real=bool(run.input_package and run.input_package.context_hash)
             if real and run.input_package.format=='partial':
+                st.caption('僅補本輪要求的材料即可，不需把所有可能檔案都補齊。每檔 20 MiB，最多 100 檔；新增材料含展開後合計 100 MiB，同名衝突拒收。')
                 loose=st.file_uploader('補上原始檔案（保留原材料，拒絕同名覆寫）',accept_multiple_files=True,max_upload_size=20,key='partial-delta-'+run.run_id)
                 if st.button('保存部分材料補件',disabled=not loose):
                     try:

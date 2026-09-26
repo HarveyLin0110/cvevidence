@@ -387,6 +387,9 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
     if ai.get("status") in ("OFFLINE", "NOT_RUN", "CONFIG_REQUIRED"):
         st.info("本次沒有完成模型調查；工程结果仍可查閱與下載。")
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
+    from .investigation_view import render as render_investigation, render_requests, render_overview, narrative_sections
+    render_overview(st, ai)
+    has_requests = render_requests(st, ai)
     if ai.get("analysis_depth") == "PC_EVIDENCE_REVIEW":
         st.caption("本次採 PC1／PC2／PC3 原文查核；各層是否完成及限制，以保存的調查說明為準。")
         if ai.get("status") in ("COMPLETED", "NEEDS_USER_INPUT"):
@@ -394,11 +397,10 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
                           if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER")), None)
             if final and final.get("finding"):
                 st.subheader("PC1／PC2／PC3 查核說明")
-                st.text(text(final["finding"]))
+                for section in narrative_sections(text(final["finding"])):
+                    st.text(section)
     st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
-    from .investigation_view import render as render_investigation, render_requests
     render_investigation(st, ai)
-    has_requests = render_requests(st, ai)
     guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id, assessment_id=assessment_id)
     if guide and not has_requests:
         st.subheader("需要準備的最小材料")

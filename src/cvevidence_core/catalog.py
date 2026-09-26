@@ -49,5 +49,5 @@ def discover_candidates(context=None,symptom='',requested_cves=None,scanner_cand
   scanner_notes.append({'input':item,'trust':'UNVERIFIED_SCANNER_CANDIDATE','assessment':None})
  intake_questions=[]
  if not context or not components:
-  intake_questions=[{'question':'哪個操作出錯、產品版本為何？','purpose':'定位工程情境，尚不判定 CVE。'},{'question':'請提供相關 log、元件清單或 SBOM，以及成品 hash；能取得 source/build 記錄時一併提供。','purpose':'依實際元件找有來源的候選，而不是從症狀猜漏洞。'}]
+  intake_questions=[{'question':'哪個操作出錯、產品版本為何？','purpose':'定位工程情境，尚不判定 CVE。'},{'question':'先向產品／建置維護者取得一份元件清單或 SBOM；若目前拿不到，先提供產品名稱與版本。','purpose':'依實際元件找有來源的候選，而不是從症狀猜漏洞。'}]
  return {'symptom':symptom,'candidates':candidates,'scanner_candidates':scanner_notes,'intake_questions':intake_questions,'scope':'Three reviewed engineering profiles; other requested CVEs enter general investigation. Automatic component discovery is still limited to this catalog; no match does not mean no vulnerabilities.','symptom_causation':'NOT_ESTABLISHED'}

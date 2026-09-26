@@ -42,6 +42,7 @@ def progress(store,ai_id):
     if p.stat().st_size>16*1024*1024:raise ValueError('Progress size limit')
     row=json.loads(p.read_text())
     from cvevidence_core.integrity import digest
+    if not isinstance(row,dict):raise ValueError('Progress must be an object')
     if row.get('record_hash')!=digest({k:v for k,v in row.items() if k!='record_hash'}):raise ValueError('Progress hash mismatch')
     return row
 

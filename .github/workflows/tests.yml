@@ -2,7 +2,7 @@ name: Fresh integration tests
 on:
   pull_request:
   push:
-    branches: [main, 'codex/frankie-fresh-milestones']
+    branches: [main, 'codex/frankie-fresh-milestones', 'codex/horace-development']
 permissions:
   contents: read
 jobs:

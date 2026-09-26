@@ -37,13 +37,32 @@ def render(st, entry):
     st.text('來源：' + info['source_url'])
     if info['status'] == 'PUBLISHED':
         st.text(info.get('title', ''))
+        def supplied(value):
+            return str(value or '').strip().casefold() not in ('', 'n/a', 'na', 'unknown', 'unspecified', '-')
         for item in info.get('affected', []):
-            st.text('公告涉及：' + item['vendor'] + ' / ' + item['product'])
+            names = [str(item[key]) for key in ('vendor', 'product') if supplied(item.get(key))]
+            if names:
+                st.text('公告涉及：' + ' / '.join(dict.fromkeys(names)))
         st.caption('公告的受影響／未受影響宣告分開呈現；範圍外不自動等於已修補，發行版回補版本需另查。')
-        for row in info.get('version_ranges',[]):
-            boundary=(' ≤ ' if row['end_inclusive'] else ' < ')+str(row['end']) if row['end'] else '（精確版本宣告）'
-            st.text(row['product']+' · '+str(row['start'])+boundary+' · '+{'affected':'公告受影響','unaffected':'公告未受影響'}.get(row['status'],'公告未明確'))
-            if not row['comparison_supported']:st.caption('此版本格式／變更區間尚不能自動比較。')
+        incomplete = not info.get('version_ranges')
+        for row in info.get('version_ranges', []):
+            if not supplied(row['start']):
+                incomplete = True
+                continue
+            product = row['product'] if supplied(row['product']) else '公告元件'
+            status = {'affected':'公告受影響','unaffected':'公告未受影響'}.get(row['status'],'公告未明確')
+            if row['end'] is not None:
+                boundary = ' ≤ 版本 ≤ ' if row['end_inclusive'] else ' ≤ 版本 < '
+                declaration = str(row['start']) + boundary + str(row['end'])
+            else:
+                declaration = str(row['start']) + ('（精確版本宣告）' if row['comparison_supported'] else '（公告原始宣告）')
+            st.text(product + ' · ' + declaration + ' · ' + status)
+            if not row['comparison_supported']:
+                incomplete = True
+                st.caption('此版本格式／變更區間尚不能自動比較。')
+        if incomplete:
+            st.info('公告未提供完整可比較的結構化版本範圍；請依以下公告原文核對，不能從缺值推定受影響或安全。')
+            st.text(info.get('description', '') or '公告未提供摘要，請查看來源紀錄。')
         with st.expander('完整版本宣告（包含回補與區間變更）'):
             st.json(info.get('affected',[]))
         with st.expander('公告摘要與來源紀錄'):

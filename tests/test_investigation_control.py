@@ -20,3 +20,22 @@ def test_resume_retains_only_current_bytes_and_pending_questions(context):
 def test_usage_unknown_is_not_zero_cost_claim():
     u=usage([{'usage':{'input_tokens':10,'output_tokens':20}},{}])
     assert u['total_tokens']==30 and not u['complete']
+
+@pytest.mark.parametrize('raw', [{}, {'total_tokens':None}, {'input_tokens':True,'output_tokens':-1}, {'total_tokens':'bad'}])
+def test_unknown_usage_is_incomplete(raw):
+    summary=usage([{'usage':raw}])
+    assert not summary['complete']
+    assert summary['reported_calls']==0
+    assert summary['total_tokens']==0
+
+
+def test_nullable_total_uses_known_input_and_output_without_counting_cache_twice():
+    summary=usage([{'usage':{'input_tokens':100,'output_tokens':20,'cached_input_tokens':80,'total_tokens':None}}])
+    assert summary['total_tokens']==120
+    assert summary['complete']
+
+
+def test_partial_usage_keeps_known_lower_bound_without_claiming_complete():
+    summary=usage([{'usage':{'input_tokens':100}}])
+    assert summary['total_tokens']==100
+    assert not summary['complete']

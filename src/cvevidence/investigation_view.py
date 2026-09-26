@@ -4,6 +4,31 @@ LABELS = {'NOT_REVIEWED':'尚未查閱完成', 'OBSERVED_SUPPORT':'原文支持�
           'USER_MATERIAL_MISSING':'使用者材料缺口（AI 提案）', 'CAPABILITY_GAP':'工具能力／公開來源缺口'}
 
 
+def narrative_sections(value):
+    """Break explicit PC headings into paragraphs without changing their wording."""
+    import re
+    return [part.strip() for part in re.split(r'(?<!\S)(?=PC[123][｜:：])', value) if part.strip()]
+
+
+def render_overview(st, ai):
+    plan = ai.get('condition_plan') or {}
+    if plan.get('context_hash') != ai.get('context_hash') or plan.get('cve_id') != ai.get('cve_id'):
+        return
+    conditions = plan.get('conditions', [])
+    st.caption('目前查到哪裡：以下是 AI 證據觀察，並非產品受影響判定。')
+    for column, layer, title in zip(st.columns(3), ('PC1', 'PC2', 'PC3'),
+                                    ('元件與版本', '實作與路徑', '部署與運作')):
+        group = [r for r in conditions if r['layer'] == layer]
+        column.metric(layer + ' · ' + title, str(len(group)) + ' 個條件')
+        counts = {}
+        for row in group:
+            label = LABELS.get(row['state'], row['state'])
+            counts[label] = counts.get(label, 0) + 1
+        column.caption('；'.join(label + '：' + str(count) for label, count in counts.items()) or '尚未建立條件')
+    if ai.get('status') in ('BUDGET_EXHAUSTED', 'TIMED_OUT', 'CANCELLED'):
+        st.info('本輪尚未完成。可展開「開始或接續 AI 調查」，選擇此紀錄接續；已查原文會重新核對，不代表需要先補檔。')
+
+
 def lines(ai):
     plan=ai.get('condition_plan') or {}
     if plan.get('context_hash')!=ai.get('context_hash') or plan.get('cve_id')!=ai.get('cve_id'): return []
@@ -31,9 +56,10 @@ def render(st, ai):
         st.text(row['requirement'])
         st.text(row['explanation'])
         detail=dossiers.get(row['condition_id'],{})
-        for evidence in detail.get('evidence',[]):
+        for number, evidence in enumerate(detail.get('evidence',[]), 1):
             st.text('命中位置：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']))
-            st.code(evidence['text'],language=None)
+            with st.expander(row['condition_id']+' 原文片段 '+str(number)+'（'+str(evidence['start_line'])+'–'+str(evidence['end_line'])+' 行）',expanded=False):
+                st.code(evidence['text'],language=None)
         if detail:st.caption('尚未確認：'+detail['unconfirmed'])
         with st.expander(row['condition_id']+'：排除條件、查法與引用',expanded=False):
             st.text('排除依據：'+row['exclusion']); st.text('查法：'+row['check'])

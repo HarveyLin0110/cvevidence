@@ -7,17 +7,23 @@ control=ContextVar('investigation_control',default={})
 
 
 def usage(calls):
-    totals={'input_tokens':0,'output_tokens':0,'total_tokens':0};known=0
+    """Sum known counts without turning absent provider fields into zero usage."""
+    totals={'input_tokens':0,'output_tokens':0,'total_tokens':0}
+    known=0; complete_calls=0
     for call in calls:
         raw=call.get('usage')
         if not isinstance(raw,dict):continue
+        values={k:v for k,v in raw.items() if k in totals and type(v) is int and v>=0}
+        if not values:continue
         known+=1
-        for k in totals:
-            value=raw.get(k)
-            if isinstance(value,int) and not isinstance(value,bool) and value>=0:totals[k]+=value
-        if 'total_tokens' not in raw:totals['total_tokens']+=sum(raw.get(k,0) for k in ('input_tokens','output_tokens') if isinstance(raw.get(k,0),int))
-    return {**totals,'reported_calls':known,'total_calls':len(calls),'complete':known==len(calls),
-        'note':'供應者回報用量；非費用。達門檻後停止下一次呼叫，進行中的呼叫可能超出門檻。'}
+        for key in ('input_tokens','output_tokens'):
+            totals[key]+=values.get(key,0)
+        # Cached input is a subset of input, not an additional chargeable count.
+        totals['total_tokens']+=values.get('total_tokens',sum(values.get(k,0) for k in ('input_tokens','output_tokens')))
+        if 'total_tokens' in values or all(k in values for k in ('input_tokens','output_tokens')):
+            complete_calls+=1
+    return {**totals,'reported_calls':known,'total_calls':len(calls),'complete':complete_calls==len(calls),
+        'note':'供應者回報用量；缺少總數時加總已知輸入／輸出，缺值不代表零用量，非費用。達門檻後停止下一次呼叫，進行中的呼叫可能超出門檻。'}
 
 
 def continuation(context,cve,previous):

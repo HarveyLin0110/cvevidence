@@ -108,6 +108,15 @@ class AIService:
         validate_ai_payload(payload,request)
         outcome.payload_sha256=self.store.put_blob(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode())
 
+    def retain_checkpoint_safely(self, request, outcome):
+        try:
+            self.retain_checkpoint(request, outcome)
+        except (ValueError, OSError, RuntimeError, KeyError, TypeError):
+            # Bad progress must not prevent an immutable terminal failure receipt.
+            # Keep the original timeout/cancel status and never attach bad bytes.
+            outcome.payload_sha256 = None
+            outcome.error_code = "AI_CHECKPOINT_REJECTED"
+
     def start(self, parent_run_id, *, user_context="", consent=False, ai_id=None, timeout=180,
               provider=None, config_id=None, continuation_ai_id=None, max_calls=12, token_limit=200000):
         started = monotonic()
@@ -165,11 +174,11 @@ class AIService:
             except WorkerCancelled:
                 outcome.status="CANCELLED"
                 outcome.error_code="USER_CANCELLED"
-                self.retain_checkpoint(request,outcome)
+                self.retain_checkpoint_safely(request,outcome)
             except subprocess.TimeoutExpired:
                 outcome.status = "TIMED_OUT"
                 outcome.error_code = "AI_DEADLINE_EXCEEDED"
-                self.retain_checkpoint(request,outcome)
+                self.retain_checkpoint_safely(request,outcome)
             except WorkerLimitError:
                 outcome.status = "BUDGET_EXHAUSTED"
                 outcome.error_code = "AI_IO_LIMIT_EXCEEDED"

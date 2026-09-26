@@ -320,3 +320,18 @@ def test_actual_model_does_not_use_another_providers_receipt():
     metadata = attempt_metadata({"calls": [call]}, {"schema_version": "2.0", "provider": "codex_cli"})
     assert metadata["actual_model"] is None
     assert "回報模型：未知" in receipt_lines(call, "codex_cli")
+
+@pytest.mark.parametrize('raw',['{broken','[]'])
+def test_corrupt_progress_shows_error_without_crashing_or_resending(raw):
+    from uuid import uuid4
+    from cvevidence.ai_jobs import path
+    app=app_for()
+    runner=app.session_state['test-runner']
+    pending=str(uuid4())
+    path(runner.store,pending,'.json').write_text(raw)
+    app.session_state['pending-ai-'+RUN]=pending
+    app.run()
+    assert not app.exception
+    assert any('未完成或結果範圍無法核對' in row.value for row in app.error)
+    assert runner.calls==[]
+    assert 'pending-ai-'+RUN not in app.session_state
