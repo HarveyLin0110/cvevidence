@@ -8,11 +8,15 @@ import subprocess
 from time import monotonic
 
 
+class WorkerCancelled(RuntimeError):
+    pass
+
+
 class WorkerLimitError(ValueError):
     pass
 
 
-def run_worker(argv, payload, *, env, timeout, max_output=16 * 1024 * 1024):
+def run_worker(argv, payload, *, env, timeout, max_output=16 * 1024 * 1024, cancel_check=None):
     if os.name != "posix" or timeout <= 0:
         raise subprocess.TimeoutExpired("AI worker", timeout)
     if len(payload) > 32000:
@@ -29,6 +33,7 @@ def run_worker(argv, payload, *, env, timeout, max_output=16 * 1024 * 1024):
             selector.register(process.stdout, selectors.EVENT_READ)
             sent = 0
             while selector.get_map():
+                if cancel_check is not None and cancel_check():raise WorkerCancelled("Cancelled by user")
                 remaining = deadline - monotonic()
                 if remaining <= 0:
                     raise subprocess.TimeoutExpired("AI worker", timeout)

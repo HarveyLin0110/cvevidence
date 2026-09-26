@@ -11,7 +11,7 @@ RUN = "00000000-0000-4000-8000-000000000001"
 
 
 def fake_run(run_id=RUN):
-    return SimpleNamespace(run_id=run_id, cve_id="CVE-2099-0001",
+    return SimpleNamespace(run_id=run_id, parent_run_id=None, cve_id="CVE-2099-0001",
                            input_package=SimpleNamespace(context_hash="test-scope-" + run_id))
 
 
@@ -26,6 +26,9 @@ def fake_engineering(run_id=RUN):
 
 class FakeRunner:
     def __init__(self):
+        import tempfile
+        from cvevidence.storage import RunStore
+        self.store=RunStore(tempfile.mkdtemp(prefix="cve-ui-test-"))
         self.config = {"default_provider": "openai_api", "providers": {
             provider: {"provider": provider, "configured": True, "reason_code": None,
                        "model": provider + "_TEST_ONLY", "reasoning_effort": "medium",
@@ -104,7 +107,16 @@ def displayed(app):
 def submit(app):
     app.checkbox[0].check()
     button(app).click().run()
+    settle(app)
     assert not app.exception
+
+
+def settle(app):
+    import time
+    for _ in range(100):
+        if not any(str(k).startswith('pending-ai-') for k in app.session_state.filtered_state):return
+        time.sleep(.02);app.run()
+    raise AssertionError('Background AI job did not finish')
 
 
 def test_unavailable_default_never_falls_back_and_explains_account_billing():
@@ -308,3 +320,18 @@ def test_actual_model_does_not_use_another_providers_receipt():
     metadata = attempt_metadata({"calls": [call]}, {"schema_version": "2.0", "provider": "codex_cli"})
     assert metadata["actual_model"] is None
     assert "回報模型：未知" in receipt_lines(call, "codex_cli")
+
+@pytest.mark.parametrize('raw',['{broken','[]'])
+def test_corrupt_progress_shows_error_without_crashing_or_resending(raw):
+    from uuid import uuid4
+    from cvevidence.ai_jobs import path
+    app=app_for()
+    runner=app.session_state['test-runner']
+    pending=str(uuid4())
+    path(runner.store,pending,'.json').write_text(raw)
+    app.session_state['pending-ai-'+RUN]=pending
+    app.run()
+    assert not app.exception
+    assert any('未完成或結果範圍無法核對' in row.value for row in app.error)
+    assert runner.calls==[]
+    assert 'pending-ai-'+RUN not in app.session_state

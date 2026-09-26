@@ -1,5 +1,6 @@
 """Actual local source workspace; all collection/supplement calls share Runner."""
 import os
+from cvevidence_core.partial_intake import IntakeError
 from pathlib import Path
 from .runner import Runner
 from .storage import RunStore
@@ -12,7 +13,7 @@ from .workflow_navigation import PAGES, sidebar_steps
 from .analysis_view import render_engineering, render_ai, VERDICTS
 from .analysis_report import export_analysis, compare_analyses, previous_engineering_run
 from .candidate_view import render_candidates
-from .ai_workspace import ai_workspace, selected_ai, with_ai_result
+from .ai_workspace import ai_workspace, selected_ai, with_ai_result, report_ai_selector
 from .ai_presenter import attempt_metadata
 from .query_preparation import render_preparation
 
@@ -109,13 +110,23 @@ def workspace(st, *, store_root=None):
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
-        source_options=["產品／版本樣品","上傳工程包"]
+        left, right = st.columns(2)
+        left.info("不知道是哪個 CVE：描述發生了什麼，先交手邊材料；CVE 留白，再從候選選擇要深入查核的項目。")
+        right.info("已知想查的 CVE：輸入 CVE 編號與產品材料，逐項核對元件、實作及部署證據。")
+        st.caption("ROM、SBOM、原碼／SDK、設定可以屬於同一次查核，請選「上傳產品材料」，不必自製工程包。沒有檔案可選「先描述情境」。")
+        source_options=["產品／版本樣品","上傳產品材料","上傳工程包"]
         if store_root is None: source_options.append("受控路徑")
         source_options.append("先描述情境")
         kind=st.radio("資料來源",source_options,horizontal=True)
+        material_mode=None
+        if kind=="上傳產品材料":
+            material_mode=st.radio("依檔案大小選擇收件方式",["一般多檔（每檔最多 20 MiB）","大型單檔（最多 256 MiB）"],horizontal=True)
+            kind="部分材料"
         available=[e for e in entries if e["available"] and e["kind"]=="initial"]
         selected=None
         upload=None
+        partial_files=[]
+        partial_large=False
         path=""
         if kind=="產品／版本樣品":
             if available:
@@ -128,15 +139,33 @@ def workspace(st, *, store_root=None):
                 st.dataframe([{"資料版":e["dataset"],"資料包":e["package_id"],"可用":"已取得" if e["available"] else "等待資料交付"} for e in entries],hide_index=True)
         elif kind=="上傳工程包":
             upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
+        elif kind.startswith("部分材料"):
+            st.info("可先提交手上已有的檔案；不需要自製 manifest。產品與 build 只記為聲明，不冒充已驗成品。")
+            partial_large=material_mode=="大型單檔（最多 256 MiB）"
+            st.info("多種材料可合併查核：小檔直接一起選取；若有大型 ROM／SDK，先匯入大型檔，再到「05 報告與後續行動」補上 SBOM、原碼等。補件保留原材料並建立新紀錄，不必另開不相關案件。")
+            if partial_large:
+                single=st.file_uploader('大型 ROM 或 SDK 封存檔（單檔 256 MiB）',max_upload_size=256)
+                partial_files=[single] if single else []
+                st.caption('一次一檔，原檔及展開內容合計最多 384 MiB、5000 個檔案。接受 ROM／IMG／BIN／SquashFS 或 ZIP／tar／tar.gz／wheel。SDK 只展開為資料，不安裝或執行；網頁元件仍會暫存上傳內容。')
+            else:
+                partial_files=st.file_uploader("產品材料：ROM、SBOM、原碼、設定可一起選（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
+                st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
+            st.caption('封存檔只展開一層，內層 ZIP／tar 不遞迴展開；其中的 ROM 會和直接上傳的 ROM 一起計入三份上限。')
+            st.caption('亦可交原始 SquashFS ROM（每次最多 3 份）；工具只讀固定套件／版本路徑，不啟動韌體。其他 ROM 格式會保留原檔並顯示尚不支援。')
+            partial_product=st.text_input("產品名稱",value="未提供",max_chars=200)
+            partial_release=st.text_input("產品版本",value="未提供",max_chars=200)
+            partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認",max_chars=200)
         elif kind=="受控路徑":
             st.caption("根目錄："+os.environ.get("CVEVIDENCE_ARTIFACT_ROOT","var/artifacts"))
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
         cve=st.text_input("CVE ID（最多 5 個，逗號或空白分隔；可留白）",placeholder="CVE-2022-37434, CVE-2023-38545")
         symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
+        if kind.startswith("部分材料"):ready=bool(partial_files)
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
-        signature=(kind,selected["archive"]["sha256"] if selected else None,
-            getattr(upload,"file_id",None),path,cve,symptom,st.session_state.get("follow_parent"))
+        signature=(kind,material_mode,selected["archive"]["sha256"] if selected else None,
+            getattr(upload,"file_id",None),tuple((f.name,f.file_id) for f in partial_files),
+            (partial_product,partial_release,partial_build) if kind.startswith("部分材料") else None,path,cve,symptom,st.session_state.get("follow_parent"))
         if st.session_state.get("request_signature")!=signature:
             if st.session_state.get("request_signature") is not None:
                 st.session_state.selected_run=None
@@ -156,6 +185,13 @@ def workspace(st, *, store_root=None):
                     if selected:
                         result=runner.submit_request(path=selected["local_path"],archive_sha256=selected["archive"]["sha256"],
                             manifest_sha256=selected["manifest_sha256"],**kwargs)
+                    elif partial_files:
+                        from cvevidence_core.partial_intake import create
+                        import tempfile
+                        with tempfile.TemporaryDirectory(dir=runner.store.root) as temporary:
+                            archive=Path(temporary)/"partial.tar.gz"
+                            create([(f.name,f) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build,large=partial_large)
+                            result=runner.submit_request(path=archive,**kwargs)
                     elif upload:
                         upload.seek(0)
                         result=runner.submit_request(stream=upload,**kwargs)
@@ -164,6 +200,8 @@ def workspace(st, *, store_root=None):
                 st.session_state.selected_request=result.spec.request_id
                 st.session_state.selected_run=result.runs[0].run_id if result.runs else None
                 st.rerun()
+            except IntakeError as exc:
+                st.error(str(exc))
             except (ValueError,OSError,RuntimeError):
                 st.error("請求未完成。請檢查最多5個合法CVE、工程包與路徑；相同請求若仍執行中或中斷，不會自動重跑。")
         if request: request_summary(st,request)
@@ -185,6 +223,12 @@ def workspace(st, *, store_root=None):
         if page!=PAGES[4]:
             next_button(st,PAGES[4],"查看失敗紀錄")
             return
+    discovery_key = "public-discovery-" + run.run_id
+    if discovery_key not in st.session_state:
+        try:
+            st.session_state[discovery_key] = runner.public_discovery(run.run_id)
+        except (ValueError, OSError, KeyError, TypeError):
+            st.error("公開候選歷史無法核對，未顯示未驗證結果；原紀錄保留，可重新查詢。")
     if page==PAGES[1]:
         st.subheader("資料確認與缺件")
         if run.input_package:
@@ -195,10 +239,119 @@ def workspace(st, *, store_root=None):
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
+        from .compilation_view import render as render_compilation
+        render_compilation(st,(payload.get('discovery',{}) if payload else run.candidates).get('compilation_database'),
+                           {s.source_id:s.path for s in run.sources})
+        provenance=(payload.get('discovery',{}) if payload else run.candidates).get('build_provenance')
+        if provenance and provenance.get('records'):
+            with st.expander('建置聲明與交付檔案核對（未認證來源）'):
+                st.caption(provenance['note'])
+                status_labels={
+                    'DECLARED_DIGESTS_MATCH':'聲明中的 SHA256 均與交付檔案吻合（建置來源仍未驗證）',
+                    'PARTIAL_DIGEST_COVERAGE':'僅部分資料可核對，尚不足以建立完整對應',
+                    'NAMED_SOURCE_CONFLICT':'同名檔案內容與聲明不一致，需先釐清版本',
+                    'MALFORMED_DECLARATION':'聲明欄位格式有誤，無法核對',
+                    'ENVELOPE_NOT_SUPPORTED':'尚不支援此簽章封裝，未核對內容或簽章',
+                    'REFERENCE_LIMIT':'聲明項目超過讀取上限，未完成核對',
+                }
+                reference_labels={
+                    'MATCHES_DELIVERED_BYTES':'SHA256 與交付檔案吻合',
+                    'NOT_IN_SNAPSHOT':'本次材料中沒有相同 SHA256 的檔案',
+                    'NO_SUPPORTED_DIGEST':'未提供可核對的 SHA256',
+                }
+                source_paths={s.source_id:s.path for s in run.sources}
+                for record in provenance['records']:
+                    st.text(record['path']+' · '+status_labels.get(record['status'],'未知核對狀態'))
+                    if record.get('references'):
+                        st.dataframe([{'角色':{'subject':'產出成品','dependency':'建置輸入'}.get(r['role'],'其他'),
+                            '聲明名稱':r['declared_name'],
+                            '核對結果':'同名檔案內容不一致' if r['named_source_conflict'] else reference_labels.get(r['state'],'未知核對狀態'),
+                            '對應交付檔案':'、'.join(source_paths.get(sid,sid) for sid in r['matched_source_ids']) or '無',
+                            '聲明 SHA256':r.get('declared_sha256') or '未提供',
+                            '顯示範圍':'僅顯示前 8 個吻合檔案' if r.get('matches_truncated') else '已顯示全部吻合檔案',
+                            } for r in record['references']],hide_index=True)
+                if provenance.get('coverage_limited'):st.caption('建置聲明僅掃描有限範圍，未列出不代表不存在。')
+        binaries=(payload.get('discovery',{}) if payload else run.candidates).get('binary_metadata')
+        if binaries and binaries.get('files'):
+            with st.expander('執行檔架構與動態依賴（PC2 線索）'):
+                st.caption(binaries['note'])
+                st.dataframe([{'來源':r['path'],'狀態':r['status'],
+                    '位元':(r.get('metadata') or {}).get('class_bits'),
+                    '架構編號':(r.get('metadata') or {}).get('machine_id'),
+                    '位元組序':(r.get('metadata') or {}).get('byte_order'),
+                    '動態依賴名稱':'、'.join((r.get('metadata') or {}).get('needed',[])),
+                    '相同內容的交付檔案':'、'.join(m['path'] for m in r.get('identical_delivered_files',[])) or '未列出',
+                    'SHA256':r['sha256']} for r in binaries['files']],hide_index=True)
+                st.caption('相同內容依 SHA256 比對；只能證明檔案內容一致，未認證建置來源或實際載入關係。未列出不代表不存在。')
+                with st.expander('查看成品的動態符號（PC2 線索）'):
+                    st.caption('匯入符號表示檔案中的外部符號參照，不代表執行時已呼叫或路徑可達。未列出不能排除靜態整合、動態查找或讀取限制。')
+                    for item in binaries['files']:
+                        symbols=(item.get('metadata') or {}).get('symbols',{})
+                        st.text(item['path'])
+                        if symbols.get('status')!='READ':
+                            st.caption('未取得可用動態符號表；不能據此判定未使用某 API。')
+                            continue
+                        imports=symbols.get('imports',[])
+                        if imports:
+                            st.dataframe([{'匯入符號':s['name'],
+                                '類型':{0:'未指定',1:'資料物件',2:'函式',6:'執行緒資料'}.get(s['type'],'其他'),
+                                '連結屬性':{1:'全域',2:'弱參照'}.get(s['binding'],'其他')} for s in imports],hide_index=True)
+                        else:st.caption('此動態符號表沒有列出的外部參照；仍不能排除其他呼叫方式。')
+                        if symbols.get('coverage_limited'):st.caption('符號清單已截短，僅顯示有限項目。')
+                if binaries.get('coverage_limited'):st.caption('僅完成有限範圍掃描；未列出不代表不存在。')
+        firmware=(payload.get('discovery',{}) if payload else run.candidates).get('firmware_inventory',[])
+        if firmware:
+            with st.expander('ROM 套件、版本與成品讀取狀態',expanded=True):
+                labels={'PARTIAL_READ':'已讀取部分材料（非完整 ROM）','NO_INVENTORY_READ':'未能讀取選定材料（不代表不存在）',
+                        'UNSUPPORTED_FORMAT':'目前不支援此映像格式','TOOL_UNAVAILABLE':'伺服器未備妥 ROM 讀取工具',
+                        'ISOLATION_UNAVAILABLE':'伺服器無法建立隔離讀取環境，未解析 ROM',
+                        'INVALID_RECEIPT':'讀取紀錄無法核對'}
+                for item in firmware:
+                    st.text(str(item['image_path'])+'：'+labels.get(item['status'],'讀取狀態待確認'))
+                    if item.get('binary_scan'):
+                        count=sum(r.get('kind')=='ELF_CANDIDATE' and r.get('status')=='READ' for r in item.get('files',[]))
+                        st.caption(f'本次擷取 {count} 份 ELF 候選，架構與相同內容比對見上方面板。只探查有限路徑與大小；未列出不代表不存在。')
+                    if item['status']=='ISOLATION_UNAVAILABLE':
+                        st.caption('請由部署維護者檢查隔離環境；不會停用隔離改成直接讀取，也不需要因此重傳相同 ROM。')
+                    if item['status'] in ('UNSUPPORTED_FORMAT','TOOL_UNAVAILABLE','NO_INVENTORY_READ'):
+                        st.caption('可先提供現有套件清單／SBOM 繼續調查；這是讀取能力或固定路徑限制，不是要求提供所有工程材料。')
+                    with st.expander('查看 ROM 讀取範圍與 hash '+str(item['image_path'])):
+                        st.json(item)
+                st.caption('原 ROM 與擷取檔案的 hash 關聯不代表來源認證，也不能證明 SDK／原碼／運作紀錄屬於同次建置。')
+        inventory=(payload.get('discovery',{}) if payload else run.candidates).get('components',[])
+        if inventory:
+            with st.expander('已辨識的元件與套件清單',expanded=True):
+                st.caption('這是材料中的版本聲明，尚未證明屬於同一 ROM 或同次建置。一般套件名稱不會自動轉成上游生態系統。自動解析最多掃描 100 份合格檔案、保留 100 筆一般清單項目；不是完整軟體資產盤點。')
+                st.dataframe([{'元件':r['name'],'版本聲明':r['version'],'來源':r.get('source_path',r['source_id']),
+                    '類型':r['source_kind'],'原文行':str(r.get('start_line',''))+('–'+str(r['end_line']) if r.get('end_line') else '')}
+                    for r in inventory],hide_index=True,width='stretch')
         if run.missing:
             for item in run.missing: st.text(item)
-        candidates=run.candidates.get("candidates",[])
-        if payload: candidates=payload.get("discovery",{}).get("candidates",[])
+        with st.expander("擴充公開漏洞候選探索（SBOM 元件／版本）"):
+            st.caption("支援 CycloneDX／SPDX 的套件 purl。只外送套件名稱、生態系統與版本至 OSV；症狀與原碼留在本機，症狀僅用於排序，不能證明原因。")
+            public_consent=st.checkbox("同意將已提交的套件名稱及版本查詢 OSV",key="osv-consent-"+run.run_id)
+            if st.button("查詢公開候選",disabled=not public_consent):
+                try:
+                    st.session_state[discovery_key]=runner.discover_public(run.run_id,consent=True)
+                except (ValueError, OSError, RuntimeError, KeyError, TypeError):
+                    st.error("本次公開查詢未完成；先前保存結果仍保留，未把失敗當成沒有漏洞。")
+            public_result=st.session_state.get("public-discovery-"+run.run_id)
+            if public_result:
+                import json
+                st.download_button('下載公開候選查詢紀錄',json.dumps(public_result,ensure_ascii=False,indent=2),file_name=run.run_id+'-public-candidates.json',mime='application/json')
+                st.text("查詢狀態："+public_result["discovery"]["status"])
+                st.caption("已保存本次查詢；重新整理後可還原，查看紀錄不會重新連網。重新查詢才會更新候選。")
+                st.caption(public_result["discovery"]["scope"])
+                st.caption(f"找到 {len(public_result['discovery']['candidates'])} 個候選；下方可查看漏洞摘要與命中套件。")
+                with st.expander("完整公開查詢紀錄（JSON）", expanded=False):
+                    st.json(public_result)
+        candidates=(payload.get("discovery",{}) if payload else run.candidates).get("candidates",[])
+        public_candidates=(st.session_state.get("public-discovery-"+run.run_id) or {}).get("discovery",{}).get("candidates",[])
+        # Prefer public summaries while retaining the selected inventory's scope fields.
+        merged={item["cve_id"]:dict(item) for item in public_candidates}
+        for item in candidates:
+            merged[item["cve_id"]]={**merged.get(item["cve_id"],{}),**item}
+        candidates=list(merged.values())
         render_candidates(st,candidates,run.cve_id)
         next_button(st,PAGES[2],"下一步：調查來源")
     elif page==PAGES[2]:
@@ -209,7 +362,8 @@ def workspace(st, *, store_root=None):
             st.subheader("執行工程分析")
             cve=run.cve_id
             if not cve:
-                options=[item["cve_id"] for item in run.candidates.get("candidates",[])]
+                public_candidates=(st.session_state.get('public-discovery-'+run.run_id) or {}).get('discovery',{}).get('candidates',[])
+                options=list(dict.fromkeys(item['cve_id'] for item in run.candidates.get('candidates',[])+public_candidates))
                 selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
                 cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
             else: st.text("本次分析："+cve)
@@ -251,12 +405,17 @@ def workspace(st, *, store_root=None):
             entry=payload["analyses"][0]
             ai_workspace(st,runner,run,payload)
             next_button(st,PAGES[4],"查看目前報告")
-            for gap in (entry.get("assessment") or {}).get("gaps",[]): st.text(str(gap.get("needed",gap)))
+            gaps=(entry.get("assessment") or {}).get("gaps",[])
+            if gaps:
+                with st.expander("原工程缺口（不是本輪補件清單）",expanded=False):
+                    for message in dict.fromkeys(str(gap.get("needed",gap)) for gap in gaps):st.text(message)
         st.subheader("查核紀錄與後續行動")
         ai_record=None
         report_payload=payload
         if payload:
             try:
+                if page == PAGES[4]:
+                    report_ai_selector(st,runner,run)
                 ai_record=selected_ai(st,runner,run)
                 report_payload=with_ai_result(payload,ai_record)
             except (ValueError,OSError,KeyError,TypeError):
@@ -267,6 +426,11 @@ def workspace(st, *, store_root=None):
             metadata=ai_record["request"]
             text="AI 獨立紀錄："+metadata["ai_id"]+" · "+metadata["created_at"]+" · "+ai_record["status"]+"\n原工程紀錄未覆寫。\n\n"+text
             st.text("附加 AI 紀錄："+metadata["ai_id"]+" · "+attempt_metadata(request=metadata)["provider_label"]+" · "+ai_record["status"])
+        if ai_record and page == PAGES[4]:
+            from .review_workspace import review_workspace, report_text
+            selected_review = review_workspace(st, runner, run, ai_record)
+            if selected_review:
+                text += "\n\n" + report_text(selected_review)
         if payload:
             assessment=payload["analyses"][0].get("assessment") or {}
             st.text(VERDICTS.get(assessment.get("verdict"),"尚未產生工程判定"))
@@ -289,8 +453,17 @@ def workspace(st, *, store_root=None):
                     file_name=run.run_id+"-events.json",mime="application/json")
             except (ValueError,OSError): st.error("操作紀錄無法讀取，沒有顯示未核對內容。")
         if run.parent_run_id:
-            st.subheader("與父 run 比較")
-            st.json(compare(store.read(run.parent_run_id),run))
+            st.subheader("本次與前次材料差異")
+            difference = compare(store.read(run.parent_run_id),run)
+            if difference['status'] == 'REJECTED':
+                st.warning("補件未接受；前次材料與結果保留。")
+            else:
+                columns = st.columns(3)
+                for column, field, label in zip(columns, ('added','removed','changed'), ('新增檔案','移除檔案','內容變更')):
+                    column.metric(label, len(difference[field]))
+                st.caption("檔案變化不等於漏洞條件已證實；補件仍需執行查核。")
+            with st.expander("材料差異明細與完整紀錄"):
+                st.json(difference)
         if payload:
             try:
                 previous=previous_engineering_run(store,run)
@@ -305,6 +478,20 @@ def workspace(st, *, store_root=None):
         if not run.error:
             st.subheader("補充資料，保留前後紀錄")
             real=bool(run.input_package and run.input_package.context_hash)
+            if real and run.input_package.format=='partial':
+                st.caption('僅補本輪要求的材料即可，不需把所有可能檔案都補齊。每檔 20 MiB，最多 100 檔；新增材料含展開後合計 100 MiB，同名衝突拒收。')
+                loose=st.file_uploader('補上原始檔案（保留原材料，拒絕同名覆寫）',accept_multiple_files=True,max_upload_size=20,key='partial-delta-'+run.run_id)
+                large_loose=st.file_uploader('或補一份大型 ROM／SDK（單檔 256 MiB）',max_upload_size=256,key='partial-large-delta-'+run.run_id)
+                st.caption('一般多檔與大型單檔請擇一。大型檔案及展開内容、以及補件後整份快照，最多 384 MiB／5000 檔。')
+                if st.button('保存部分材料補件',disabled=not (loose or large_loose) or bool(loose and large_loose)):
+                    try:
+                        chosen_loose=[large_loose] if large_loose else loose
+                        child=runner.supplement_partial(run.run_id,[(f.name,f) for f in chosen_loose],large=bool(large_loose))
+                        st.session_state.selected_run=child.run_id
+                        st.session_state.step=PAGES[2] if not child.error else PAGES[4]
+                        st.rerun()
+                    except IntakeError as exc:st.error(str(exc))
+                    except (ValueError,OSError):st.error('補件與原快照衝突或格式不符，未覆寫原材料。')
             matching=[e for e in entries if real and e["available"] and e["kind"]=="supplement"
                 and e["base_package_id"]==run.input_package.package_id
                 and e["build_id"]==run.input_package.declared_build_id]

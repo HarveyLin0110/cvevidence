@@ -13,7 +13,7 @@ class InputPackage(Model):
     declared_build_id: str = Field(min_length=1, max_length=100)
     package_id: str = Field(min_length=1, max_length=100)
     archive_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    format: Literal["core-adapter-v0.2", "rom", "cmake", "curl"] = "core-adapter-v0.2"
+    format: Literal["core-adapter-v0.2", "rom", "cmake", "curl", "partial"] = "core-adapter-v0.2"
     context_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     provenance_verified: Literal[False] = False
 

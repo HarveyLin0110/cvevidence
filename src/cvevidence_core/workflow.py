@@ -25,7 +25,7 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
         notes=[interpret_statement(x,context.context_hash) if isinstance(x,str) else x for x in statements]
         assessment=assess(context,verified,notes);event('ASSESS','COMPLETED',cve_id)
         public_record=None;query_plan=None
-        if cve_id not in CATALOG:
+        if cve_id not in CATALOG or context.manifest['format']=='partial':
             from .public_cve import lookup
             from .general_triage import plan
             event('PUBLIC_CVE','STARTED',cve_id)
@@ -76,7 +76,7 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
                 if field in entry:collection[field]=entry[field]
             verified=verify(context,collection)
             if event_callback:event_callback({'stage':'AI','status':'STARTED','cve_id':entry['cve_id']})
-            depth_options={'analysis_depth':'pc','max_calls':12,'timeout_seconds':145} if analysis_depth=='pc' else {}
+            depth_options={'analysis_depth':'pc','max_calls':12,'timeout_seconds':240 if assessment.get('assessment_kind')=='GENERAL_TRIAGE' else 145} if analysis_depth=='pc' else {}
             if timeout_seconds is not None:
                 depth_options['timeout_seconds']=max(0 if provider is not None else 1e-9,
                     min(depth_options.get('timeout_seconds',90),timeout_seconds-(monotonic()-started)))

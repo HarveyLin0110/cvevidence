@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 from .contracts import Model
 
-AIStatus = Literal["COMPLETED", "NEEDS_USER_INPUT", "TIMED_OUT", "API_ERROR", "CONNECTION_ERROR",
+AIStatus = Literal["CANCELLED", "COMPLETED", "NEEDS_USER_INPUT", "TIMED_OUT", "API_ERROR", "CONNECTION_ERROR",
     "INCOMPLETE", "INVALID_CITATION", "BUDGET_EXHAUSTED", "CONFIG_REQUIRED", "CONSENT_REQUIRED",
     "INPUT_CHANGED_OR_INVALID", "INVALID_MODEL_OUTPUT", "FAILED", "NOT_RUN"]
 
@@ -26,10 +26,13 @@ class AIRequest(Model):
     reasoning_effort: str | None = Field(default=None, max_length=30)
     created_at: str
     timeout_seconds: float = Field(gt=0, le=300)
+    continuation_ai_id: str | None = None
+    max_calls: int = Field(default=12,ge=1,le=12)
+    token_limit: int = Field(default=200000,ge=1000,le=1000000)
 
     @model_validator(mode="after")
     def canonical_ids(self):
-        for value in (self.ai_id, self.parent_run_id):
+        for value in (self.ai_id, self.parent_run_id, *([self.continuation_ai_id] if self.continuation_ai_id else [])):
             if str(UUID(value)) != value: raise ValueError("Canonical UUID required")
         return self
 

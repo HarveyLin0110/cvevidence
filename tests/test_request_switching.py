@@ -24,3 +24,41 @@ def test_switch_destination_uses_selected_run_state():
         open_run(st, selected)
         assert st.session_state.selected_run == 'selected'
         assert st.session_state.step == page
+
+
+def test_discovered_cves_have_independent_request_branches():
+    from cvevidence.request_ui import request_branches
+    root = run('discovery', cve=None)
+    first = run('first', 'discovery', created='2')
+    second = run('second', 'discovery', cve='CVE-2099-0002', created='3')
+    retry = run('retry', 'discovery', created='4')
+    supplement = run('supplement', 'first', created='5')
+    unrelated = run('other-request', created='9')
+    rows, histories = request_branches([root], [root, first, second, retry, supplement, unrelated])
+    assert set(rows) == {'discovery', 'first', 'second'}
+    assert [r.run_id for r in histories['discovery']] == ['discovery']
+    assert [r.run_id for r in histories['first']] == ['supplement', 'retry', 'first']
+    assert [r.run_id for r in histories['second']] == ['second']
+
+
+def test_reload_request_opens_latest_first_cve_without_hiding_failure():
+    from cvevidence.request_ui import open_request
+    root = run('root', error=None, engineering_payload_sha256=None)
+    analyzed = run('analysis', 'root', created='2', error=None, engineering_payload_sha256='hash')
+    failed = run('failed', 'analysis', created='3', error='failure', engineering_payload_sha256=None)
+    other = run('other-cve', cve='CVE-2099-0002', created='9', error=None, engineering_payload_sha256='other')
+    result = Row(spec=Row(request_id='request'), runs=[root, other])
+    st = Row(session_state=Row())
+    open_request(st, result, [root, analyzed, other])
+    assert (st.session_state.selected_request, st.session_state.selected_run, st.session_state.step) == ('request', 'analysis', PAGES[2])
+    open_request(st, result, [root, analyzed, failed, other])
+    assert (st.session_state.selected_run, st.session_state.step) == ('failed', PAGES[4])
+
+
+def test_reload_draft_clears_previous_run():
+    from cvevidence.request_ui import open_request
+    st = Row(session_state=Row(selected_run='previous', step=PAGES[4]))
+    open_request(st, Row(spec=Row(request_id='draft'), runs=[]), [])
+    assert st.session_state.selected_request == 'draft'
+    assert st.session_state.selected_run is None
+    assert st.session_state.step == PAGES[0]

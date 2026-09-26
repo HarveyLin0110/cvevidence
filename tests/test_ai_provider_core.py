@@ -295,3 +295,18 @@ def test_openai_private_native_history_is_also_bounded(case, monkeypatch):
                              transport=lambda *args: pytest.fail('Oversized input must not call the model'))
     result = ai.investigate(*case, mode='LIVE', provider=provider)
     assert result['status'] == 'BUDGET_EXHAUSTED' and provider._closed
+
+@pytest.mark.parametrize('provider_id',['openai_api','codex_cli'])
+def test_shared_token_threshold_handles_nullable_total(case,provider_id):
+    from cvevidence_core.investigation_control import control
+    receipt={'provider':provider_id,'status':'completed','model':None,
+             'usage':{'input_tokens':900,'output_tokens':200,'total_tokens':None}}
+    provider=SimulatedProvider([ProviderStep(decision('LIST'),receipt)])
+    provider.provider_id=provider_id
+    token=control.set({'token_limit':1000})
+    try:result=run(case,provider,max_calls=3)
+    finally:control.reset(token)
+    assert result['status']=='BUDGET_EXHAUSTED'
+    assert len(provider.seen)==1
+    assert result['usage_summary']['total_tokens']==1100
+    assert result['calls'][0]['usage']['total_tokens'] is None

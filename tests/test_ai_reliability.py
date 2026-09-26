@@ -249,7 +249,7 @@ class ReliabilityTests(unittest.TestCase):
                 self.assertEqual(result['tasks'][0]['status'], 'TOOL_ERROR')
 
     def test_local_io_failure_does_not_leave_a_running_task(self):
-        with patch('cvevidence_core.ai.read_excerpt', side_effect=OSError('input disappeared')):
+        with patch('cvevidence_core.ai.read_bounded_excerpt', side_effect=OSError('input disappeared')):
             result = self.run_ai([arguments(), self.read()], max_calls=2)
         self.assertEqual(result['status'], 'INPUT_CHANGED_OR_INVALID')
         self.assertEqual(result['tasks'][0]['status'], 'COMPLETED')

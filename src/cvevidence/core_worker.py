@@ -30,6 +30,30 @@ def execute(req):
         if req.get("context_hash") and context.context_hash != req["context_hash"]:
             raise IntegrityError("Run context changed")
         op = req["operation"]
+        if op == "review_conditions":
+            import re
+            from cvevidence_core.integrity import digest
+            from cvevidence_core.condition_review import dossier, verify_review
+            sha = req.get('review_payload_sha256', '')
+            if not isinstance(sha, str) or not re.fullmatch(r'[a-f0-9]{64}', sha):
+                raise ValueError('Invalid review payload')
+            payload = archive.parent / sha
+            if payload.is_symlink() or not payload.is_file() or payload.stat().st_size > 16 * 1024 * 1024 or file_hash(payload) != sha:
+                raise ValueError('Review payload changed')
+            data = json.loads(payload.read_bytes())
+            ai = data['ai']
+            if ai.get('record_hash') != digest({k:v for k,v in ai.items() if k != 'record_hash'}):
+                raise ValueError('AI changed')
+            current = dossier(context, ai)
+            if current != ai.get('condition_dossier'):
+                raise ValueError('Saved dossier does not match current evidence')
+            receipt = verify_review(context, current, data['decision'])
+            if file_hash(archive) != actual:
+                raise ValueError('Archive changed during review')
+            return receipt
+        if op == "discover_public":
+            from cvevidence_core.component_discovery import discover
+            return discover(context,req.get("symptom",""),consent=req.get("consent") is True)
         if op == "analyze_offline":
             from datetime import datetime, timezone
             from cvevidence_core.workflow import analyze_package

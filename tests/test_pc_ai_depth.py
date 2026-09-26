@@ -27,9 +27,10 @@ def test_pc_review_cannot_stop_with_only_a_missing_file(context):
     with patch('cvevidence_core.ai.settings',return_value={'OPENAI_API_KEY':'TEST_ONLY','OPENAI_MODEL':'TEST_ONLY'}):
         result=investigate(context,verified,entry['assessment'],mode='LIVE',transport=transport,
                            analysis_depth='pc',max_calls=2,public_record=public_record())
-    assert result['mode']=='SIMULATED' and result['status']=='NEEDS_USER_INPUT'
+    assert result['mode']=='SIMULATED' and result['status']=='BUDGET_EXHAUSTED'
     assert result['tasks'][0]['status']=='TOOL_ERROR'
-    assert result['tasks'][1]['status']=='COMPLETED'
+    assert result['tasks'][1]['status']=='TOOL_ERROR'
+    assert 'PLAN' in result['tasks'][1]['result']['error']
     assert digest(entry['assessment'])==original
     assert entry['assessment']['cve_condition_verification_status']=='NOT_RUN'
     assert all(c['state']=='UNKNOWN' for c in entry['assessment']['conditions'])

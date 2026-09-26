@@ -38,9 +38,11 @@ def plan(cve_id, context=None, public_record=None):
         raise ValueError('Plan CVE mismatch')
     targets = '、'.join(a['vendor'] + ' ' + a['product'] for a in (info or {}).get('affected', [])[:3])
     rows = []
+    from .component_discovery import components
+    identity_ids={r['source_id'] for r in components(context)} if context else set()
     for index, qid in enumerate(QUERY_IDS):
         materials = sorted(({'source_id': r['source_id'], 'path': r['path']} for r in context.sources.values()
-                            if r['kind'] == 'file' and _matches(r['path'], index)), key=lambda r: r['path']) if context else []
+                            if r['kind'] == 'file' and (_matches(r['path'], index) or (index == 0 and r['source_id'] in identity_ids))), key=lambda r: r['path']) if context else []
         rows.append({'query_id': qid, 'title': PURPOSES[index], 'description':
                      (('公告目標：' + targets + '。') if targets else '') + PURPOSES[index],
                      'pc_layer': ['PC1', 'PC2', 'PC2', 'PC2', 'PC3'][index],
