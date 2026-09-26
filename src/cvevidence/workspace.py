@@ -233,6 +233,9 @@ def workspace(st, *, store_root=None):
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
+        from .compilation_view import render as render_compilation
+        render_compilation(st,(payload.get('discovery',{}) if payload else run.candidates).get('compilation_database'),
+                           {s.source_id:s.path for s in run.sources})
         provenance=(payload.get('discovery',{}) if payload else run.candidates).get('build_provenance')
         if provenance and provenance.get('records'):
             with st.expander('建置聲明與交付檔案核對（未認證來源）'):

@@ -41,7 +41,8 @@ def prepare(context, public_sources):
     from .firmware_inventory import reports
     from .elf_metadata import inventory
     from .build_provenance import inspect as provenance
-    return {'build_provenance':provenance(context),'binary_metadata':inventory(context),'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
+    from .compilation_database import inspect as compilation
+    return {'compilation_database':compilation(context,[r['source_id'] for r in index if r.get('relevance_score',0)>=100]),'build_provenance':provenance(context),'binary_metadata':inventory(context),'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
             'component_declarations_truncated':len(declarations)>20,
             'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
             'read_errors':errors,'note':'已讀片段只支持其中可見內容；排序與檔案存在不是證據，不完整片段不能證明功能不存在。'}
@@ -68,3 +69,28 @@ def check_existing(context, requests, visible_excerpts):
                         'matched_sources':len(matches),'unread_matches':0,
                         'inspected_source_ids':sorted(declared),'semantic_sufficiency_verified':False})
     return receipt
+
+
+def check_copy_reads(context, tasks):
+    """A bounded read-progress gate, never a semantic or build-binding verdict."""
+    from pathlib import PurePosixPath
+    groups={};read_ids=set()
+    for task in tasks:
+        if task.get('status')!='COMPLETED':continue
+        result=task.get('result') or {}
+        if task.get('action')=='READ':read_ids.add(result.get('source_id'))
+        if task.get('action')!='SEARCH':continue
+        for row in result.get('matching_sources',[]):
+            sid=row['source_id']
+            if sid not in context.sources:raise IntegrityError('Search copy source is outside this context')
+            path=PurePosixPath(context.sources[sid]['path'])
+            if path.suffix.lower() not in {'.c','.cc','.cpp','.h','.hpp','.py','.js','.ts','.java','.go','.rs'}:continue
+            groups.setdefault(path.name.casefold(),set()).add(sid)
+    copies=set().union(*(group for group in groups.values() if len(group)>1)) if groups else set()
+    pending=sorted(copies-read_ids,key=lambda sid:context.sources[sid]['path'])
+    if pending:
+        hints=[{'source_id':sid,'path':context.sources[sid]['path']} for sid in pending[:8]]
+        raise ValueError('補件前仍有已搜尋命中的同名原碼副本未 READ；SEARCH 定位片段不代表已查本文。請讀關鍵實作，不能把調查未完成推成使用者缺件：'+str(hints))
+    return {'matched_copy_count':len(copies),'unread_copy_count':0,
+            'semantic_sufficiency_verified':False,
+            'note':'只核對已回報同名程式碼副本是否各有成功 READ；不保證完整本文、語意、全部副本或成品綁定。'}

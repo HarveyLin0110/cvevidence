@@ -38,6 +38,7 @@ required_files 只列解除目前缺口所必要的最小既有工程材料。�
 READ 的 start_line/end_line 最多 200 行，end_line - start_line 必須小於 200（例如 500–699），SEARCH term 使用字面關鍵字。不要捏造 source_id。
 公告選段不足時用 SEARCH_PUBLIC（source_ids 為 P-ID 或 [] 搜尋本輪全部保存公告、term 字面搜尋），再 READ_PUBLIC（恰好一個 P-ID、start_line/end_line 為保存文字行號，最多 200 行／8000 bytes）讀取修補或條件上下文。這兩個工具不連網、不讀產品檔、不產生 X-ID；公告 P-ID 只能用於條件的 public_source_id，不放產品 citations。尚未取得或保存本身截短的上游內容仍是工具缺口，不能宣稱已讀。
 READ 的 source_ids 必須恰好一個；COMPARE 必須恰好兩個同快照來源。多個檔案不要一次放進 COMPARE。
+SDK 可能有多份 bundled／static 原碼；判斷某份已修補或準備索取建置綁定前，先用 SEARCH source_ids=[] 跨已交材料搜尋相關函式／實作，再核對 matching_sources 中不同副本。SEARCH 優先回傳不同檔案片段，仍須 READ 各副本關鍵段落；已回報同名原碼副本尚未逐份成功 READ 時，ASK_USER 會被阻擋。scope_covers_all_files=false 表示只搜指定檔；coverage_limited／unsearched_file_count／skipped_nontext_or_large 表示未完整涵蓋，不能把未命中說成不存在。
 搜尋若只涵蓋部分來源，只能說那些來源未找到；需要宣告缺件前先 LIST 對應檔名。已有資料不要重複要求使用者補。
 LIST 的 term 比對檔名；SEARCH 只搜尋檔案內容，搜尋檔名字串沒有命中不代表該檔不存在。清單 truncated 時縮小 LIST term，不能據此宣告缺件。
 source_index 若已有 launcher、config 或觀測，先 READ 與當次缺口相關的原文；LIST 只證明檔案存在，不代表已檢查內容。
@@ -49,6 +50,7 @@ GENERAL_TRIAGE 且有 PUBLISHED 公告時，先 PLAN 建立本 CVE 的 3–8 項
 讀取產品證據後，用 REVIEW 提交同一完整 conditions（條件定義與公告引文原封保留），只更新 state、citations、explanation。OBSERVED_SUPPORT／OBSERVED_EXCLUSION 是有原文支持的待覆核觀察，不是正式判定；CONFLICT 是證據矛盾；USER_MATERIAL_MISSING 是確實缺少使用者材料；CAPABILITY_GAP 是工具不會驗證或無法取得公開資料；NOT_REVIEWED 是尚未讀完。優先檢查可排除條件，不因 PC3 尚未知就向使用者索取所有材料。
 條件狀態以本次目標成品為範圍：若原碼有排除線索，但缺少原碼到成品的建置對應，explanation 保留該線索，state 仍為 USER_MATERIAL_MISSING（缺建置材料）或 CAPABILITY_GAP（工具尚無能力），不可先把成品條件標成 OBSERVED_EXCLUSION 又要求同條件補件。不能為了通過補件檢查而改狀態，REVIEW 必須依證據說明原因。
 binary_metadata 是工具核對 hash 後解析的 ELF 結構線索，不是產品版本或同 build 證明；它不是文字 READ 原文，不可捏造 X-ID，也不可把只有 metadata 的 source_id 放入 existing_source_ids。不要用文字 READ 讀 ELF；現有解析能力不足要列 CAPABILITY_GAP。
+compilation_database 是已交 compile_commands.json 的有界宣告摘要。candidate_source_ids 只依路徑字串比對，不認證成品綁定；command／arguments 不會執行。先 READ 資料庫原文再引用，區分「宣告編譯此副本」與「編譯／連結確實完成」。缺少 entry 或有截短不證明其他副本未使用；補件後若已能縮小候選，說明新增進展，不要再索取相同資料庫。
 ASK_USER 用 requests 結構化列 1–3 項，全部針對一個最關鍵 condition_id，依重要性排序；每項只是一份具體材料（不能打包整個 SDK）。欄位 material、why、owner、how、alternative（可留空）、search_terms（1–3 個精確路徑／檔名詞）、existing_source_ids（已讀相關來源）、insufficiency（已交材料為何不足）、expected_resolution（取得後驗證什麼）。新 CVE 的 condition_id 用 PLAN 的 C-ID；已有專用規則用原 condition_id。required_files 留 []，系統會產生精簡清單。其餘 action 的 requests=[]。
 initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 X-ID；不用重新索取或重讀相同片段。提出 requests 前，工具會全量比對 search_terms 的檔案路徑；任何命中但未讀的材料會阻擋補件。先 READ 相關材料，再用 existing_source_ids 與 insufficiency 說明尚缺什麼；不能用很廣的搜尋詞或把已收到說成不存在。
 若 REVIEW 仍有 USER_MATERIAL_MISSING，且沒有成品排除線索、證據衝突或工具能力缺口，必須用 ASK_USER 提出一個最關鍵條件的最小結構化補件；不能只在 COMPLETE 摘要寫「請提供」。缺口屬工具或證據衝突時可 COMPLETE 交覆核，不要為了收尾而改條件狀態。
@@ -273,6 +275,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
         result['initial_product_excerpts']=prepared['initial_product_excerpts']
         result['binary_metadata']=deepcopy(prepared['binary_metadata'])
         result['build_provenance']=deepcopy(prepared['build_provenance'])
+        result['compilation_database']=deepcopy(prepared['compilation_database'])
     resumed=continuation(context,verified.cve_id,controls.get('previous'))
     if resumed:
         payload['continuation']=resumed
@@ -447,6 +450,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     tool_output=compare_sources(context,*ids)
                 elif action=='VERIFY':tool_output=citation_check
                 elif action=='ASK_USER':
+                    if generic:
+                        from .investigation_intake import check_copy_reads
+                        task['copy_read_check']=check_copy_reads(context,result['tasks'])
                     if generic and not requires_plan:
                         raise ValueError('公告不可用屬工具／公開來源缺口；COMPLETE 說明限制，不向使用者索取一整套材料。')
                     if requires_plan and not any(r['state']=='USER_MATERIAL_MISSING' for r in result['condition_plan']['conditions']):
