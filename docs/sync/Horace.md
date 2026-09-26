@@ -1,5 +1,42 @@
 # Horace 開發同步
 
+## 2026-09-26 團隊登入邊界
+
+- 程式 7ee3eea：集中驗證既有 Google 部署設定，帳號切換清除 session 暫存，帳號目錄拒絕 symlink；保留白名單與 subject 雜湊儲存方式。
+- AppTest 覆蓋未設定、未登入、未受邀、受邀入口；實際瀏覽器驗證臨時 localhost:8507 未設定時不載入工作台，已停止臨時服務並回到 8506。未測公司 OIDC／HTTPS，未公開入口。
+- 完整回歸 505 passed、23 subtests passed（250.59 秒）；上一輪 CI 36197384239 成功。詳見 docs/releases/2026-09-26-團隊登入邊界.md。
+- 尚待公司登入部署、認證覆核與分享／備份政策，不宣稱完成內網上線；PC 判定及模型調查未改。
+
+## 2026-09-26 收件錯誤指引
+
+- 部分材料與補件新增可辨識的中文容量／封存檔／連結錯誤，損壞 ZIP 不再直接使頁面例外。僅顯示固定訊息，不回顯任意檔名或伺服器錯誤。base 合併先查容量再複製。
+- 程式提交 23757a4；嚴格原生 ROM 全量 490 passed、23 subtests passed（295.33 秒）。實際 8506 瀏覽器入口正常；錯誤提交由 AppTest 驗證，未新增原生選檔 HTTP 驗收或模型 LIVE。
+- 詳見 docs/releases/2026-09-26-收件錯誤指引.md。未改正式判定／AI／登入政策；只推個人分支。內網認證、完整 ROM／SDK 同建置解析等仍待完成。
+
+## 2026-09-26 大型材料與 CI 環境差異
+
+- 新增大型 ROM／SDK 單檔入口及補件：256 MiB 單檔、384 MiB／5000 檔快照；一般材料維持原限制。後端以 1 MiB 分塊暫存，不用 getvalue 複製整份上傳。Streamlit 仍會暫存上傳內容，不宣稱端到端 HTTP 串流。
+- 封裝改為穩定 bytes、0600 權限，重送同一請求可辨識相同材料；補件檢查合併後總容量並保留原 run。Runner.supplement_partial 新增 large 關鍵字選項，預設不變。
+- 上輪 CI 真實失敗已追到 bwrap 隔離網路建立被拒絕；新增 ISOLATION_UNAVAILABLE，不再混為缺材料。保留原 CI，另設必須真的讀出 ROM 的工作，沒有停用隔離或變更主機安全政策。舊版工具 -version 回傳碼造成預檢誤報也已修正；詳見 release。
+- 本機嚴格要求原生讀取的全量：483 passed、23 subtests passed（285.23 秒）。新建 24 MiB SquashFS 走串流收件及網頁結果通過，原生選檔器上傳尚未列驗收；本輪無新模型 LIVE。
+- D01/D02/D05–09；R01/R03/R05/R06/R07/R09/R11/R12。文件 docs/releases/2026-09-26-大型材料收件與環境差異.md。後續仍有 SDK／ROM 同建置核對、更多 ROM 格式、公司登入／案件權限與運維；只推個人分支。
+
+## 2026-09-26 ROM 固定資訊隔離讀取
+
+- 新寫原始 SquashFS ROM 固定三路徑讀取，保存原 ROM／工具／擷取文字 hash 與逐檔狀態；接既有套件辨識、Q1、AI 原文及網頁。副檔名不作格式或判定依據，未知格式保留原檔與能力缺口。
+- Linux 必須具備 unsquashfs 與 bubblewrap，CI 加入 bubblewrap；固定命令、唯讀映像／程式／函式庫、独立 namespaces、乾淨環境及資源界線。沒有非隔離 fallback，沒有 mount 或執行韌體。
+- 新建 TEST_ONLY 真實 SquashFS 驗證、主機 symlink／過量讀取拒絕、receipt 型別／hash 檢查。輔助隔離探針確認工作目錄不可見、主機網路不可達、映像不可寫、無 API key。瀏覽器核對 run 00d686a0-bc6c-4684-a78f-9589ce448490 的狀態與候選；本輪無新 API 呼叫。
+- 最終全量 474 passed、23 subtests passed（252.86 秒），12 項新增測試。D01/D02/D03/D05–09；R01/R03/R05/R06/R07/R09/R10/R12。詳見 docs/releases/2026-09-26-ROM固定資訊隔離讀取.md。
+- 仍未完成：大型 ROM 串流收件、廠商容器／分割區／其他檔案系統、完整 binary 解析及 SDK 同建置對應；亦非整套網站安全稽核。重新 fetch 後 main 仍 b95f96d，僅推個人分支，Harvey 決定合併。
+
+## 2026-09-26 網通套件清單與 AI 接線
+
+- 新寫 opkg list-installed／installed control stanza 解析，保留 vendor 版本、原文位置、來源與未驗證身分；不猜生態系統，不直接產生受影響結論。
+- 元件清單接入候選、Q1、材料確認表格及 AI 初始原文。自訂名稱 JSON SBOM 也可參與 AI 初始身分材料選擇；維持既有讀取界線。新增 discovery.components 為材料聲明，非驗證事實。
+- 真實 API Sol/high：CVE-2023-38546＋TEST_ONLY 清單，110.313 秒、6 calls、NEEDS_USER_INPUT，0 拒絕；讀取 vendor2 原文，補件集中 C1 三項。實際網頁已載入該結果。非真實設備判定，非人工品質通過。
+- 最終全量 462 passed、23 subtests passed（395.26 秒），八項新增測試含網頁表格。D01/D02/D03/D06–09、R01/R03/R05/R06/R10/R12；細節與識別碼見 docs/releases/2026-09-26-網通套件清單.md。
+- 待辦保留：通用 ROM 解包、SDK／ROM 同建置對應、正式新 CVE 規則及內網運維。找到既有 team_app.py Google allowlist／帳號儲存隔離可沿用，未改服務開放範圍，登入方式與公司設定仍待確認。
+
 ## 2026-09-26 公司使用／網頁逐條覆核
 
 - 第一批實務範圍確認為網通設備 ROM、SDK、SBOM、套件清單與原碼，目標公司內網；舊 Demo 僅參考概念。登入方式仍待確認，本機服務尚未開放內網。

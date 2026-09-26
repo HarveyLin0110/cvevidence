@@ -1,5 +1,6 @@
 """Actual local source workspace; all collection/supplement calls share Runner."""
 import os
+from cvevidence_core.partial_intake import IntakeError
 from pathlib import Path
 from .runner import Runner
 from .storage import RunStore
@@ -113,7 +114,7 @@ def workspace(st, *, store_root=None):
         left.info("不知道是哪個 CVE：描述發生了什麼，先交手邊材料；CVE 留白，再從候選選擇要深入查核的項目。")
         right.info("已知想查的 CVE：輸入 CVE 編號與產品材料，逐項核對元件、實作及部署證據。")
         st.caption("目前没有檔案可選「先描述情境」保存草稿；有零散檔案可選「部分材料」，不必先製作工程包。")
-        source_options=["產品／版本樣品","上傳工程包","部分材料（SBOM／日誌／原碼／設定）"]
+        source_options=["產品／版本樣品","上傳工程包","部分材料（SBOM／日誌／原碼／設定）","部分材料：大型 ROM／SDK（單檔）"]
         if store_root is None: source_options.append("受控路徑")
         source_options.append("先描述情境")
         kind=st.radio("資料來源",source_options,horizontal=True)
@@ -121,6 +122,7 @@ def workspace(st, *, store_root=None):
         selected=None
         upload=None
         partial_files=[]
+        partial_large=False
         path=""
         if kind=="產品／版本樣品":
             if available:
@@ -135,8 +137,15 @@ def workspace(st, *, store_root=None):
             upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
         elif kind.startswith("部分材料"):
             st.info("可先提交手上已有的檔案；不需要自製 manifest。產品與 build 只記為聲明，不冒充已驗成品。")
-            partial_files=st.file_uploader("部分材料（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
-            st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
+            partial_large='大型' in kind
+            if partial_large:
+                single=st.file_uploader('大型 ROM 或 SDK 封存檔（單檔 256 MiB）',max_upload_size=256)
+                partial_files=[single] if single else []
+                st.caption('一次一檔，原檔及展開內容合計最多 384 MiB、5000 個檔案。接受 ROM／IMG／BIN／SquashFS 或 ZIP／tar／tar.gz／wheel。SDK 只展開為資料，不安裝或執行；網頁元件仍會暫存上傳內容。')
+            else:
+                partial_files=st.file_uploader("部分材料（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
+                st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
+            st.caption('亦可交原始 SquashFS ROM（每次最多 3 份）；工具只讀固定套件／版本路徑，不啟動韌體。其他 ROM 格式會保留原檔並顯示尚不支援。')
             partial_product=st.text_input("產品名稱",value="未提供",max_chars=200)
             partial_release=st.text_input("產品版本",value="未提供",max_chars=200)
             partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認",max_chars=200)
@@ -175,7 +184,7 @@ def workspace(st, *, store_root=None):
                         import tempfile
                         with tempfile.TemporaryDirectory(dir=runner.store.root) as temporary:
                             archive=Path(temporary)/"partial.tar.gz"
-                            create([(f.name,f.getvalue()) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build)
+                            create([(f.name,f) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build,large=partial_large)
                             result=runner.submit_request(path=archive,**kwargs)
                     elif upload:
                         upload.seek(0)
@@ -185,6 +194,8 @@ def workspace(st, *, store_root=None):
                 st.session_state.selected_request=result.spec.request_id
                 st.session_state.selected_run=result.runs[0].run_id if result.runs else None
                 st.rerun()
+            except IntakeError as exc:
+                st.error(str(exc))
             except (ValueError,OSError,RuntimeError):
                 st.error("請求未完成。請檢查最多5個合法CVE、工程包與路徑；相同請求若仍執行中或中斷，不會自動重跑。")
         if request: request_summary(st,request)
@@ -222,6 +233,29 @@ def workspace(st, *, store_root=None):
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
+        firmware=(payload.get('discovery',{}) if payload else run.candidates).get('firmware_inventory',[])
+        if firmware:
+            with st.expander('ROM 套件與版本讀取狀態',expanded=True):
+                labels={'PARTIAL_READ':'已讀取部分固定路徑','NO_INVENTORY_READ':'未能讀取固定路徑（不代表不存在）',
+                        'UNSUPPORTED_FORMAT':'目前不支援此映像格式','TOOL_UNAVAILABLE':'伺服器未備妥 ROM 讀取工具',
+                        'ISOLATION_UNAVAILABLE':'伺服器無法建立隔離讀取環境，未解析 ROM',
+                        'INVALID_RECEIPT':'讀取紀錄無法核對'}
+                for item in firmware:
+                    st.text(str(item['image_path'])+'：'+labels.get(item['status'],'讀取狀態待確認'))
+                    if item['status']=='ISOLATION_UNAVAILABLE':
+                        st.caption('請由部署維護者檢查隔離環境；不會停用隔離改成直接讀取，也不需要因此重傳相同 ROM。')
+                    if item['status'] in ('UNSUPPORTED_FORMAT','TOOL_UNAVAILABLE','NO_INVENTORY_READ'):
+                        st.caption('可先提供現有套件清單／SBOM 繼續調查；這是讀取能力或固定路徑限制，不是要求提供所有工程材料。')
+                    with st.expander('查看 ROM 讀取範圍與 hash '+str(item['image_path'])):
+                        st.json(item)
+                st.caption('原 ROM 與擷取文字的 hash 關聯不代表來源認證，也不能證明 SDK／原碼／運作紀錄屬於同次建置。')
+        inventory=(payload.get('discovery',{}) if payload else run.candidates).get('components',[])
+        if inventory:
+            with st.expander('已辨識的元件與套件清單',expanded=True):
+                st.caption('這是材料中的版本聲明，尚未證明屬於同一 ROM 或同次建置。一般套件名稱不會自動轉成上游生態系統。自動解析最多掃描 100 份合格檔案、保留 100 筆一般清單項目；不是完整軟體資產盤點。')
+                st.dataframe([{'元件':r['name'],'版本聲明':r['version'],'來源':r.get('source_path',r['source_id']),
+                    '類型':r['source_kind'],'原文行':str(r.get('start_line',''))+('–'+str(r['end_line']) if r.get('end_line') else '')}
+                    for r in inventory],hide_index=True,width='stretch')
         if run.missing:
             for item in run.missing: st.text(item)
         with st.expander("擴充公開漏洞候選探索（SBOM 元件／版本）"):
@@ -378,12 +412,16 @@ def workspace(st, *, store_root=None):
             if real and run.input_package.format=='partial':
                 st.caption('僅補本輪要求的材料即可，不需把所有可能檔案都補齊。每檔 20 MiB，最多 100 檔；新增材料含展開後合計 100 MiB，同名衝突拒收。')
                 loose=st.file_uploader('補上原始檔案（保留原材料，拒絕同名覆寫）',accept_multiple_files=True,max_upload_size=20,key='partial-delta-'+run.run_id)
-                if st.button('保存部分材料補件',disabled=not loose):
+                large_loose=st.file_uploader('或補一份大型 ROM／SDK（單檔 256 MiB）',max_upload_size=256,key='partial-large-delta-'+run.run_id)
+                st.caption('一般多檔與大型單檔請擇一。大型檔案及展開内容、以及補件後整份快照，最多 384 MiB／5000 檔。')
+                if st.button('保存部分材料補件',disabled=not (loose or large_loose) or bool(loose and large_loose)):
                     try:
-                        child=runner.supplement_partial(run.run_id,[(f.name,f.getvalue()) for f in loose])
+                        chosen_loose=[large_loose] if large_loose else loose
+                        child=runner.supplement_partial(run.run_id,[(f.name,f) for f in chosen_loose],large=bool(large_loose))
                         st.session_state.selected_run=child.run_id
                         st.session_state.step=PAGES[2] if not child.error else PAGES[4]
                         st.rerun()
+                    except IntakeError as exc:st.error(str(exc))
                     except (ValueError,OSError):st.error('補件與原快照衝突或格式不符，未覆寫原材料。')
             matching=[e for e in entries if real and e["available"] and e["kind"]=="supplement"
                 and e["base_package_id"]==run.input_package.package_id

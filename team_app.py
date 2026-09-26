@@ -5,26 +5,19 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 import streamlit as st
-from cvevidence.web_access import principal, release_label
+from cvevidence.web_access import principal, release_label, deployment_policy, bind_session, account_root
 from cvevidence.product_style import apply_style
 apply_style(st)
 
 try:
-    policy = st.secrets["deployment"]
-    allowed = policy["allowed_emails"]
-    auth = st.secrets["auth"]
-    google = auth["google"]
-    if (not isinstance(allowed, list) or not allowed
-            or not auth["redirect_uri"].startswith("https://")
-            or len(auth["cookie_secret"]) < 32
-            or google["server_metadata_url"] != "https://accounts.google.com/.well-known/openid-configuration"
-            or not google["client_id"] or not google["client_secret"]):
-        raise ValueError("Incomplete configuration")
+    allowed = deployment_policy(st.secrets)
 except (KeyError, ValueError, FileNotFoundError):
+    bind_session(st.session_state,None)
     st.error("團隊測試站尚未完成登入設定，暫不開放工作台。")
     st.stop()
 
 if not st.user.is_logged_in:
+    bind_session(st.session_state,None)
     st.title("CVEvidence")
     st.write("團隊測試站 · 使用受邀的 Google 帳號登入")
     st.button("使用 Google 登入", on_click=st.login, args=("google",))
@@ -32,9 +25,12 @@ if not st.user.is_logged_in:
 try:
     identity = principal(dict(st.user), allowed)
 except ValueError:
+    bind_session(st.session_state,None)
     st.error("此帳號尚未獲得測試站存取權。")
     st.button("登出", on_click=st.logout)
     st.stop()
+
+bind_session(st.session_state,identity)
 
 from cvevidence.runtime_guard import current
 if not current():
@@ -47,4 +43,9 @@ with st.sidebar.expander("版本資訊"):
     st.caption("部署版本：" + release_label(os.environ.get("CVEVIDENCE_RELEASE_SHA")))
 st.sidebar.button("登出", on_click=st.logout)
 root = Path(os.environ.get("CVEVIDENCE_WEB_STORE", "var/team-runtime"))
-workspace(st, store_root=root / identity)
+try:
+    owned_root=account_root(root,identity)
+except (ValueError,OSError):
+    st.error("帳號資料目錄無法安全開啟，請聯絡管理員；未載入查核資料。")
+    st.stop()
+workspace(st, store_root=owned_root)

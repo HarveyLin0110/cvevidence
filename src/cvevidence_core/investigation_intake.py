@@ -8,9 +8,12 @@ def prepare(context, public_sources):
     text='\n'.join(s['text'] for s in public_sources)
     names=set(re.findall(r'\b[\w-]+\.(?:c|h|cpp|conf|json)\b',text))
     files=[r for r in context.sources.values() if r['kind']=='file']
+    from .component_discovery import components
+    declarations=components(context)
+    identity_ids={row['source_id'] for row in declarations}
     def score(r):
         path=r['path'].lower(); name=path.rsplit('/',1)[-1]
-        if name in ('sbom.cdx.json','build-record.json'):return 100
+        if name in ('sbom.cdx.json','build-record.json') or r['source_id'] in identity_ids:return 100
         if name in names and path.startswith('source/'):return 90
         if path.startswith('runtime/'):return 80
         if path.startswith(('install/etc/','observations/')) or path.endswith(('.conf','.config')):return 70
@@ -19,7 +22,11 @@ def prepare(context, public_sources):
     ranked=sorted(files,key=lambda r:(-score(r),r['path']))
     from .relevance import rank
     ranking=rank(context,text)
-    index=ranking['sources']
+    identity_index=[{'source_id':r['source_id'],'path':r['path'],
+                    'relevance_score':80,'relevance_reasons':['已解析元件聲明；尚未驗證建置歸屬']}
+                    for r in ranked if r['source_id'] in identity_ids][:20]
+    priority_ids={r['source_id'] for r in identity_index}
+    index=(identity_index+[r for r in ranking['sources'] if r['source_id'] not in priority_ids])[:60]
     excerpts=[]; errors=[]; remaining=8000
     # Identity facts are read once before asking the model to plan. Code bodies
     # still need targeted searches; the first lines are not treated as absence.
@@ -31,7 +38,10 @@ def prepare(context, public_sources):
             remaining-=len(excerpt['text']);excerpts.append({**excerpt})
         except IntegrityError:raise
         except (ValueError,OSError):errors.append({'source_id':row['source_id'],'gap_kind':'CAPABILITY_GAP'})
-    return {'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
+    from .firmware_inventory import reports
+    return {'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
+            'component_declarations_truncated':len(declarations)>20,
+            'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
             'read_errors':errors,'note':'已讀片段只支持其中可見內容；排序與檔案存在不是證據，不完整片段不能證明功能不存在。'}
 
 

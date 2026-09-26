@@ -9,7 +9,7 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
-    def supplement_partial(self,run_id,files,note=''):
+    def supplement_partial(self,run_id,files,note='',*,large=False):
         from cvevidence_core.integrity import safe_extract,ingest_package
         from cvevidence_core.partial_intake import create_supplement
         import tempfile
@@ -19,7 +19,7 @@ class Runner:
         with tempfile.TemporaryDirectory(dir=self.store.root) as temporary:
             root=Path(temporary)
             safe_extract(self.store.root/'blobs'/parent.input_package.archive_sha256,root/'base')
-            create_supplement(ingest_package(root/'base'),files,root/'delta.tgz')
+            create_supplement(ingest_package(root/'base'),files,root/'delta.tgz',large=large)
             return self.supplement_file(run_id,path=root/'delta.tgz',note=note)
 
     def discover_public(self, run_id, *, consent=False):

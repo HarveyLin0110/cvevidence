@@ -9,12 +9,24 @@ ECOSYSTEMS={'pypi':'PyPI','npm':'npm','maven':'Maven','golang':'Go','cargo':'cra
 
 def components(context):
     rows=[];scanned=0
-    for source in context.sources.values():
-        if source['kind']!='file' or not source['path'].endswith('.json') or source['size']>2_000_000:continue
+    for source in sorted(context.sources.values(),key=lambda s:(not s['path'].lower().endswith('.json'),s['path'])):
+        if source['kind']!='file' or source['size']>2_000_000:continue
+        path=source['path'].lower()
+        if not path.endswith(('.json','.txt','.manifest','.list','/status','.control')) and path not in ('status','manifest'):continue
         if scanned>=100:break
         scanned+=1
-        try:data=json.loads('\n'.join(text_lines(context,source['source_id'])))
+        try:lines=text_lines(context,source['source_id'])
         except IntegrityError:raise
+        except (ValueError,UnicodeError):continue
+        if not path.endswith('.json'):
+            from .package_inventory import parse
+            for row in parse(lines):
+                rows.append({**row,'purl':'','source_id':source['source_id'],'source_path':source['path'],
+                    'source_kind':'PACKAGE_INVENTORY_DECLARATION','query':None,
+                    'identity_verified':False})
+                if len(rows)>=100:return rows
+            continue
+        try:data=json.loads('\n'.join(lines))
         except (ValueError,UnicodeError):continue
         if not isinstance(data,dict):continue
         declared=[row for key in ('components','packages') if isinstance(data.get(key),list) for row in data[key]]
@@ -32,7 +44,7 @@ def components(context):
                     pname=unquote(match[2]);ecosystem=ECOSYSTEMS[match[1]]
                     if ecosystem=='Maven':pname=pname.replace('/',':')
                     query={'package':{'name':pname,'ecosystem':ecosystem},'version':version}
-            rows.append({'name':name,'version':version,'purl':purl,'source_id':source['source_id'],
+            rows.append({'name':name,'version':version,'purl':purl,'source_id':source['source_id'],'source_path':source['path'],
                 'source_kind':'SBOM_DECLARATION','query':query})
             if len(rows)>=100:return rows
     return rows
