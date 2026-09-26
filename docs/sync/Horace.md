@@ -107,3 +107,18 @@ D 的 integration a47a1a3 未接分析屬當時結果，main 新 OFFLINE 已取�
 - P0 最終程式 `3b837e7`：完整材料 CVE-2022-35252 實連成功（整次約 160 秒、8 calls、無工具／引用錯誤），讀取官方公告／patch、版本、cookie.c 與建置線索後提出排除觀察，沒有補件。
 - 最後從本機網頁啟動 CVE-2023-38546 部分材料實連：155.595 秒、9 calls、NEEDS_USER_INPUT；只問 C2 同一修補條件的 easy.c／cookie.c／cookie.h，含取得方式與替代方案，C3 工具能力不足另列。期間錯誤提案有被 guard 拒絕並修正，完整紀錄保留。正式判定仍待工程覆核。
 - 自動驗收：完整回歸 409 passed／23 subtests（既有 duplicate ZIP 警告）；後續時間調整相關 82 passed；最後 UI／共享期限專項 9 passed。不混算成最後版本全量重跑。詳細記錄見 `docs/releases/2026-09-26-P0-通用CVE調查.md`。本機網頁維持 8506，改動分開提交至 codex/horace-development，由 Harvey 決定合併。
+
+## 2026-09-26 P1／P2 延續
+
+- P1 搜尋：公告／patch 路徑、函式、設定符號與建置紀錄共同排序，保存掃描上限與原因；排行不是證據，不宣稱掃過所有檔案。R01/R03/R05。
+- P1 版本：保留 CNA defaultStatus／changes；數字版本可比對明確區間，發行版／回補／預發行與未覆蓋範圍保持未知；網頁分開公告受影響與未受影響宣告。R05/R06。
+- P1 條件呈現／覆核：逐條顯示原文檔名與行號，建立有 hash 的條件證據包；本機操作員可用 scripts/review_conditions.py 提交逐條理由，Verifier 重查原文與 scope，保存獨立覆核收據。人工身分未認證、語意仍屬人工判讀；不能把此收據當成自動安全判定。R01/R05/R06/R11；10 項相關測試通過。
+- P1 部分材料：新增 partial 格式與網頁多檔收件，內部產生清單、記錄使用者身分聲明；inventory hash 不冒充產品 binary。即使是既有 CVE 也走通用待查，無完整 build 不套專用安全判定。R01/R06/R07；部分收件及通用回歸通過。
+- P1 公開候選：支援 CycloneDX／SPDX 套件身分；網頁明確同意後向固定 OSV API 查詢最多五個元件，症狀只在本機比對排序，不外送原碼／日誌。保存回應 hash、查詢與 scope；未涵蓋與查不到不視為安全。R02/R03/R10。規格來源 https://google.github.io/osv.dev/api/ 。
+- P1 接續／P2：使用者明選前次 AI，僅同 run 或明確祖先可讀；重驗 bytes 後才沿用引用，材料缺口重新 REVIEW。背景工作、逐步存檔、取消程序群組、時間／呼叫上限及供應者回報 token 門檻已接線；不宣稱 token 精確硬上限或供應者端零費用取消。R01/R05/R08/R09/R11。38 項 AI 介面、23 項控制／來源／部分材料、10 項工作台測試通過；真實 Django 接續調查正在驗收。
+- 真實實連：CVE-2024-42005，官方 Django 4.2 SBOM 初次 112.807 秒／5 calls，只要求一份原始套件；补入官方 wheel 的四份原碼後，接續 101.156 秒／8 calls，完成 5 條條件的覆核觀察、引用 query.py 與 sql/query.py、不重複補件，原紀錄不變。仍未證明已部署產品受影響。
+- P2 網頁實測：實際啟動 API、看到 RUNNING 與目前步驟，再按取消；保存 CANCELLED／USER_CANCELLED 與 checkpoint，可下載，沒有改工程結果。
+- 真實第二 CVE 觸發 token 門檻並保留 BUDGET_EXHAUSTED。發現公告 patch 的長測試字串與接續重複公告耗用過多，加入傳送原文選段與去重；完整快照仍保存，未傳送部分不作不存在證明。正在從原 checkpoint 驗收。
+
+- 最終 `5e2ba52` 全量：430 passed、23 subtests passed（231.66 秒），只剩既有 duplicate ZIP 測試警告。CVE-2023-36053 去重後接續完成：70.667 秒／4 calls，6 個條件、5 個有原文引用，命中 validators.py；無工具拒絕、無補件。完整失敗與預算停止記錄保留。
+- 網頁已重啟至最後版本並留在成功 LIVE 結果；可查三輪預算停止／成功歷史，另有實際取消紀錄。詳細範圍、限制、D/R 規則與驗收見 `docs/releases/2026-09-26-P1-P2-通用調查延續.md`。本輪 12 個 commits 只推 Horace 開發分支，由 Harvey 決定合併。

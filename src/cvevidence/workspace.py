@@ -109,13 +109,14 @@ def workspace(st, *, store_root=None):
     entries=catalog_entries(Path(__file__).resolve().parents[2])
     if page==PAGES[0]:
         st.subheader("從產品與情境開始")
-        source_options=["產品／版本樣品","上傳工程包"]
+        source_options=["產品／版本樣品","上傳工程包","部分材料（SBOM／日誌／原碼／設定）"]
         if store_root is None: source_options.append("受控路徑")
         source_options.append("先描述情境")
         kind=st.radio("資料來源",source_options,horizontal=True)
         available=[e for e in entries if e["available"] and e["kind"]=="initial"]
         selected=None
         upload=None
+        partial_files=[]
         path=""
         if kind=="產品／版本樣品":
             if available:
@@ -128,15 +129,23 @@ def workspace(st, *, store_root=None):
                 st.dataframe([{"資料版":e["dataset"],"資料包":e["package_id"],"可用":"已取得" if e["available"] else "等待資料交付"} for e in entries],hide_index=True)
         elif kind=="上傳工程包":
             upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
+        elif kind.startswith("部分材料"):
+            st.info("可先提交手上已有的檔案；不需要自製 manifest。產品與 build 只記為聲明，不冒充已驗成品。")
+            partial_files=st.file_uploader("部分材料（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
+            partial_product=st.text_input("產品名稱",value="未提供")
+            partial_release=st.text_input("產品版本",value="未提供")
+            partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認")
         elif kind=="受控路徑":
             st.caption("根目錄："+os.environ.get("CVEVIDENCE_ARTIFACT_ROOT","var/artifacts"))
             path=st.text_input("相對路徑",placeholder="archives/資料版本/06_cmake.tar.gz")
         cve=st.text_input("CVE ID（最多 5 個，逗號或空白分隔；可留白）",placeholder="CVE-2022-37434, CVE-2023-38545")
         symptom=st.text_area("情境與想確認的問題",max_chars=4000,placeholder="描述操作、異常、部署方式；說明只作調查背景。")
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
+        if kind.startswith("部分材料"):ready=bool(partial_files)
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
         signature=(kind,selected["archive"]["sha256"] if selected else None,
-            getattr(upload,"file_id",None),path,cve,symptom,st.session_state.get("follow_parent"))
+            getattr(upload,"file_id",None),tuple((f.name,f.file_id) for f in partial_files),
+            (partial_product,partial_release,partial_build) if kind.startswith("部分材料") else None,path,cve,symptom,st.session_state.get("follow_parent"))
         if st.session_state.get("request_signature")!=signature:
             if st.session_state.get("request_signature") is not None:
                 st.session_state.selected_run=None
@@ -156,6 +165,13 @@ def workspace(st, *, store_root=None):
                     if selected:
                         result=runner.submit_request(path=selected["local_path"],archive_sha256=selected["archive"]["sha256"],
                             manifest_sha256=selected["manifest_sha256"],**kwargs)
+                    elif partial_files:
+                        from cvevidence_core.partial_intake import create
+                        import tempfile
+                        with tempfile.TemporaryDirectory(dir=runner.store.root) as temporary:
+                            archive=Path(temporary)/"partial.tar.gz"
+                            create([(f.name,f.getvalue()) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build)
+                            result=runner.submit_request(path=archive,**kwargs)
                     elif upload:
                         upload.seek(0)
                         result=runner.submit_request(stream=upload,**kwargs)
@@ -197,7 +213,21 @@ def workspace(st, *, store_root=None):
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
         if run.missing:
             for item in run.missing: st.text(item)
+        with st.expander("擴充公開漏洞候選探索（SBOM 元件／版本）"):
+            st.caption("支援 CycloneDX／SPDX 的套件 purl。只外送套件名稱、生態系統與版本至 OSV；症狀與原碼留在本機，症狀僅用於排序，不能證明原因。")
+            public_consent=st.checkbox("同意將已提交的套件名稱及版本查詢 OSV",key="osv-consent-"+run.run_id)
+            if st.button("查詢公開候選",disabled=not public_consent):
+                st.session_state["public-discovery-"+run.run_id]=runner.discover_public(run.run_id,consent=True)
+            public_result=st.session_state.get("public-discovery-"+run.run_id)
+            if public_result:
+                import json
+                st.download_button('下載公開候選查詢紀錄',json.dumps(public_result,ensure_ascii=False,indent=2),file_name=run.run_id+'-public-candidates.json',mime='application/json')
+                st.text("查詢狀態："+public_result["discovery"]["status"])
+                st.caption(public_result["discovery"]["scope"])
+                st.json(public_result)
         candidates=run.candidates.get("candidates",[])
+        if st.session_state.get("public-discovery-"+run.run_id):
+            candidates=candidates+st.session_state["public-discovery-"+run.run_id]["discovery"]["candidates"]
         if payload: candidates=payload.get("discovery",{}).get("candidates",[])
         render_candidates(st,candidates,run.cve_id)
         next_button(st,PAGES[2],"下一步：調查來源")
@@ -209,7 +239,8 @@ def workspace(st, *, store_root=None):
             st.subheader("執行工程分析")
             cve=run.cve_id
             if not cve:
-                options=[item["cve_id"] for item in run.candidates.get("candidates",[])]
+                public_candidates=(st.session_state.get('public-discovery-'+run.run_id) or {}).get('discovery',{}).get('candidates',[])
+                options=list(dict.fromkeys(item['cve_id'] for item in run.candidates.get('candidates',[])+public_candidates))
                 selected=st.selectbox("選擇一個 CVE 進行分析",[""]+options,key="analysis-cve-"+run.run_id)
                 cve=selected or st.text_input("或輸入 CVE ID",key="analysis-custom-"+run.run_id).strip().upper()
             else: st.text("本次分析："+cve)
@@ -308,6 +339,15 @@ def workspace(st, *, store_root=None):
         if not run.error:
             st.subheader("補充資料，保留前後紀錄")
             real=bool(run.input_package and run.input_package.context_hash)
+            if real and run.input_package.format=='partial':
+                loose=st.file_uploader('補上原始檔案（保留原材料，拒絕同名覆寫）',accept_multiple_files=True,max_upload_size=20,key='partial-delta-'+run.run_id)
+                if st.button('保存部分材料補件',disabled=not loose):
+                    try:
+                        child=runner.supplement_partial(run.run_id,[(f.name,f.getvalue()) for f in loose])
+                        st.session_state.selected_run=child.run_id
+                        st.session_state.step=PAGES[2] if not child.error else PAGES[4]
+                        st.rerun()
+                    except (ValueError,OSError):st.error('補件與原快照衝突或格式不符，未覆寫原材料。')
             matching=[e for e in entries if real and e["available"] and e["kind"]=="supplement"
                 and e["base_package_id"]==run.input_package.package_id
                 and e["build_id"]==run.input_package.declared_build_id]

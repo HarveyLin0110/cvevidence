@@ -161,7 +161,7 @@ def _curl(b,proof):
 
 def collect_evidence(context,cve_id):
     context.assert_current()
-    if cve_id not in CATALOG:
+    if cve_id not in CATALOG or context.manifest['format']=='partial':
         from .general_triage import collect
         return collect(context,cve_id)
     b=EvidenceBuilder(context);proof=BuildProof(context)

@@ -13,6 +13,10 @@ def lines(ai):
             '必要條件：'+row['requirement'], '排除依據：'+row['exclusion'], '查法：'+row['check'],
             '目前觀察：'+row['explanation'], '產品引用：'+', '.join(row['citations']),
             '公告依據：'+row['public_source_id']+' · '+row['public_quote']]
+    for row in (ai.get('condition_dossier') or {}).get('conditions',[]):
+        for evidence in row.get('evidence',[]):
+            output += [row['condition_id']+' 命中：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']),evidence['text']]
+        output.append(row['condition_id']+' 尚未確認：'+row['unconfirmed'])
     return output
 
 
@@ -21,10 +25,16 @@ def render(st, ai):
     if not lines(ai): return
     st.subheader('本次 CVE 專屬條件與調查進度')
     st.caption('以下為有來源的 AI 判讀，仍待工程覆核；不改變原工程判定。未讀完、工具限制與使用者缺件分開處理。')
+    dossiers={r['condition_id']:r for r in (ai.get('condition_dossier') or {}).get('conditions',[])}
     for row in plan['conditions']:
         st.text(row['condition_id']+' · '+row['layer']+' · '+LABELS.get(row['state'],row['state']))
         st.text(row['requirement'])
         st.text(row['explanation'])
+        detail=dossiers.get(row['condition_id'],{})
+        for evidence in detail.get('evidence',[]):
+            st.text('命中位置：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']))
+            st.code(evidence['text'],language=None)
+        if detail:st.caption('尚未確認：'+detail['unconfirmed'])
         with st.expander(row['condition_id']+'：排除條件、查法與引用',expanded=False):
             st.text('排除依據：'+row['exclusion']); st.text('查法：'+row['check'])
             st.text('公告原文：'+row['public_quote']); st.caption(row['public_source_id'])
@@ -33,6 +43,9 @@ def render(st, ai):
         st.info('工具能力不足的項目由開發端／工程覆核處理，不要求使用者反覆補檔。')
     if any(r['state']=='NOT_REVIEWED' for r in plan['conditions']):
         st.info('尚未查閱完成的項目是調查待辦，不代表使用者缺件。')
+    if ai.get('condition_dossier'):
+        import json
+        st.download_button('下載條件與證據覆核包',json.dumps(ai['condition_dossier'],ensure_ascii=False,indent=2),file_name=ai['cve_id']+'-review.json',mime='application/json')
     with st.expander('本次保存的官方公告與修補內容',expanded=False):
         for row in (ai.get('public_sources') or {}).get('sources',[]):
             st.text(row['source_id']+' · '+row['url'])

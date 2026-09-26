@@ -116,7 +116,7 @@ def ingest_package(path:str|pathlib.Path,expected_manifest_hash:str|None=None)->
  except (OSError,ValueError) as e:raise UnsupportedError('Missing or invalid manifest; obtain artifact identity and delivery inventory') from e
  required={'schema_version','package_id','product_id','release_id','build_id','format','primary_artifact','files'}
  if not required<=manifest.keys() or manifest['schema_version']!='1.0':raise UnsupportedError('Unsupported manifest schema')
- if manifest['format'] not in ('rom','cmake','curl'):raise UnsupportedError('Unsupported delivery format')
+ if manifest['format'] not in ('rom','cmake','curl','partial'):raise UnsupportedError('Unsupported delivery format')
  if expected_manifest_hash and file_hash(root/'manifest.json')!=expected_manifest_hash:raise IntegrityError('Catalog manifest hash mismatch')
  actual=scan(root)
  if actual!=manifest['files']:raise IntegrityError('Delivered files do not match manifest')
@@ -126,4 +126,4 @@ def ingest_package(path:str|pathlib.Path,expected_manifest_hash:str|None=None)->
  for row in actual:
   sid='S-'+digest({'path':row['path'],'sha256':row['sha256']})[:24];sources[sid]={**row,'source_id':sid}
  context=digest({'manifest':manifest,'sources':actual})
- return InputPackage(root,manifest,sources,context)
+ return InputPackage(root,manifest,sources,context,['部分材料：產品 binary 與建置身分尚未驗證'] if manifest['format']=='partial' else [])

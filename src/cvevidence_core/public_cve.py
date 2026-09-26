@@ -74,11 +74,13 @@ def brief(record):
     if not isinstance(description, str):
         raise ValueError('Invalid description')
     affected = [{'vendor': str(a.get('vendor', ''))[:200], 'product': str(a.get('product', ''))[:200],
-                 'versions': [{k: str(v[k])[:200] for k in ('version', 'status', 'lessThan', 'lessThanOrEqual', 'versionType') if k in v}
+                 'defaultStatus':str(a.get('defaultStatus','unknown'))[:40],
+                 'versions': [{**{'changes':v.get('changes',[])[:20]}, **{k: str(v[k])[:200] for k in ('version', 'status', 'lessThan', 'lessThanOrEqual', 'versionType') if k in v}}
                               for v in a.get('versions', [])[:20]]} for a in cna.get('affected', [])[:20]]
     references = [r['url'] for r in cna.get('references', []) if isinstance(r.get('url'), str)
                   and r['url'].startswith('https://')][:10]
-    return {'status': status, 'cve_id': record['cve_id'], 'source_url': record['source_url'],
+    from .version_ranges import normalize
+    return {'version_ranges':normalize(affected), 'status': status, 'cve_id': record['cve_id'], 'source_url': record['source_url'],
             'record_sha256': record['sha256'], 'title': str(cna.get('title', ''))[:600],
             'description': description[:6000], 'description_truncated': len(description) > 6000,
             'affected': affected, 'references': references,

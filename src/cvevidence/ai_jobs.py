@@ -1,0 +1,55 @@
+"""Local UI job lifecycle. A rerender never repeats an API attempt."""
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from uuid import UUID
+import json
+_pool=ThreadPoolExecutor(max_workers=2,thread_name_prefix='cve-ai')
+_jobs={};_lock=Lock()
+
+
+def path(store,ai_id,suffix):
+    if str(UUID(ai_id))!=ai_id:raise ValueError('Canonical AI id required')
+    root=store.root/'ai-progress'
+    if root.is_symlink():raise ValueError('Invalid progress root')
+    root.mkdir(mode=0o700,exist_ok=True)
+    target=root/(ai_id+suffix)
+    if target.is_symlink():raise ValueError('Invalid progress file')
+    return target
+
+
+def start(runner,run_id,**kwargs):
+    key=(str(runner.store.root.resolve()),kwargs['ai_id'])
+    with _lock:
+        if key in _jobs:return
+        active=[f for f in _jobs.values() if not f.done()]
+        if len(active)>=2:raise RuntimeError('目前已有兩個 AI 調查，請等待或取消。')
+        def invoke():
+            record=runner.investigate_ai(run_id,**kwargs)
+            if record['request']['parent_run_id']!=run_id:raise ValueError('AI result parent mismatch')
+            return record
+        _jobs[key]=_pool.submit(invoke)
+
+
+def cancel(store,ai_id):
+    p=path(store,ai_id,'.cancel')
+    try:p.open('x').close()
+    except FileExistsError:pass
+
+
+def progress(store,ai_id):
+    p=path(store,ai_id,'.json')
+    if not p.exists():return None
+    if p.stat().st_size>16*1024*1024:raise ValueError('Progress size limit')
+    row=json.loads(p.read_text())
+    from cvevidence_core.integrity import digest
+    if row.get('record_hash')!=digest({k:v for k,v in row.items() if k!='record_hash'}):raise ValueError('Progress hash mismatch')
+    return row
+
+
+def state(store,ai_id):
+    key=(str(store.root.resolve()),ai_id)
+    with _lock:future=_jobs.get(key)
+    if future is None:return 'UNKNOWN'
+    if not future.done():return 'RUNNING'
+    future.result()  # Do not hide worker/controller failures.
+    return 'DONE'

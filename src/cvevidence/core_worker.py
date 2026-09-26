@@ -30,6 +30,9 @@ def execute(req):
         if req.get("context_hash") and context.context_hash != req["context_hash"]:
             raise IntegrityError("Run context changed")
         op = req["operation"]
+        if op == "discover_public":
+            from cvevidence_core.component_discovery import discover
+            return discover(context,req.get("symptom",""),consent=req.get("consent") is True)
         if op == "analyze_offline":
             from datetime import datetime, timezone
             from cvevidence_core.workflow import analyze_package

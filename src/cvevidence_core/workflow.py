@@ -25,7 +25,7 @@ def analyze_package(package,requested_cves=None,symptom='',statements=(),claims=
         notes=[interpret_statement(x,context.context_hash) if isinstance(x,str) else x for x in statements]
         assessment=assess(context,verified,notes);event('ASSESS','COMPLETED',cve_id)
         public_record=None;query_plan=None
-        if cve_id not in CATALOG:
+        if cve_id not in CATALOG or context.manifest['format']=='partial':
             from .public_cve import lookup
             from .general_triage import plan
             event('PUBLIC_CVE','STARTED',cve_id)

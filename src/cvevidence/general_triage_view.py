@@ -39,7 +39,13 @@ def render(st, entry):
         st.text(info.get('title', ''))
         for item in info.get('affected', []):
             st.text('公告涉及：' + item['vendor'] + ' / ' + item['product'])
-            st.text('公告版本資料：' + json.dumps(item['versions'], ensure_ascii=False))
+        st.caption('公告的受影響／未受影響宣告分開呈現；範圍外不自動等於已修補，發行版回補版本需另查。')
+        for row in info.get('version_ranges',[]):
+            boundary=(' ≤ ' if row['end_inclusive'] else ' < ')+str(row['end']) if row['end'] else '（精確版本宣告）'
+            st.text(row['product']+' · '+str(row['start'])+boundary+' · '+{'affected':'公告受影響','unaffected':'公告未受影響'}.get(row['status'],'公告未明確'))
+            if not row['comparison_supported']:st.caption('此版本格式／變更區間尚不能自動比較。')
+        with st.expander('完整版本宣告（包含回補與區間變更）'):
+            st.json(info.get('affected',[]))
         with st.expander('公告摘要與來源紀錄'):
             st.text(info.get('description', ''))
             st.caption('公開公告只提供調查線索；未證明本次成品受影響。')

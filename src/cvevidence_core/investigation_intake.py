@@ -17,7 +17,9 @@ def prepare(context, public_sources):
         if name.endswith(('.sh','.patch','.diff')):return 60
         return 0
     ranked=sorted(files,key=lambda r:(-score(r),r['path']))
-    index=[{'source_id':r['source_id'],'path':r['path']} for r in ranked[:60]]
+    from .relevance import rank
+    ranking=rank(context,text)
+    index=ranking['sources']
     excerpts=[]; errors=[]; remaining=8000
     # Identity facts are read once before asking the model to plan. Code bodies
     # still need targeted searches; the first lines are not treated as absence.
@@ -29,7 +31,7 @@ def prepare(context, public_sources):
             remaining-=len(excerpt['text']);excerpts.append({**excerpt})
         except IntegrityError:raise
         except (ValueError,OSError):errors.append({'source_id':row['source_id'],'gap_kind':'CAPABILITY_GAP'})
-    return {'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
+    return {'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
             'read_errors':errors,'note':'已讀片段只支持其中可見內容；排序與檔案存在不是證據，不完整片段不能證明功能不存在。'}
 
 

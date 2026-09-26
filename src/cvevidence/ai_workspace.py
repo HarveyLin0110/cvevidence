@@ -45,6 +45,40 @@ def ai_workspace(st, runner, run, engineering):
         return None
     timeout = 300 if assessment.get("assessment_kind") == "GENERAL_TRIAGE" else 180
     st.subheader("追加 AI 調查")
+    from . import ai_jobs
+    pending=st.session_state.get('pending-ai-'+run.run_id)
+    if pending:
+        @st.fragment(run_every=2)
+        def live_progress():
+            try:status=ai_jobs.state(runner.store,pending)
+            except (ValueError,RuntimeError,OSError):
+                st.error('AI 調查未完成或結果範圍無法核對，未選入報告。')
+                del st.session_state['pending-ai-'+run.run_id]
+                return
+            saved=ai_jobs.progress(runner.store,pending)
+            st.info('AI 調查：'+status)
+            if saved:
+                st.text(saved.get('progress_phase','執行中'))
+                for row in (saved.get('condition_plan') or {}).get('conditions',[]):
+                    st.text(row['condition_id']+' · '+row['layer']+' · '+row['state'])
+                totals=saved.get('usage_summary',{})
+                st.caption('已記錄呼叫：'+str(len(saved.get('calls',[])))+' · 回報 tokens：'+(str(totals.get('total_tokens',0)) if totals.get('reported_calls') else '尚未回報'))
+                complete=[t for t in saved.get('tasks',[]) if t.get('status')=='COMPLETED']
+                if complete:st.text('最近完成：'+complete[-1].get('question',''))
+            if status=='DONE':
+                st.session_state['selected-ai-'+run.run_id]=pending
+                st.session_state['ai-history-'+run.run_id]=pending
+                del st.session_state['pending-ai-'+run.run_id]
+                st.rerun()
+            elif status=='UNKNOWN':
+                st.warning('執行程序已不在本機工作清單；不會自動重送。請查看保存紀錄。')
+                if st.button('離開等待畫面'):
+                    del st.session_state['pending-ai-'+run.run_id];st.rerun()
+            elif st.button('取消本次 AI 調查',key='cancel-'+pending):
+                ai_jobs.cancel(runner.store,pending)
+                st.warning('已要求停止；已送出的模型呼叫可能已計費，完成步驟會保留。')
+        live_progress()
+        return None
     providers, default, legacy = provider_options(runner.ai_configuration())
     provider_key = "ai-provider-" + run.run_id
     if st.session_state.get(provider_key) not in providers:
@@ -67,9 +101,27 @@ def ai_workspace(st, runner, run, engineering):
             st.info(PROVIDERS.get(key, "預設來源") + "：" + readiness_reason(option))
     context = st.text_area("本次 AI 想確認的問題", value=engineering.get("discovery", {}).get("symptom", ""),
                            max_chars=4000, key="ai-context-" + run.run_id)
+    prior, _ = runner.ai_history(run.run_id)
+    if run.parent_run_id:
+        ancestor=runner.store.read(run.parent_run_id)
+        seen=set()
+        while ancestor.run_id not in seen:
+            seen.add(ancestor.run_id)
+            if ancestor.cve_id==run.cve_id:
+                records,_=runner.ai_history(ancestor.run_id);prior+=records
+            if not ancestor.parent_run_id:break
+            ancestor=runner.store.read(ancestor.parent_run_id)
+    resumable={r['request']['ai_id']:r for r in prior if r.get('result')}
+    continuation=st.selectbox('接續前次調查',['不接續']+list(resumable),
+        format_func=lambda v:v if v=='不接續' else resumable[v]['request']['created_at'][:19]+' · '+resumable[v]['status']+' · '+v[:8],key='resume-'+run.run_id)
+    with st.expander('本輪時間與用量上限'):
+        timeout=st.slider('最長秒數',30,timeout,timeout,step=10,key='budget-time-'+run.run_id)
+        max_calls=st.slider('最多模型呼叫次數',3,12,12,key='budget-calls-'+run.run_id)
+        token_limit=st.number_input('累計回報 tokens 停止門檻',min_value=1000,max_value=1000000,value=200000,step=1000,key='budget-tokens-'+run.run_id)
+        st.caption('門檻在下一次呼叫前檢查；單次呼叫可能超出。供應者未回報用量時不能精確計量，仍受時間與次數限制。')
     signature = (run.run_id, run.input_package.context_hash, assessment["assessment_id"],
                  provider, config.get("config_id"), config.get("auth_type"),
-                 config.get("model"), config.get("reasoning_effort"), context)
+                 config.get("model"), config.get("reasoning_effort"), context,continuation,timeout,max_calls,token_limit)
     if (st.session_state.get("ai-signature-" + run.run_id) != signature
             or st.session_state.get("ai-active-run") != run.run_id):
         st.session_state["ai-signature-" + run.run_id] = signature
@@ -90,14 +142,11 @@ def ai_workspace(st, runner, run, engineering):
             st.warning("請先確認本次資料外送授權；尚未呼叫模型。")
         else:
             try:
-                with st.spinner("AI 正在調查本次資料；工程結果保持不變…"):
-                    routing = {} if legacy else {"provider": provider, "config_id": config.get("config_id")}
-                    record = runner.investigate_ai(run.run_id, user_context=context, consent=True,
-                        ai_id=attempt_id, timeout=timeout, **routing)
-                if record["request"]["parent_run_id"] != run.run_id:
-                    raise ValueError("AI result belongs to another engineering run")
-                st.session_state["selected-ai-" + run.run_id] = record["request"]["ai_id"]
-                st.session_state["ai-history-" + run.run_id] = record["request"]["ai_id"]
+                routing = {} if legacy else {"provider": provider, "config_id": config.get("config_id")}
+                ai_jobs.start(runner,run.run_id,user_context=context,consent=True,
+                    ai_id=attempt_id,timeout=timeout,max_calls=max_calls,token_limit=int(token_limit),
+                    continuation_ai_id=None if continuation=='不接續' else continuation,**routing)
+                st.session_state['pending-ai-'+run.run_id]=attempt_id
                 st.rerun()
             except (ValueError, OSError, RuntimeError):
                 st.error("AI 調查未完成或尚在執行。工程結果保留；請查閱下方操作紀錄，不會自動重送。")
@@ -129,6 +178,8 @@ def ai_workspace(st, runner, run, engineering):
                        file_name=chosen + "-ai.json", mime="application/json", key="ai-download-" + run.run_id)
     if record["result"]:
         ai_entry = record["result"]["analyses"][0]
+        if ai_entry['ai'].get('usage_summary'):
+            u=ai_entry['ai']['usage_summary'];st.caption('本輪回報用量：'+(str(u['total_tokens'])+' tokens' if u.get('reported_calls') else '未知')+('（部分回報）' if not u.get('complete') else '')+'；'+u['note'])
         render_ai(st, ai_entry["ai"], context_hash=run.input_package.context_hash,
                   cve_id=run.cve_id, assessment_id=assessment["assessment_id"], request=record["request"])
         followup = ai_entry.get("investigation_verification")

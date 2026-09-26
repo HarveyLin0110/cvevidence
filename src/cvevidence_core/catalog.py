@@ -34,6 +34,9 @@ def discover_candidates(context=None,symptom='',requested_cves=None,scanner_cand
    row=context.by_path('build/build-record.json')[1]
    for component in record.get('components',[]):
     if isinstance(component,dict) and isinstance(component.get('name'),str) and isinstance(component.get('version'),str):components.append({'name':component['name'].lower(),'version':component['version'],'source_id':row['source_id'],'source_kind':'BUILD_RECORD_DECLARATION'})
+ if context:
+  from .component_discovery import components as read_components
+  components.extend(read_components(context))
  candidates=[]
  for cve_id,item in CATALOG.items():
   matches=[c for c in components if c['name'] in ({'curl','libcurl'} if item['component']=='curl' else {item['component']})]

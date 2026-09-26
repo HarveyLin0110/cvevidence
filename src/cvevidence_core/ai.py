@@ -165,6 +165,9 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
 
 def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max_calls,timeout_seconds,transport,public_record,analysis_depth,provider,started):
     start=started
+    from .investigation_control import control, continuation, publish, usage
+    controls=control.get()
+    max_calls=min(max_calls,controls.get('max_calls',12))
     require_verified(context,verified)
     if assessment['context_hash']!=context.context_hash or assessment['verification_hash']!=verified.collection_hash:raise IntegrityError('AI 輸入 assessment 與目前證據不一致')
     from .assessment import assess
@@ -263,12 +266,42 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if not verify_excerpt(context,excerpt):raise IntegrityError('初始材料片段無法核對')
             excerpts[excerpt['excerpt_id']]=excerpt
         result['initial_product_excerpts']=prepared['initial_product_excerpts']
+    resumed=continuation(context,verified.cve_id,controls.get('previous'))
+    if resumed:
+        payload['continuation']=resumed
+        result['continuation_from']=resumed['previous_record_hash']
+        if resumed.get('conditions'):
+            from .condition_plan import validate
+            public=resumed.get('public_sources',{}).get('sources',[])
+            for source in public:
+                import hashlib
+                if source.get('text_sha256')!=hashlib.sha256(source['text'].encode()).hexdigest():raise IntegrityError('Saved public source changed')
+            base=[{**r,'state':'NOT_REVIEWED','citations':[]} for r in resumed['conditions']]
+            validate(base,public)
+            planned=base
+            result['condition_plan']=condition_record(context,verified.cve_id,resumed['conditions'])
+            result['public_sources']=resumed['public_sources'];payload['public_sources']=resumed['public_sources']
+            for x in resumed['excerpts']:excerpts[x['excerpt_id']]=x
+            result['initial_product_excerpts']+=resumed['excerpts']
+            payload['continuation_instruction']='已有條件計畫，不要再 PLAN；先處理前次未解問題與新增材料，再 REVIEW 全部條件。'
+    from .public_packet import compact as compact_public
+    if result.get('public_sources'):
+        payload['public_sources']=compact_public(result['public_sources'])
+    if resumed:
+        # Public text already has one dedicated slot. Do not retransmit it in
+        # continuation or retain an entire nested previous investigation.
+        payload['continuation']={k:v for k,v in resumed.items() if k!='public_sources'}
+    payload['budget_guidance']='保留 REVIEW 與收尾兩次呼叫；若已取得足夠原文，勿反覆搜尋。接近 token 門檻時先 REVIEW，將未完成明列，下一輪接續。'
     payload['requires_condition_plan'] = requires_plan
     items[0]['content']=json.dumps(payload,ensure_ascii=False)
     if public_brief is not None:
         result['public_cve_record']=public_brief
     try:
         for number in range(max_calls):
+            result['usage_summary']=usage(result['calls'])
+            if result['usage_summary']['total_tokens']>=controls.get('token_limit',1000000):
+                failure('BUDGET_EXHAUSTED','TOKEN_THRESHOLD_REACHED');break
+            publish(result,excerpts,phase='準備下一步調查')
             remaining=timeout_seconds-(time.monotonic()-start)
             if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             stage='INPUT_CHECK';context.assert_current()
@@ -276,11 +309,15 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             stage='REQUEST'
             budget={'max_calls':max_calls,'remaining_calls_including_current':max_calls-number,
-                    'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER'}
+                    'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER',
+                    'condition_review_pending':requires_plan and not reviewed,
+                    'reported_tokens_so_far':usage(result['calls'])['total_tokens'],
+                    'token_stop_threshold':controls.get('token_limit',1000000)}
             attempt={'call_number':number+1,'model':result['model'] if provider is None else None,'status':'STARTED','usage':None,'runtime_budget':budget}
             if provider is None:attempt['response_id']=None
             else:attempt['provider']=provider.provider_id
             result['calls'].append(attempt)
+            publish(result,excerpts,phase='等待模型回應')
             if provider is None:
                 response=request({**config,'_investigation_budget':budget,'_analysis_depth':analysis_depth},items,
                                  min(remaining,65 if analysis_depth=='pc' else 45))
@@ -381,7 +418,13 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     result['condition_plan']=condition_record(context,verified.cve_id,reviewed_rows)
                     reviewed=True;tool_output=result['condition_plan']
                 elif action=='LIST':tool_output=list_sources(context,args['term'],60)
-                elif action=='SEARCH':tool_output=search_sources(context,args['term'],ids or None,8)
+                elif action=='SEARCH':
+                    if not ids:
+                        from .relevance import rank
+                        ranked=rank(context,args['term']+'('+ '\n'.join(s['text'] for s in result.get('public_sources',{}).get('sources',[])))
+                        preferred=[r['source_id'] for r in ranked['sources']]
+                        ids=preferred+[sid for sid in context.sources if sid not in preferred]
+                    tool_output=search_sources(context,args['term'],ids,8)
                 elif action=='READ':
                     if len(ids)!=1:raise ValueError('READ 需要一個 source_id')
                     tool_output=read_excerpt(context,ids[0],args['start_line'],args['end_line'])
@@ -432,6 +475,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)[:50000]})
             else:provider_history.append({'step_number':number+1,'decision':deepcopy(args),'result':deepcopy(tool_output)})
             if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
+            publish(result,excerpts,phase='已完成 '+action)
             if result['status'] in {'COMPLETED','NEEDS_USER_INPUT'}:break
         else:result['status']='BUDGET_EXHAUSTED'
         stage='INPUT_CHECK';context.assert_current()
@@ -456,6 +500,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
     if attempt is not None and attempt['status']=='STARTED':attempt['status']=result['status']
     result['excerpts']=list(excerpts.values());result['elapsed_seconds']=round(time.monotonic()-start,3)
     result['rejected_proposals']=sum(t['status']=='REJECTED' for t in result['tasks'])
+    result['usage_summary']=usage(result['calls'])
+    from .condition_review import dossier
+    result['condition_dossier']=dossier(context,result) if result.get('condition_plan') else None
     result['finished_at']=datetime.now(timezone.utc).isoformat()
     result['record_hash']=digest(result)
     return result

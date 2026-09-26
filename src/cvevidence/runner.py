@@ -9,6 +9,30 @@ from .contracts import InputPackage, EvidenceRecord, RunEnvelope, RunError
 from .storage import RunStore
 
 class Runner:
+    def supplement_partial(self,run_id,files,note=''):
+        from cvevidence_core.integrity import safe_extract,ingest_package
+        from cvevidence_core.partial_intake import create_supplement
+        import tempfile
+        from pathlib import Path
+        parent=self.store.read(run_id)
+        if not parent.input_package or parent.input_package.format!='partial':raise ValueError('Partial parent required')
+        with tempfile.TemporaryDirectory(dir=self.store.root) as temporary:
+            root=Path(temporary)
+            safe_extract(self.store.root/'blobs'/parent.input_package.archive_sha256,root/'base')
+            create_supplement(ingest_package(root/'base'),files,root/'delta.tgz')
+            return self.supplement_file(run_id,path=root/'delta.tgz',note=note)
+
+    def discover_public(self, run_id, *, consent=False):
+        from .core_service import CoreService
+        import json
+        run=self.store.read(run_id)
+        if not run.input_package:raise ValueError("Input required")
+        result=CoreService(self.store).invoke("discover_public",run.input_package.archive_sha256,
+            run.input_package.context_hash,consent=consent,symptom=run.candidates.get("symptom",""),timeout=30)
+        receipt={"parent_run_id":run_id,"discovery":result}
+        sha=self.store.put_blob(json.dumps(receipt,ensure_ascii=False,sort_keys=True).encode())
+        return {**receipt,"record_sha256":sha}
+
     def investigate_ai(self, parent_run_id, **kwargs):
         from .ai_service import AIService
         return AIService(self.store).start(parent_run_id, **kwargs)
