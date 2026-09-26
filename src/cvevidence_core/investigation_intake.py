@@ -71,10 +71,14 @@ def check_existing(context, requests, visible_excerpts):
     return receipt
 
 
-def check_copy_reads(context, tasks):
+def check_copy_reads(context, tasks, retained_reads=()):
     """A bounded read-progress gate, never a semantic or build-binding verdict."""
     from pathlib import PurePosixPath
     groups={};read_ids=set()
+    from .sources import verify_excerpt
+    for excerpt in retained_reads:
+        if not verify_excerpt(context,excerpt):raise IntegrityError('Retained READ does not match current source')
+        read_ids.add(excerpt['source_id'])
     for task in tasks:
         if task.get('status')!='COMPLETED':continue
         result=task.get('result') or {}
@@ -93,4 +97,4 @@ def check_copy_reads(context, tasks):
         raise ValueError('補件前仍有已搜尋命中的同名原碼副本未 READ；SEARCH 定位片段不代表已查本文。請讀關鍵實作，不能把調查未完成推成使用者缺件：'+str(hints))
     return {'matched_copy_count':len(copies),'unread_copy_count':0,
             'semantic_sufficiency_verified':False,
-            'note':'只核對已回報同名程式碼副本是否各有成功 READ；不保證完整本文、語意、全部副本或成品綁定。'}
+            'note':'只核對已回報同名程式碼副本是否各有成功 READ，含接續時重新核對相同原文的 READ；不保證完整本文、語意、全部副本或成品綁定。'}

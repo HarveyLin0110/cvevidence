@@ -39,6 +39,12 @@ def continuation(context,cve,previous):
         if verify_excerpt(context,mapped):retained.append(mapped)
         else:stale.append(x['excerpt_id'])
     known={x['excerpt_id'] for x in retained}
+    read_ids=set(previous.get('retained_read_excerpt_ids',[])) & known
+    for task in previous.get('tasks',[]):
+        if task.get('action')!='READ' or task.get('status')!='COMPLETED':continue
+        excerpt=task.get('result') or {}
+        if excerpt.get('excerpt_id') in known and verify_excerpt(context,{**excerpt,'context_hash':context.context_hash}):
+            read_ids.add(excerpt['excerpt_id'])
     conditions=deepcopy(plan['conditions'])
     for row in conditions:
         original=list(row['citations']);row['citations']=[x for x in original if x in known]
@@ -46,6 +52,7 @@ def continuation(context,cve,previous):
         if any(x not in known for x in original) or row['state'] in ('USER_MATERIAL_MISSING','CAPABILITY_GAP','CONFLICT'):
             row.update(state='NOT_REVIEWED',explanation='前次觀察：'+row['explanation'][:400]+'；本輪須重新查核新增材料。')
     return {'previous_record_hash':previous['record_hash'],'conditions':conditions,'excerpts':retained,
+        'retained_read_excerpt_ids':sorted(read_ids),
         'stale_excerpt_ids':stale,'public_sources':deepcopy(previous.get('public_sources',{})),
         'previous_questions':[{'question':t.get('question'),'finding':t.get('finding'),'required_files':t.get('required_files',[])}
             for t in previous.get('tasks',[]) if t.get('status')=='COMPLETED' and t.get('action') in ('ASK_USER','COMPLETE')][-3:],

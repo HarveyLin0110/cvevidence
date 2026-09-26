@@ -277,6 +277,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
         result['build_provenance']=deepcopy(prepared['build_provenance'])
         result['compilation_database']=deepcopy(prepared['compilation_database'])
     resumed=continuation(context,verified.cve_id,controls.get('previous'))
+    retained_reads=[]
     if resumed:
         payload['continuation']=resumed
         result['continuation_from']=resumed['previous_record_hash']
@@ -292,8 +293,11 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             result['condition_plan']=condition_record(context,verified.cve_id,resumed['conditions'])
             result['public_sources']=resumed['public_sources'];payload['public_sources']=resumed['public_sources']
             for x in resumed['excerpts']:excerpts[x['excerpt_id']]=x
+            retained_ids=set(resumed.get('retained_read_excerpt_ids',[]))
+            retained_reads=[x for x in resumed['excerpts'] if x['excerpt_id'] in retained_ids]
+            result['retained_read_excerpt_ids']=sorted(retained_ids)
             result['initial_product_excerpts']+=resumed['excerpts']
-            payload['continuation_instruction']='已有條件計畫，不要再 PLAN；先處理前次未解問題與新增材料，再 REVIEW 全部條件。'
+            payload['continuation_instruction']='已有條件計畫，不要再 PLAN；先處理前次未解問題與新增材料，再 REVIEW 全部條件。retained_read_excerpt_ids 是前輪成功 READ 且本輪已核對相同原文的片段，可滿足多副本閱讀檢查，不需為此重讀；不代表全文或語意充分。'
     from .public_packet import compact as compact_public
     if result.get('public_sources'):
         payload['public_sources']=compact_public(result['public_sources'])
@@ -452,7 +456,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 elif action=='ASK_USER':
                     if generic:
                         from .investigation_intake import check_copy_reads
-                        task['copy_read_check']=check_copy_reads(context,result['tasks'])
+                        task['copy_read_check']=check_copy_reads(context,result['tasks'],retained_reads)
                     if generic and not requires_plan:
                         raise ValueError('公告不可用屬工具／公開來源缺口；COMPLETE 說明限制，不向使用者索取一整套材料。')
                     if requires_plan and not any(r['state']=='USER_MATERIAL_MISSING' for r in result['condition_plan']['conditions']):
