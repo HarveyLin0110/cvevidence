@@ -396,8 +396,11 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
                 st.subheader("PC1／PC2／PC3 查核說明")
                 st.text(text(final["finding"]))
     st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
+    from .investigation_view import render as render_investigation, render_requests
+    render_investigation(st, ai)
+    has_requests = render_requests(st, ai)
     guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id, assessment_id=assessment_id)
-    if guide:
+    if guide and not has_requests:
         st.subheader("需要準備的最小材料")
         st.caption("清單依核心可接受的收件格式整理；已收到不等於已通過驗證。AI 調查與詳細格式可展開查看。")
         for item in guide["items"]:
@@ -409,7 +412,7 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
             for item in guide["items"]: st.text(item["title"] + "：" + item["purpose"])
             st.code(text(guide["details"]), language="json")
     for index, task in enumerate(rows(ai.get("tasks")), 1):
-        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=not bool(guide)):
+        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=False):
             st.text(text(task.get("question")))
             st.text("目的：" + text(task.get("reason")))
             st.text("動作：" + text(task.get("action")) + " · " + model_task_status(task))

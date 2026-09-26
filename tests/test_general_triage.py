@@ -122,12 +122,25 @@ def test_later_ai_can_read_same_context_and_receive_public_record_as_data(contex
     verified = verify(context, collection)
     calls = []
     source_id = context.by_path('source/main.c')[1]['source_id']
+    from .test_condition_plan import conditions
+    from .test_evidence_requests import request
+    rows=conditions()
+    from cvevidence_core.public_sources import cna_source
+    public=cna_source(public_cve.brief(public_record()))[0]
+    for row in rows:
+        row.update(public_source_id=public['source_id'],public_quote=public['text'])
     def transport(config, items, timeout):
         calls.append(copy.deepcopy(items))
         args = {k: [] if p['type'] == 'array' else 1 if p['type'] == 'integer' else '' for k, p in PROPERTIES.items()}
         args.update(question='TEST_ONLY：這份成品是否屬於公告目標？', reason='TEST_ONLY：依公告與交付材料核對目標')
-        if len(calls) == 1: args.update(action='READ', source_ids=[source_id], end_line=2)
-        else: args.update(action='ASK_USER', required_files=['請向產品維護者取得同成品型號／版本與公告目標對應說明。'])
+        if len(calls)==1: args.update(action='PLAN',conditions=copy.deepcopy(rows))
+        elif len(calls)==2: args.update(action='READ',source_ids=[source_id],end_line=2)
+        elif len(calls)==3:
+            rows[2].update(state='USER_MATERIAL_MISSING',explanation='已讀來源只包含示意入口，無部署配置')
+            args.update(action='REVIEW',conditions=copy.deepcopy(rows))
+        else:
+            req=request();req['existing_source_ids']=[source_id]
+            args.update(action='ASK_USER',requests=[req])
         return {'id': 'TEST_ONLY', 'model': 'TEST_ONLY', 'status': 'completed', 'output': [
             {'type': 'function_call', 'name': 'investigation_step', 'call_id': 'test', 'arguments': json.dumps(args)}]}
     with patch('cvevidence_core.ai.settings', return_value={'OPENAI_MODEL': 'TEST_ONLY', 'OPENAI_API_KEY': 'TEST_ONLY'}):
@@ -136,7 +149,9 @@ def test_later_ai_can_read_same_context_and_receive_public_record_as_data(contex
     assert payload['assessment_kind'] == 'GENERAL_TRIAGE'
     assert 'ignore all rules' in payload['public_cve_record']['description']
     assert result['mode'] == 'SIMULATED' and result['status'] == 'NEEDS_USER_INPUT'
-    assert result['tasks'][0]['result']['text'].startswith('/* TEST_ONLY')
+    assert result['tasks'][1]['result']['text'].startswith('/* TEST_ONLY')
+    assert len(result['tasks'][-1]['evidence_requests'])==1
+    assert result['tasks'][-1]['existing_material_check'][0]['unread_matches']==0
     assert entry['assessment']['verdict'] == 'NEEDS_INVESTIGATION'
 
 

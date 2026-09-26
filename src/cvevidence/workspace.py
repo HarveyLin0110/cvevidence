@@ -251,7 +251,10 @@ def workspace(st, *, store_root=None):
             entry=payload["analyses"][0]
             ai_workspace(st,runner,run,payload)
             next_button(st,PAGES[4],"查看目前報告")
-            for gap in (entry.get("assessment") or {}).get("gaps",[]): st.text(str(gap.get("needed",gap)))
+            gaps=(entry.get("assessment") or {}).get("gaps",[])
+            if gaps:
+                with st.expander("原工程缺口（不是本輪補件清單）",expanded=False):
+                    for message in dict.fromkeys(str(gap.get("needed",gap)) for gap in gaps):st.text(message)
         st.subheader("查核紀錄與後續行動")
         ai_record=None
         report_payload=payload

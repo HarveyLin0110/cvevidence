@@ -43,6 +43,7 @@ def ai_workspace(st, runner, run, engineering):
     if not assessment:
         st.info("此 CVE 尚無可用工程判定，不能啟動 AI 調查；可查看報告或另建查核。")
         return None
+    timeout = 300 if assessment.get("assessment_kind") == "GENERAL_TRIAGE" else 180
     st.subheader("追加 AI 調查")
     providers, default, legacy = provider_options(runner.ai_configuration())
     provider_key = "ai-provider-" + run.run_id
@@ -80,7 +81,7 @@ def ai_workspace(st, runner, run, engineering):
     with st.form("ai-form-" + run.run_id):
         consent = st.checkbox("我有權提供本次資料，並同意透過 " + provider_label + " 將本次問題、工程缺口及必要來源片段送至 OpenAI。",
                               value=False, key="ai-consent-" + run.run_id + "-" + attempt_id)
-        st.caption("只調查目前成品與 CVE；每次建立獨立紀錄，最長 180 秒。來源或問題變更後須重新同意。")
+        st.caption(f"只調查目前成品與 CVE；每次建立獨立紀錄，最長 {timeout} 秒。來源或問題變更後須重新同意。")
         # Consent is checked again by the service. A form must submit before its
         # checkbox state is available, so the button gates configuration only.
         submit = st.form_submit_button("開始 AI 調查", disabled=not config.get("configured") or not compatible)
@@ -92,7 +93,7 @@ def ai_workspace(st, runner, run, engineering):
                 with st.spinner("AI 正在調查本次資料；工程結果保持不變…"):
                     routing = {} if legacy else {"provider": provider, "config_id": config.get("config_id")}
                     record = runner.investigate_ai(run.run_id, user_context=context, consent=True,
-                        ai_id=attempt_id, timeout=180, **routing)
+                        ai_id=attempt_id, timeout=timeout, **routing)
                 if record["request"]["parent_run_id"] != run.run_id:
                     raise ValueError("AI result belongs to another engineering run")
                 st.session_state["selected-ai-" + run.run_id] = record["request"]["ai_id"]
