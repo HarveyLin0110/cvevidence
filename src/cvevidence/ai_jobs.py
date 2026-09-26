@@ -1,10 +1,23 @@
 """Local UI job lifecycle. A rerender never repeats an API attempt."""
 from concurrent.futures import ThreadPoolExecutor
+from collections import OrderedDict
 from threading import Lock
 from uuid import UUID
 import json
 _pool=ThreadPoolExecutor(max_workers=2,thread_name_prefix='cve-ai')
 _jobs={};_lock=Lock()
+_finished=OrderedDict()
+_history_limit=128
+
+
+def _collect_finished():
+    """Called under the lock; never retain full results or exception frames."""
+    for key, future in list(_jobs.items()):
+        if not future.done():continue
+        _finished[key]=future.result()
+        del _jobs[key]
+    while len(_finished)>_history_limit:
+        _finished.popitem(last=False)
 
 
 def path(store,ai_id,suffix):
@@ -20,13 +33,18 @@ def path(store,ai_id,suffix):
 def start(runner,run_id,**kwargs):
     key=(str(runner.store.root.resolve()),kwargs['ai_id'])
     with _lock:
-        if key in _jobs:return
-        active=[f for f in _jobs.values() if not f.done()]
-        if len(active)>=2:raise RuntimeError('目前已有兩個 AI 調查，請等待或取消。')
+        _collect_finished()
+        if key in _jobs or key in _finished:return
+        if len(_jobs)>=2:raise RuntimeError('目前已有兩個 AI 調查，請等待或取消。')
         def invoke():
-            record=runner.investigate_ai(run_id,**kwargs)
-            if record['request']['parent_run_id']!=run_id:raise ValueError('AI result parent mismatch')
-            return record
+            try:
+                record=runner.investigate_ai(run_id,**kwargs)
+                if record['request']['parent_run_id']!=run_id:raise ValueError('AI result parent mismatch')
+                return 'DONE'
+            except Exception:
+                # Durable service receipts contain detailed outcomes when available.
+                # Do not retain uploaded content via a Future traceback or message.
+                return 'FAILED'
         _jobs[key]=_pool.submit(invoke)
 
 
@@ -49,8 +67,9 @@ def progress(store,ai_id):
 
 def state(store,ai_id):
     key=(str(store.root.resolve()),ai_id)
-    with _lock:future=_jobs.get(key)
-    if future is None:return 'UNKNOWN'
-    if not future.done():return 'RUNNING'
-    future.result()  # Do not hide worker/controller failures.
-    return 'DONE'
+    with _lock:
+        _collect_finished()
+        if key in _jobs:return 'RUNNING'
+        result=_finished.get(key,'UNKNOWN')
+    if result=='FAILED':raise RuntimeError('AI_BACKGROUND_JOB_FAILED')
+    return result
