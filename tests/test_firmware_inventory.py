@@ -99,9 +99,16 @@ def test_mixed_archive_rom_and_source_are_in_same_snapshot(tmp_path,image):
     create([('materials.zip',packed)],tmp_path/'p.tgz',large=True)
     safe_extract(tmp_path/'p.tgz',tmp_path/'p');c=ingest_package(tmp_path/'p')
     report=fw.reports(c)[0]
-    assert report['status']=='PARTIAL_READ'
     assert report['image_sha256']==c.by_path('materials.zip.unpacked/product/device.rom')[1]['sha256']
     assert c.by_path('materials.zip.unpacked/sdk/main.c')[0].read_bytes()==b'/* TEST_ONLY */'
+    if report['status']=='ISOLATION_UNAVAILABLE':
+        if os.environ.get('CVEVIDENCE_REQUIRE_FIRMWARE_READER')=='1':pytest.fail('Required isolation environment unavailable')
+        assert not components(c)
+        assert report['bytes_read']==0
+        assert all(row['status']!='READ' for row in report['files'])
+        assert c.by_path('materials.zip.unpacked/product/device.rom')[0].read_bytes()==image.read_bytes()
+        return
+    assert report['status']=='PARTIAL_READ'
     assert components(c)[0]['version']=='8.3.0-vendor2'
 
 
@@ -110,6 +117,17 @@ def test_archive_members_share_direct_image_limit(tmp_path):
     with pytest.raises(ValueError,match='最多提供 3'):
         create([('materials.zip',packed),('direct.rom',b'TEST_ONLY')],tmp_path/'p.tgz')
     assert not (tmp_path/'p.tgz').exists()
+
+
+@pytest.mark.parametrize('required',[False,True])
+def test_mixed_archive_isolation_failure_keeps_required_reader_gate(tmp_path,image,monkeypatch,required):
+    monkeypatch.setenv('CVEVIDENCE_REQUIRE_FIRMWARE_READER','1' if required else '0')
+    monkeypatch.setattr(fw,'_cat',lambda *a:(None,'ISOLATION_UNAVAILABLE'))
+    if required:
+        with pytest.raises(pytest.fail.Exception,match='Required isolation environment unavailable'):
+            test_mixed_archive_rom_and_source_are_in_same_snapshot(tmp_path,image)
+    else:
+        test_mixed_archive_rom_and_source_are_in_same_snapshot(tmp_path,image)
 
 
 def test_archive_cannot_supply_generated_rom_receipts(tmp_path):
