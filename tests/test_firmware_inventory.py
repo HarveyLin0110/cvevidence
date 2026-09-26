@@ -5,6 +5,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import pytest
+import io
+import zipfile
 from cvevidence_core import firmware_inventory as fw
 from cvevidence_core.partial_intake import create
 from cvevidence_core.integrity import safe_extract, ingest_package, scan
@@ -82,6 +84,47 @@ def test_missing_tool_and_timeout_keep_explicit_unknown(tmp_path,monkeypatch):
 def test_reserved_paths_and_image_count_rejected(tmp_path):
     with pytest.raises(ValueError):create([('device.rom.rom-inventory/inspection.json',b'{}')],tmp_path/'p.tgz')
     with pytest.raises(ValueError):create([(f'{i}.rom',b'x') for i in range(4)],tmp_path/'p.tgz')
+
+
+def zip_bytes(files):
+    output=io.BytesIO()
+    with zipfile.ZipFile(output,'w') as archive:
+        for name,data in files:archive.writestr(name,data)
+    return output.getvalue()
+
+
+def test_mixed_archive_rom_and_source_are_in_same_snapshot(tmp_path,image):
+    packed=zip_bytes([('product/device.rom',image.read_bytes()),('sdk/main.c',b'/* TEST_ONLY */'),
+                      ('sbom.txt',b'TEST_ONLY supplemental inventory')])
+    create([('materials.zip',packed)],tmp_path/'p.tgz',large=True)
+    safe_extract(tmp_path/'p.tgz',tmp_path/'p');c=ingest_package(tmp_path/'p')
+    report=fw.reports(c)[0]
+    assert report['status']=='PARTIAL_READ'
+    assert report['image_sha256']==c.by_path('materials.zip.unpacked/product/device.rom')[1]['sha256']
+    assert c.by_path('materials.zip.unpacked/sdk/main.c')[0].read_bytes()==b'/* TEST_ONLY */'
+    assert components(c)[0]['version']=='8.3.0-vendor2'
+
+
+def test_archive_members_share_direct_image_limit(tmp_path):
+    packed=zip_bytes([(f'{i}.rom',b'TEST_ONLY') for i in range(3)])
+    with pytest.raises(ValueError,match='最多提供 3'):
+        create([('materials.zip',packed),('direct.rom',b'TEST_ONLY')],tmp_path/'p.tgz')
+    assert not (tmp_path/'p.tgz').exists()
+
+
+def test_archive_cannot_supply_generated_rom_receipts(tmp_path):
+    from cvevidence_core.partial_intake import IntakeError
+    packed=zip_bytes([('device.rom.rom-inventory/inspection.json',b'{}')])
+    with pytest.raises(IntakeError) as error:create([('materials.zip',packed)],tmp_path/'p.tgz')
+    assert error.value.code=='ARCHIVE_UNSAFE'
+
+
+def test_nested_archive_stays_opaque(tmp_path):
+    packed=zip_bytes([('nested.zip',zip_bytes([('device.rom',b'TEST_ONLY')]))])
+    create([('materials.zip',packed)],tmp_path/'p.tgz')
+    safe_extract(tmp_path/'p.tgz',tmp_path/'p');c=ingest_package(tmp_path/'p')
+    assert fw.reports(c)==[]
+    assert c.by_path('materials.zip.unpacked/nested.zip')
 
 
 def test_output_limit_does_not_publish_partial_file(tmp_path,monkeypatch):

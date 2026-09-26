@@ -102,11 +102,16 @@ def create(files, output, *, product='未提供', release='未提供', build='�
             _extract_upload(source,destination,max_bytes=total_limit-total,max_files=MAX_FILES-len(scan(root)))
             expanded=scan(destination)
             if any(r['kind']!='file' for r in expanded):raise IntakeError('LINKS')
+            if any(any(part.endswith('.rom-inventory') for part in Path(r['path']).parts) for r in expanded):
+                raise IntakeError('ARCHIVE_UNSAFE')
             total+=sum(r['size'] for r in expanded)
             if total>total_limit:raise ValueError('材料展開後超過收件容量限制')
         from .firmware_inventory import candidate, extract, SUFFIX
         images=[]
-        for name,_ in files:
+        # Inspect direct uploads and one-level archive members under the same
+        # image-count/byte limits. Nested archives remain opaque data.
+        for row in scan(root):
+            name=row['path']
             with (root/relative(name)).open('rb') as stream:head=stream.read(4)
             if candidate(name,head):images.append(name)
         if len(images)>3:raise ValueError('每次最多提供 3 份 ROM 映像，請分次建立查核')

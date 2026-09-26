@@ -1,6 +1,6 @@
 """Read existing identity material and enforce discovery before evidence requests."""
 import re
-from .sources import read_excerpt
+from .sources import read_bounded_excerpt as read_excerpt
 from .integrity import IntegrityError
 
 

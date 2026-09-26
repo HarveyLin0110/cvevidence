@@ -103,11 +103,13 @@ def test_large_upload_ui_is_single_file_and_separate_from_small_mode(tmp_path):
     from tests.test_package_inventory import inventory_app
     app=AppTest.from_function(inventory_app,default_timeout=20)
     app.session_state['test_store']=str(tmp_path/'runtime')
-    app.run();app.radio[0].set_value('部分材料：大型 ROM／SDK（單檔）').run()
+    app.run();app.radio[0].set_value('上傳產品材料').run()
+    next(r for r in app.radio if r.label=='依檔案大小選擇收件方式').set_value('大型單檔（最多 256 MiB）').run()
     assert not app.exception
     assert len(app.get('file_uploader'))==1
     assert any('384 MiB' in c.value and '網頁元件仍會暫存' in c.value for c in app.caption)
     assert next(b for b in app.button if b.label=='匯入並建立查核').disabled
-    app.radio[0].set_value('部分材料（SBOM／日誌／原碼／設定）').run()
+    next(r for r in app.radio if r.label=='依檔案大小選擇收件方式').set_value('一般多檔（每檔最多 20 MiB）').run()
     assert not app.exception
     assert any('每檔 20 MiB' in c.value for c in app.caption)
+    assert any('補件保留原材料' in x.value for x in app.info)

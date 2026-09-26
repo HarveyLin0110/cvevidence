@@ -113,11 +113,15 @@ def workspace(st, *, store_root=None):
         left, right = st.columns(2)
         left.info("不知道是哪個 CVE：描述發生了什麼，先交手邊材料；CVE 留白，再從候選選擇要深入查核的項目。")
         right.info("已知想查的 CVE：輸入 CVE 編號與產品材料，逐項核對元件、實作及部署證據。")
-        st.caption("目前没有檔案可選「先描述情境」保存草稿；有零散檔案可選「部分材料」，不必先製作工程包。")
-        source_options=["產品／版本樣品","上傳工程包","部分材料（SBOM／日誌／原碼／設定）","部分材料：大型 ROM／SDK（單檔）"]
+        st.caption("ROM、SBOM、原碼／SDK、設定可以屬於同一次查核，請選「上傳產品材料」，不必自製工程包。沒有檔案可選「先描述情境」。")
+        source_options=["產品／版本樣品","上傳產品材料","上傳工程包"]
         if store_root is None: source_options.append("受控路徑")
         source_options.append("先描述情境")
         kind=st.radio("資料來源",source_options,horizontal=True)
+        material_mode=None
+        if kind=="上傳產品材料":
+            material_mode=st.radio("依檔案大小選擇收件方式",["一般多檔（每檔最多 20 MiB）","大型單檔（最多 256 MiB）"],horizontal=True)
+            kind="部分材料"
         available=[e for e in entries if e["available"] and e["kind"]=="initial"]
         selected=None
         upload=None
@@ -137,14 +141,16 @@ def workspace(st, *, store_root=None):
             upload=st.file_uploader("ZIP / tar.gz 工程包（上限 512 MiB）",type=["zip","gz","tar"],max_upload_size=512)
         elif kind.startswith("部分材料"):
             st.info("可先提交手上已有的檔案；不需要自製 manifest。產品與 build 只記為聲明，不冒充已驗成品。")
-            partial_large='大型' in kind
+            partial_large=material_mode=="大型單檔（最多 256 MiB）"
+            st.info("多種材料可合併查核：小檔直接一起選取；若有大型 ROM／SDK，先匯入大型檔，再到「05 報告與後續行動」補上 SBOM、原碼等。補件保留原材料並建立新紀錄，不必另開不相關案件。")
             if partial_large:
                 single=st.file_uploader('大型 ROM 或 SDK 封存檔（單檔 256 MiB）',max_upload_size=256)
                 partial_files=[single] if single else []
                 st.caption('一次一檔，原檔及展開內容合計最多 384 MiB、5000 個檔案。接受 ROM／IMG／BIN／SquashFS 或 ZIP／tar／tar.gz／wheel。SDK 只展開為資料，不安裝或執行；網頁元件仍會暫存上傳內容。')
             else:
-                partial_files=st.file_uploader("部分材料（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
+                partial_files=st.file_uploader("產品材料：ROM、SBOM、原碼、設定可一起選（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
                 st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
+            st.caption('封存檔只展開一層，內層 ZIP／tar 不遞迴展開；其中的 ROM 會和直接上傳的 ROM 一起計入三份上限。')
             st.caption('亦可交原始 SquashFS ROM（每次最多 3 份）；工具只讀固定套件／版本路徑，不啟動韌體。其他 ROM 格式會保留原檔並顯示尚不支援。')
             partial_product=st.text_input("產品名稱",value="未提供",max_chars=200)
             partial_release=st.text_input("產品版本",value="未提供",max_chars=200)
@@ -157,7 +163,7 @@ def workspace(st, *, store_root=None):
         ready=bool(selected) if kind=="產品／版本樣品" else upload is not None if kind=="上傳工程包" else bool(path.strip())
         if kind.startswith("部分材料"):ready=bool(partial_files)
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
-        signature=(kind,selected["archive"]["sha256"] if selected else None,
+        signature=(kind,material_mode,selected["archive"]["sha256"] if selected else None,
             getattr(upload,"file_id",None),tuple((f.name,f.file_id) for f in partial_files),
             (partial_product,partial_release,partial_build) if kind.startswith("部分材料") else None,path,cve,symptom,st.session_state.get("follow_parent"))
         if st.session_state.get("request_signature")!=signature:

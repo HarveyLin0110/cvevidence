@@ -4,7 +4,7 @@ import json,os,pathlib,re,socket,time,urllib.error,urllib.request
 from copy import deepcopy
 from datetime import datetime,timezone
 from .integrity import IntegrityError,digest
-from .sources import list_sources,search_sources,read_excerpt,compare_sources,verify_excerpt
+from .sources import list_sources,search_sources,read_excerpt,read_bounded_excerpt,compare_sources,verify_excerpt
 from .verifier import require_verified,verify_citations
 from .collection_guidance import collection_guide
 from .evidence_requests import SCHEMA as REQUEST_SCHEMA, validate as validate_requests, display as display_request, validate_legacy
@@ -35,7 +35,7 @@ collection_guide 是核心提供的收件格式指引，並非已驗觀測或使
 required_files 只列解除目前缺口所必要的最小既有工程材料。可選的新增動態測試放在 finding 並註明可選、由工程師在受控環境評估；不能把重現漏洞或產生特殊攻擊輸入當作工程適用性判定的必要補件。
 總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 COMPLETE／ASK_USER。優先以 2–4 次完成一項最有價值的追加調查。
 預留一次呼叫收尾；剩兩次時至多做一個必要查核，剩一次時依已有證據 COMPLETE 或提出具體 ASK_USER。不得為了完成而捏造答案，資料不足要明說限制。
-READ 的 start_line/end_line 最多 200 行，end_line - start_line 必須小於 200（例如 500–699），SEARCH term 使用字面關鍵字。不要捏造 source_id。
+READ 的 start_line/end_line 最多 200 行，end_line - start_line 必須小於 200（例如 500–699），READ 另限 24000 UTF-8 bytes，超限先縮小範圍；單行仍超限屬 CAPABILITY_GAP，不索取同一份檔案。SEARCH term 使用字面關鍵字；omitted_excerpts 是已命中但因片段容量未回傳的位置，可縮小 READ，不能當未命中。COMPARE 的 truncated=true 表示差異未讀完。不要捏造 source_id。
 公告選段不足時用 SEARCH_PUBLIC（source_ids 為 P-ID 或 [] 搜尋本輪全部保存公告、term 字面搜尋），再 READ_PUBLIC（恰好一個 P-ID、start_line/end_line 為保存文字行號，最多 200 行／8000 bytes）讀取修補或條件上下文。這兩個工具不連網、不讀產品檔、不產生 X-ID；公告 P-ID 只能用於條件的 public_source_id，不放產品 citations。尚未取得或保存本身截短的上游內容仍是工具缺口，不能宣稱已讀。
 READ 的 source_ids 必須恰好一個；COMPARE 必須恰好兩個同快照來源。多個檔案不要一次放進 COMPARE。
 SDK 可能有多份 bundled／static 原碼；判斷某份已修補或準備索取建置綁定前，先用 SEARCH source_ids=[] 跨已交材料搜尋相關函式／實作，再核對 matching_sources 中不同副本。SEARCH 優先回傳不同檔案片段，仍須 READ 各副本關鍵段落；已回報同名原碼副本尚未逐份成功 READ 時，ASK_USER 會被阻擋。scope_covers_all_files=false 表示只搜指定檔；coverage_limited／unsearched_file_count／skipped_nontext_or_large 表示未完整涵蓋，不能把未命中說成不存在。
@@ -444,7 +444,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     tool_output=search_sources(context,args['term'],ids,8)
                 elif action=='READ':
                     if len(ids)!=1:raise ValueError('READ 需要一個 source_id')
-                    tool_output=read_excerpt(context,ids[0],args['start_line'],args['end_line'])
+                    tool_output=read_bounded_excerpt(context,ids[0],args['start_line'],args['end_line'])
                 elif action=='COMPARE':
                     if len(ids)!=2:raise ValueError('COMPARE 需要兩個 source_id')
                     tool_output=compare_sources(context,*ids)

@@ -68,7 +68,7 @@ def test_web_shows_actionable_archive_error_without_crashing(tmp_path):
     from streamlit.testing.v1 import AppTest
     app=AppTest.from_function(failing_upload_app,default_timeout=20)
     app.session_state['test_store']=str(tmp_path/'runtime')
-    app.run();app.radio[0].set_value('部分材料（SBOM／日誌／原碼／設定）').run()
+    app.run();app.radio[0].set_value('上傳產品材料').run()
     next(b for b in app.button if b.label=='匯入並建立查核').click().run()
     assert not app.exception
     assert any('封存檔損壞' in x.value and '重新提供' in x.value for x in app.error)
