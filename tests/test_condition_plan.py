@@ -43,3 +43,27 @@ def test_generic_depth_budget_is_shared_and_bounded(tmp_path):
             investigate_after_engineering(context,saved,analysis_depth='pc',timeout_seconds=outer)
         assert 0<call.call_args.kwargs['timeout_seconds']<=expected
         assert call.call_args.kwargs['max_calls']==12
+
+
+def test_quote_failure_returns_bounded_exact_source_hints_without_acceptance():
+    from cvevidence_core.condition_plan import QuoteMismatch
+    rows=conditions();rows[1]['public_quote']='cookie parsing is now completely safe'
+    before=deepcopy(rows)
+    source={'source_id':'P-test','text':'Unrelated introductory text.\nTEST_ONLY cookie parsing must reject invalid bytes.\n'+'z'*200000}
+    with pytest.raises(QuoteMismatch) as caught:validate(rows,[source])
+    hint=caught.value.feedback
+    assert not hint['accepted'] and hint['condition_id']=='C2'
+    assert 1<=len(hint['candidate_quotes'])<=3
+    assert sum(len(q['text']) for q in hint['candidate_quotes'])<=1800
+    for q in hint['candidate_quotes']:
+        assert source['text'][q['start_char']:q['start_char']+len(q['text'])]==q['text']
+    assert rows==before
+    with pytest.raises(QuoteMismatch):validate(rows,[source])
+
+
+def test_unknown_public_source_does_not_suggest_another_sources_text():
+    from cvevidence_core.condition_plan import QuoteMismatch
+    rows=conditions();rows[0]['public_source_id']='P-unknown'
+    with pytest.raises(QuoteMismatch) as caught:validate(rows,PUBLIC)
+    assert not caught.value.feedback['source_known']
+    assert caught.value.feedback['candidate_quotes']==[]

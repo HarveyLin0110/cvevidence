@@ -39,7 +39,8 @@ def prepare(context, public_sources):
         except IntegrityError:raise
         except (ValueError,OSError):errors.append({'source_id':row['source_id'],'gap_kind':'CAPABILITY_GAP'})
     from .firmware_inventory import reports
-    return {'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
+    from .elf_metadata import inventory
+    return {'binary_metadata':inventory(context),'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
             'component_declarations_truncated':len(declarations)>20,
             'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
             'read_errors':errors,'note':'已讀片段只支持其中可見內容；排序與檔案存在不是證據，不完整片段不能證明功能不存在。'}

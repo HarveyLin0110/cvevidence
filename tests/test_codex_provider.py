@@ -215,7 +215,7 @@ def test_bounded_bidirectional_io_avoids_pipe_deadlock(tmp_path):
 def _running(pid):
     try:
         return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()[0] != "Z"
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
 
 
@@ -272,3 +272,16 @@ def test_worker_death_kills_cli_and_descendants(tmp_path):
         if process.poll() is None:
             process.kill()
             process.wait()
+
+
+@pytest.mark.parametrize("failure",[FileNotFoundError(),ProcessLookupError()])
+def test_process_probe_handles_exit_during_read(monkeypatch,failure):
+    def gone(*args,**kwargs):raise failure
+    monkeypatch.setattr(Path,"read_text",gone)
+    assert not _running(123)
+
+
+def test_process_probe_does_not_hide_permission_failure(monkeypatch):
+    def denied(*args,**kwargs):raise PermissionError()
+    monkeypatch.setattr(Path,"read_text",denied)
+    with pytest.raises(PermissionError):_running(123)

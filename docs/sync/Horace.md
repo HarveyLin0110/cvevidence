@@ -1,5 +1,33 @@
 # Horace 開發同步
 
+## 2026-09-26 引用修正與輸入精簡
+
+- ddbdd48：引用錯誤指出條件／來源並附同來源有限原文提示，不自動接受、替換或認證語意。606aa79：PLAN／REVIEW 模型回覆改為短確認，完整條件與實際回覆仍各自保存。
+- 同材料 LIVE 8f8135bc-a654-4861-aa1c-150de0ece81c：Sol/high，5 calls、70.85 秒、81448 tokens，五步全通過，單項補件卡。對照前次 8 calls／117.73 秒／170625 tokens 僅為單次觀察，不保證固定比例。已實連 8506 確認最新卡與用量。
+- 全量 530 passed、23 subtests passed（273.33 秒）；程式 CI 36205478451 仍在執行。詳細限制／D/R 見 docs/releases/2026-09-26-引用修正與調查輸入精簡.md。
+- 持續待辦：真實補件與原碼成品關聯核對、SDK／ROM 同建置、更多格式、公司登入部署、跨案例人工品質驗收。
+
+## 2026-09-26 最小補件與收尾一致性
+
+- f19d748：使用者材料缺口且無排除／衝突／工具限制時，COMPLETE 不能只用文字索取；要求經既有檢查的 ASK_USER 卡。保留交工程覆核路徑。
+- 第三次同 ELF 真實 API：db215ee0-652c-4fec-bdb8-30b42d72ec49，Sol/high，8 calls、117.73 秒、170625 tokens，NEEDS_USER_INPUT，一項既有建置紀錄；實際 8506 已看到最小補件卡與取得方式。原工程 bytes 不變。
+- 仍有三次 TOOL_ERROR 後修正成功；不宣稱高效率或已完成補件驗證。下一步改善公告逐字引文與精確搜尋詞、重複輸入。
+- 本機全量 527 passed、23 subtests passed（291.70 秒）；程式 CI 36204923946 尚在執行。細節見 docs/releases/2026-09-26-最小補件收尾一致性.md。
+
+## 2026-09-26 ELF 真實模型／狀態範圍
+
+- 兩次 OpenAI API Sol/high 真實調查，每次 6 calls：首次 97.75 秒、第二次 84.21 秒；同 TEST_ONLY source/ELF，工程 run 63976040-37e0-4080-be9c-fc0c7a7a64d6。最新 AI 2b8323e0-6f85-424c-9d24-95f3407180fa 已在實際網頁開啟。
+- 修正原碼排除線索與目標成品範圍混淆，ASK_USER 拒絕回覆條件狀態；保存 ELF metadata。第二次仍有一筆 PLAN 引用修正，最後 COMPLETE 而非成功結構化補件，不宣稱完整品質通過。
+- 246dd36 修 CI 程序退出探針競態；501581b 狀態／metadata；37ad6f5 處理無 PLAN 邊界。最終全量 522 passed、23 subtests passed（281.06 秒），CI 36204344253 全部成功。
+- 後續優先：最小下一步與結構化補件一致性、減少重複輸入 tokens、source-to-binary／實際庫解析。完整限制與 D/R 見 docs/releases/2026-09-26-ELF真實AI查核.md。
+
+## 2026-09-26 ELF 結構與 PC2 線索
+
+- 9df8ebd：新寫有界 ELF32/64 大小端解析，保留 source ID/hash、架構、動態依賴與未驗證狀態；接入候選、AI 初始材料與網頁 PC2 面板。不執行產品，不直接改 CVE 判定；既有 BuildProof readelf 未替換。
+- 新編譯 TEST_ONLY ELF 比對 readelf，相同依賴；實際 run 415803a0-88aa-49a4-9d73-8b4725320a10 已在 8506 開啟。新模型 LIVE 尚未執行。
+- 全量 518 passed、23 subtests passed（265.16 秒）；13 新增案例。上一輪 CI 36197953797 成功。詳見 docs/releases/2026-09-26-ELF結構查核.md，含讀取界線與 D/R。
+- ROM 內任意執行檔、符號／路徑分析、同 build、真實模型語意品質与內網正式部署仍待補齊。
+
 ## 2026-09-26 團隊登入邊界
 
 - 程式 7ee3eea：集中驗證既有 Google 部署設定，帳號切換清除 session 暫存，帳號目錄拒絕 symlink；保留白名單與 subject 雜湊儲存方式。

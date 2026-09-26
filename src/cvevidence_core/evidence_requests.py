@@ -45,3 +45,11 @@ def display(row):
 def validate_legacy(files):
     if not 1<=len(files)<=3 or any(not s.strip() for s in files):raise ValueError('每輪補件限制 1–3 項，請按重要性縮減')
     if len({re.sub(r'\W','',s).casefold() for s in files})!=len(files):raise ValueError('補件不可重複')
+
+
+def require_actionable_completion(conditions):
+    """Unresolved user gaps need an actionable card, not prose-only completion."""
+    states={row['state'] for row in conditions}
+    if ('USER_MATERIAL_MISSING' in states and not states.intersection(
+            {'OBSERVED_EXCLUSION','CONFLICT','CAPABILITY_GAP'})):
+        raise ValueError('仍有使用者材料缺口；請 ASK_USER 提出一個最關鍵條件的最小結構化補件，不可只在 COMPLETE 摘要索取。工具限制或證據衝突須在 REVIEW 如實說明，不得為通過檢查改狀態。')

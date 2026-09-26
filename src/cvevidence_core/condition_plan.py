@@ -14,6 +14,29 @@ SCHEMA = {'type': 'array', 'items': {'type': 'object', 'properties': {
     'required': sorted(FIELDS), 'additionalProperties': False}}
 
 
+class QuoteMismatch(ValueError):
+    """Exact-source hints remain data; never silently repair a condition."""
+    def __init__(self,row,source):
+        super().__init__('每個條件須引用 public_sources 中 P-ID 與逐字原文 public_quote；語意仍待覆核')
+        self.feedback={'condition_id':row['condition_id'],'source_id':row['public_source_id'],
+            'source_known':source is not None,'accepted':False,'candidate_quotes':[],
+            'note':'下列是該來源的原文片段，不表示支持此條件。重新核對語意後逐字引用；若沒有支持原文，修正條件或改用已提供的其他來源。不得把摘要當作原文。'}
+        if source is None:return
+        text=source['text']
+        terms=set(re.findall(r'[a-zA-Z_]{3,}',row['public_quote'].lower()))
+        pieces=[];offset=0
+        # Bounded lexical hints only. No model call and no semantic acceptance.
+        for line in text[:120000].splitlines(keepends=True):
+            for start in range(0,len(line),600):
+                excerpt=line[start:start+600]
+                if len(excerpt.strip())<8:continue
+                words=set(re.findall(r'[a-zA-Z_]{3,}',excerpt.lower()))
+                pieces.append((len(terms & words),offset+start,excerpt))
+            offset+=len(line)
+        for _,start,quote in sorted(pieces,key=lambda p:(-p[0],p[1]))[:3]:
+            self.feedback['candidate_quotes'].append({'start_char':start,'text':quote})
+
+
 def validate(rows, public_sources, *, previous=None):
     if not isinstance(rows,list) or not 3 <= len(rows) <= 8:
         raise ValueError('條件計畫須有 3–8 項、涵蓋 PC1/PC2/PC3；不是固定五項材料清單。')
@@ -31,7 +54,7 @@ def validate(rows, public_sources, *, previous=None):
             raise ValueError('逐項說明必要條件、排除條件、驗證方法與理由')
         source=public.get(row['public_source_id'])
         if not source or len(row['public_quote'].strip())<8 or row['public_quote'] not in source['text']:
-            raise ValueError('每個條件須引用 public_sources 中 P-ID 與逐字原文 public_quote；語意仍待覆核')
+            raise QuoteMismatch(row,source)
         if (not isinstance(row['citations'],list) or len(row['citations'])>8
                 or any(not isinstance(x,str) for x in row['citations'])):
             raise ValueError('條件引用格式不符')

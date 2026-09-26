@@ -8,7 +8,7 @@ from .sources import list_sources,search_sources,read_excerpt,compare_sources,ve
 from .verifier import require_verified,verify_citations
 from .collection_guidance import collection_guide
 from .evidence_requests import SCHEMA as REQUEST_SCHEMA, validate as validate_requests, display as display_request, validate_legacy
-from .condition_plan import SCHEMA as CONDITION_SCHEMA, validate as validate_conditions, record as condition_record
+from .condition_plan import SCHEMA as CONDITION_SCHEMA, validate as validate_conditions, record as condition_record, QuoteMismatch
 from .providers import ProviderStep, ProviderError, responses_request, MAX_PROVIDER_INPUT_BYTES, MAX_PROVIDER_RECEIPT_BYTES
 
 SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律用繁體中文。
@@ -46,8 +46,11 @@ UNKNOWN 條件中的判讀規則不是已成立的事實。source_index 只是�
 補件的成品 hash/build_id 會由工具自動附上；自由文字不用重打 hash，以免截斷或打錯。引用 ID 必須逐字照抄。
 GENERAL_TRIAGE 且有 PUBLISHED 公告時，先 PLAN 建立本 CVE 的 3–8 項條件（conditions），涵蓋 PC1/PC2/PC3。每項用 C1…C8、layer、requirement、exclusion（什麼證據可排除）、check（要查哪個實作或配置）、public_source_id、public_quote（P-ID 原文逐字摘錄）、state=NOT_REVIEWED、citations=[]、explanation。不要把「請提供檔案」當漏洞条件。
 讀取產品證據後，用 REVIEW 提交同一完整 conditions（條件定義與公告引文原封保留），只更新 state、citations、explanation。OBSERVED_SUPPORT／OBSERVED_EXCLUSION 是有原文支持的待覆核觀察，不是正式判定；CONFLICT 是證據矛盾；USER_MATERIAL_MISSING 是確實缺少使用者材料；CAPABILITY_GAP 是工具不會驗證或無法取得公開資料；NOT_REVIEWED 是尚未讀完。優先檢查可排除條件，不因 PC3 尚未知就向使用者索取所有材料。
+條件狀態以本次目標成品為範圍：若原碼有排除線索，但缺少原碼到成品的建置對應，explanation 保留該線索，state 仍為 USER_MATERIAL_MISSING（缺建置材料）或 CAPABILITY_GAP（工具尚無能力），不可先把成品條件標成 OBSERVED_EXCLUSION 又要求同條件補件。不能為了通過補件檢查而改狀態，REVIEW 必須依證據說明原因。
+binary_metadata 是工具核對 hash 後解析的 ELF 結構線索，不是產品版本或同 build 證明；它不是文字 READ 原文，不可捏造 X-ID，也不可把只有 metadata 的 source_id 放入 existing_source_ids。不要用文字 READ 讀 ELF；現有解析能力不足要列 CAPABILITY_GAP。
 ASK_USER 用 requests 結構化列 1–3 項，全部針對一個最關鍵 condition_id，依重要性排序；每項只是一份具體材料（不能打包整個 SDK）。欄位 material、why、owner、how、alternative（可留空）、search_terms（1–3 個精確路徑／檔名詞）、existing_source_ids（已讀相關來源）、insufficiency（已交材料為何不足）、expected_resolution（取得後驗證什麼）。新 CVE 的 condition_id 用 PLAN 的 C-ID；已有專用規則用原 condition_id。required_files 留 []，系統會產生精簡清單。其餘 action 的 requests=[]。
 initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 X-ID；不用重新索取或重讀相同片段。提出 requests 前，工具會全量比對 search_terms 的檔案路徑；任何命中但未讀的材料會阻擋補件。先 READ 相關材料，再用 existing_source_ids 與 insufficiency 說明尚缺什麼；不能用很廣的搜尋詞或把已收到說成不存在。
+若 REVIEW 仍有 USER_MATERIAL_MISSING，且沒有成品排除線索、證據衝突或工具能力缺口，必須用 ASK_USER 提出一個最關鍵條件的最小結構化補件；不能只在 COMPLETE 摘要寫「請提供」。缺口屬工具或證據衝突時可 COMPLETE 交覆核，不要為了收尾而改條件狀態。
 如果已有必要條件的排除線索且無矛盾，先 COMPLETE 交工程覆核，不要為 PC3 等剩餘條件要求更多材料。工具未支援或尚未讀完，列工具待辦而非補件。
 PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收尾前必須先有 PLAN 與 REVIEW；每項 explanation 簡短說明命中或未完成原因。找不到專用驗證器屬 CAPABILITY_GAP，不應要求使用者補規則。
 每次只呼叫一個工具。所有參數必填；不適用的文字用空字串、陣列用 []、行號用 1。
@@ -266,6 +269,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if not verify_excerpt(context,excerpt):raise IntegrityError('初始材料片段無法核對')
             excerpts[excerpt['excerpt_id']]=excerpt
         result['initial_product_excerpts']=prepared['initial_product_excerpts']
+        result['binary_metadata']=deepcopy(prepared['binary_metadata'])
     resumed=continuation(context,verified.cve_id,controls.get('previous'))
     if resumed:
         payload['continuation']=resumed
@@ -456,6 +460,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     if guide is not None:tool_output['collection_guide']=guide
                     result['status']='NEEDS_USER_INPUT'
                 elif action=='COMPLETE':
+                    if requires_plan:
+                        from .evidence_requests import require_actionable_completion
+                        require_actionable_completion(result['condition_plan']['conditions'])
                     if not args['citations'] or not args['finding'].strip():raise ValueError('COMPLETE 需要有引用的調查摘要')
                     result['status']='COMPLETED';tool_output={'summary':args['finding'],'citation_check':citation_check}
                 found=tool_output.get('matches',[]) if isinstance(tool_output,dict) else []
@@ -470,10 +477,20 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 task.update(status='INPUT_CHANGED_OR_INVALID',result={'error':str(exc)});raise
             except (ValueError,KeyError) as exc:
                 task.update(status='TOOL_ERROR',result={'error':str(exc)});tool_output=task['result']
+                if isinstance(exc,QuoteMismatch):tool_output['citation_repair']=deepcopy(exc.feedback)
+                if action in {'ASK_USER','COMPLETE'} and requires_plan:
+                    tool_output['condition_states']={r['condition_id']:r['state'] for r in result.get('condition_plan',{}).get('conditions',[])}
+                    tool_output['recovery']='尚無條件計畫時先 PLAN，再 READ／REVIEW；先核對補件對象的條件狀態。確有成品排除線索時 COMPLETE；若只有未綁定原碼的線索，REVIEW 說明建置對應缺口。工具能力不足用 CAPABILITY_GAP，不向使用者索取工具規則；不得只為通過檢查而改狀態。'
+            feedback=tool_output
+            if action in {'PLAN','REVIEW'} and task['status']=='COMPLETED':
+                feedback={'accepted':True,'plan_hash':tool_output['plan_hash'],
+                    'condition_states':{r['condition_id']:r['state'] for r in tool_output['conditions']},
+                    'note':'條件定義與本次提交相同，完整內容已保存；後續 REVIEW 保留原定義與公告引文。接受格式與引用不表示語意已驗證。'}
+                task['model_feedback']=deepcopy(feedback)
             if provider is None:
                 items.extend(output)
-                items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(tool_output,ensure_ascii=False)[:50000]})
-            else:provider_history.append({'step_number':number+1,'decision':deepcopy(args),'result':deepcopy(tool_output)})
+                items.append({'type':'function_call_output','call_id':call['call_id'],'output':json.dumps(feedback,ensure_ascii=False)[:50000]})
+            else:provider_history.append({'step_number':number+1,'decision':deepcopy(args),'result':deepcopy(feedback)})
             if time.monotonic()-start>=timeout_seconds:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             publish(result,excerpts,phase='已完成 '+action)
             if result['status'] in {'COMPLETED','NEEDS_USER_INPUT'}:break

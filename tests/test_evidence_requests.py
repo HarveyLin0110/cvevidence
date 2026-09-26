@@ -22,3 +22,16 @@ def test_reject_broad_unnecessary_or_unactionable_requests(case):
     if case=='exclusion':rows[0]['state']='OBSERVED_EXCLUSION'
     if case=='no_how':req[0]['how']=''
     with pytest.raises(ValueError):validate(req,rows,generic=True)
+
+
+@pytest.mark.parametrize('other',['OBSERVED_EXCLUSION','CONFLICT','CAPABILITY_GAP'])
+def test_completion_can_stop_for_review_or_capability_gap(other):
+    from cvevidence_core.evidence_requests import require_actionable_completion
+    require_actionable_completion([{'state':'USER_MATERIAL_MISSING'},{'state':other}])
+
+
+def test_user_gap_requires_actionable_card_without_reclassifying_it():
+    from cvevidence_core.evidence_requests import require_actionable_completion
+    rows=[{'state':'USER_MATERIAL_MISSING'},{'state':'NOT_REVIEWED'}]
+    with pytest.raises(ValueError,match='ASK_USER'):require_actionable_completion(rows)
+    assert rows[0]['state']=='USER_MATERIAL_MISSING'

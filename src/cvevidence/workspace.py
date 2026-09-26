@@ -233,6 +233,17 @@ def workspace(st, *, store_root=None):
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
+        binaries=(payload.get('discovery',{}) if payload else run.candidates).get('binary_metadata')
+        if binaries and binaries.get('files'):
+            with st.expander('執行檔架構與動態依賴（PC2 線索）'):
+                st.caption(binaries['note'])
+                st.dataframe([{'來源':r['path'],'狀態':r['status'],
+                    '位元':(r.get('metadata') or {}).get('class_bits'),
+                    '架構編號':(r.get('metadata') or {}).get('machine_id'),
+                    '位元組序':(r.get('metadata') or {}).get('byte_order'),
+                    '動態依賴名稱':'、'.join((r.get('metadata') or {}).get('needed',[])),
+                    'SHA256':r['sha256']} for r in binaries['files']],hide_index=True)
+                if binaries.get('coverage_limited'):st.caption('僅完成有限範圍掃描；未列出不代表不存在。')
         firmware=(payload.get('discovery',{}) if payload else run.candidates).get('firmware_inventory',[])
         if firmware:
             with st.expander('ROM 套件與版本讀取狀態',expanded=True):
