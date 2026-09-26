@@ -14,9 +14,10 @@ from urllib.parse import urlsplit, urljoin
 HOSTS = frozenset({'curl.se', 'openssl-library.org', 'www.openssl.org', 'zlib.net',
     'www.zlib.net', 'github.com', 'raw.githubusercontent.com', 'www.openwall.com',
     'security.gentoo.org', 'www.djangoproject.com', 'httpd.apache.org',
-    'www.apache.org', 'security.apache.org', 'www.kernel.org', 'git.kernel.org'})
+    'www.apache.org', 'security.apache.org', 'www.kernel.org', 'git.kernel.org', 'lists.debian.org',
+    'patch-diff.githubusercontent.com'})
 MAX_BYTES = 1_000_000
-MAX_TEXT = 14000
+MAX_TEXT = 120000
 
 
 def approved(url):
@@ -26,12 +27,23 @@ def approved(url):
                 or p.username or p.password or p.query or p.fragment or '\\' in url):
             return False
         if p.hostname == 'github.com':
-            return bool(re.fullmatch(r'/[\w.-]+/[\w.-]+/(?:commit/[0-9a-f]{7,40}(?:\.patch)?|security/advisories/GHSA-[\w-]+|releases/tag/[\w.-]+)', p.path))
+            return bool(re.fullmatch(r'/[\w.-]+/[\w.-]+/(?:commit/[0-9a-f]{7,40}(?:\.patch)?|pull/[1-9][0-9]{0,8}|security/advisories/GHSA-[\w-]+|releases/tag/[\w.-]+)', p.path))
+        if p.hostname == 'patch-diff.githubusercontent.com':
+            return bool(re.fullmatch(r'/raw/[\w.-]+/[\w.-]+/pull/[1-9][0-9]{0,8}\.patch',p.path))
         if p.hostname == 'raw.githubusercontent.com':
             return bool(re.fullmatch(r'/[\w.-]+/[\w.-]+/[0-9a-f]{40}/[\w./-]+', p.path))
+        if p.hostname == 'lists.debian.org':
+            return bool(re.fullmatch(r'/(?:debian-security-announce|debian-lts-announce)/[0-9]{4}/[0-9]{2}/msg[0-9]{5}\.html', p.path))
         return bool(p.path and '..' not in p.path)
     except (ValueError, TypeError):
         return False
+
+
+def snapshot_url(url):
+    """Fixed GitHub PR-to-patch mapping; no redirect or model-provided target."""
+    match=re.fullmatch(r'https://github.com/([\w.-]+)/([\w.-]+)/pull/([1-9][0-9]{0,8})',url)
+    if match:return 'https://patch-diff.githubusercontent.com/raw/'+ '/'.join(match.group(1,2))+'/pull/'+match.group(3)+'.patch'
+    return url+'.patch' if re.fullmatch(r'https://github.com/[\w.-]+/[\w.-]+/commit/[0-9a-f]{7,40}',url) else url
 
 
 class _Text(HTMLParser):
@@ -89,10 +101,13 @@ def _download(url, deadline):
 
 
 def collect(info, *, timeout=15, limit=3):
-    """Only CNA references and approved patch links from their saved HTML."""
+    """Only saved CVE references and approved patch links from their saved HTML."""
     deadline = time.monotonic() + max(0, min(timeout, 15))
     sources = []; failures = []; seen = set()
     references = list(info.get('references', []))
+    provenance = {r['url']: r.get('origins', []) for r in info.get('reference_details', [])}
+    limit = max(0, min(limit, 3))
+    attempts = 0
     # A reviewed vendor URL template handles CNA records that omit the vendor
     # advisory. Only the validated CVE ID is interpolated, never model text.
     cve = info.get('cve_id','')
@@ -101,13 +116,19 @@ def collect(info, *, timeout=15, limit=3):
             for a in info.get('affected', [])):
         references.insert(0,'https://curl.se/docs/'+cve+'.html')
     queue = [(url, info.get('source_url')) for url in references if approved(url)]
+    unique = {}
+    for url, parent in queue:
+        unique.setdefault(snapshot_url(url), (url, parent))
+    queue = list(unique.values())
     # Prefer the vendor advisory over mirrors and commit patch bytes over HTML.
     queue.sort(key=lambda row: (urlsplit(row[0]).hostname != 'curl.se', 'github.com' in row[0], '/docs/' not in row[0]))
-    while queue and len(sources) + len(failures) < limit and time.monotonic() < deadline:
+    while queue and len(sources) < limit and attempts < limit*2 and time.monotonic() < deadline:
         original, parent = queue.pop(0)
-        url = original + '.patch' if re.fullmatch(r'https://github.com/[\w.-]+/[\w.-]+/commit/[0-9a-f]{7,40}', original) else original
+        url = snapshot_url(original)
         if url in seen: continue
         seen.add(url)
+        seen.add(original)
+        attempts += 1
         try:
             raw, kind = _download(url, deadline)
             body = raw.decode('utf-8')
@@ -119,10 +140,13 @@ def collect(info, *, timeout=15, limit=3):
                 links = [urljoin(url, link) for link in parser.links]
             text = body[:MAX_TEXT]
             row = {'source_id': 'P-' + hashlib.sha256(url.encode() + raw).hexdigest()[:24],
-                'url': url, 'discovered_from': parent, 'retrieved_at': datetime.now(timezone.utc).isoformat(),
+                'url': url, 'reference_url':original, 'discovered_from': parent, 'retrieved_at': datetime.now(timezone.utc).isoformat(),
                 'raw_sha256': hashlib.sha256(raw).hexdigest(), 'text_sha256': hashlib.sha256(text.encode()).hexdigest(),
                 'text': text, 'truncated': len(body) > MAX_TEXT, 'status': 'RETRIEVED',
                 'role': 'PUBLIC_REFERENCE_NOT_PRODUCT_EVIDENCE'}
+            row['reference_origins'] = provenance.get(original, [])
+            row['publisher_scope'] = ('DOWNSTREAM_DISTRIBUTION' if urlsplit(url).hostname == 'lists.debian.org'
+                                      else 'PUBLIC_REFERENCE_SCOPE_REQUIRES_REVIEW')
             sources.append(row)
             patches = [(link, url) for link in links if approved(link) and re.search(r'/commit/[0-9a-f]{7,40}(?:\.patch)?$', link)]
             queue = patches + queue
@@ -130,7 +154,9 @@ def collect(info, *, timeout=15, limit=3):
             failures.append({'url': url, 'status': 'UNAVAILABLE', 'gap_kind': 'CAPABILITY_GAP'})
     return {'sources': sources, 'failures': failures,
             'unsupported_references': [u for u in info.get('references', []) if not approved(u)],
-            'note': '只取得經來源政策允許的公告與修補；內容仍是待覆核資料，不是產品證據。未取得不等於不存在，不向使用者自動索取。'}
+            'unvisited_references': list(dict.fromkeys(u for u, _ in queue if snapshot_url(u) not in seen))[:20],
+            'references_truncated': info.get('references_truncated', False),
+            'note': '只取得經來源政策允許的公告與修補，最多三份來源、六次嘗試與共用期限。CNA／ADP 是連結出處，不是適用性認證；下游發行版修補版本不能直接套用到產品。未取得或因上限未訪問屬工具缺口，不向使用者自動索取。'}
 
 
 def cna_source(info):

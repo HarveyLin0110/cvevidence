@@ -10,5 +10,6 @@ def compact(bundle):
             selected.append(line);used+=len(line)+1
         rows.append({**{k:v for k,v in source.items() if k!='text'},'text':'\n'.join(selected),
             'text_selection':True,'omitted_lines':omitted,
-            'selection_note':'傳送的是受限逐行原文選段；hash 屬完整保存來源。未顯示部分不能推定不存在，必要時明示工具限制。'})
+            'total_saved_lines':len(source['text'].splitlines()),
+            'selection_note':'傳送的是受限逐行原文選段；hash 屬完整保存來源。可用 SEARCH_PUBLIC 搜尋 P-ID 保存公告、READ_PUBLIC 讀保存行。未顯示部分不能推定不存在；保存內容本身若截短，工具無法補回。'})
     return {**bundle,'sources':rows}

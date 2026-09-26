@@ -183,6 +183,31 @@ def test_saved_engineering_is_immutable_and_later_ai_does_not_refetch(context):
     assert saved == before
 
 
+def test_public_search_and_read_use_saved_snapshot_not_product_evidence(context):
+    from .test_public_reader import bundle
+    saved=bundle(('p'*149+'\n')*40+'TEST_ONLY target patch condition\n')
+    entry=analyzed(context)['analyses'][0]
+    verified=verify(context,collect_evidence(context,CVE))
+    calls=[]
+    def transport(config,items,timeout):
+        calls.append(copy.deepcopy(items))
+        args={k:[] if p['type']=='array' else 1 if p['type']=='integer' else '' for k,p in PROPERTIES.items()}
+        args.update(question='TEST_ONLY locate saved patch detail',reason='TEST_ONLY inspect omitted public context',
+                    action='SEARCH_PUBLIC' if len(calls)==1 else 'READ_PUBLIC',source_ids=['P-test'],
+                    term='target patch' if len(calls)==1 else '',start_line=41,end_line=41)
+        return {'id':'TEST_ONLY','model':'TEST_ONLY','status':'completed','output':[
+            {'type':'function_call','name':'investigation_step','call_id':'test','arguments':json.dumps(args)}]}
+    with patch('cvevidence_core.public_sources.collect',return_value=saved),patch(
+            'cvevidence_core.ai.settings',return_value={'OPENAI_MODEL':'TEST_ONLY','OPENAI_API_KEY':'TEST_ONLY'}):
+        result=investigate(context,verified,entry['assessment'],mode='LIVE',public_record=public_record(),
+                           transport=transport,max_calls=2)
+    assert [t['action'] for t in result['tasks']]==['SEARCH_PUBLIC','READ_PUBLIC']
+    assert all(t['status']=='COMPLETED' for t in result['tasks'])
+    assert result['tasks'][1]['result']['text']=='TEST_ONLY target patch condition'
+    assert not any(x.get('source_id')=='P-test' for x in result.get('excerpts',[]))
+    assert entry['assessment']['verdict']=='NEEDS_INVESTIGATION'
+
+
 def _render(entry):
     import streamlit as st
     from cvevidence.analysis_view import render_engineering

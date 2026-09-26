@@ -77,11 +77,37 @@ def brief(record):
                  'defaultStatus':str(a.get('defaultStatus','unknown'))[:40],
                  'versions': [{**{'changes':v.get('changes',[])[:20]}, **{k: str(v[k])[:200] for k in ('version', 'status', 'lessThan', 'lessThanOrEqual', 'versionType') if k in v}}
                               for v in a.get('versions', [])[:20]]} for a in cna.get('affected', [])[:20]]
-    references = [r['url'] for r in cna.get('references', []) if isinstance(r.get('url'), str)
-                  and r['url'].startswith('https://')][:10]
+    references, reference_details, references_truncated = _references(data.get('containers', {}))
     from .version_ranges import normalize
     return {'version_ranges':normalize(affected), 'status': status, 'cve_id': record['cve_id'], 'source_url': record['source_url'],
             'record_sha256': record['sha256'], 'title': str(cna.get('title', ''))[:600],
             'description': description[:6000], 'description_truncated': len(description) > 6000,
             'affected': affected, 'references': references,
-            'note': 'CNA 公告內容，僅作待覆核的查核線索；不是本次產品的已驗證條件。'}
+            'reference_details': reference_details, 'references_truncated': references_truncated,
+            'note': '描述與版本來自 CNA；參考連結包含 CNA 與 ADP 補充。下游維護公告的修補版本只適用其產品範圍，不能直接套用到本次產品；全部仍是待覆核線索。'}
+
+
+def _references(containers):
+    """Keep bounded CNA/ADP provenance; duplicate links do not displace new ones."""
+    adp = containers.get('adp', [])
+    if not isinstance(adp, list):adp = []
+    groups = [('CNA', containers.get('cna', {}))] + [('ADP', row) for row in adp[:8]]
+    details = {}; truncated = len(adp)>8
+    for kind, container in groups:
+        if not isinstance(container, dict):continue
+        rows = container.get('references', [])
+        if not isinstance(rows, list):continue
+        truncated = truncated or len(rows)>32
+        provider = container.get('providerMetadata', {})
+        provider = provider if isinstance(provider, dict) else {}
+        origin = {'container': kind, 'provider': str(provider.get('shortName', ''))[:100],
+                  'org_id': str(provider.get('orgId', ''))[:100]}
+        for row in rows[:32]:
+            url = row.get('url') if isinstance(row, dict) else None
+            if not isinstance(url, str) or not url.startswith('https://') or len(url)>2048:continue
+            if url not in details:
+                if len(details)>=20:
+                    truncated = True;continue
+                details[url] = {'url': url, 'origins': []}
+            if origin not in details[url]['origins']:details[url]['origins'].append(origin)
+    return list(details), list(details.values()), truncated

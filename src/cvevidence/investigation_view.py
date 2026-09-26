@@ -75,9 +75,16 @@ def render(st, ai):
     with st.expander('本次保存的官方公告與修補內容',expanded=False):
         for row in (ai.get('public_sources') or {}).get('sources',[]):
             st.text(row['source_id']+' · '+row['url'])
+            if row.get('reference_origins'):
+                st.caption('CVE 參考連結出處：'+'、'.join(r['container']+(' / '+r['provider'] if r.get('provider') else '') for r in row['reference_origins']))
+            if row.get('publisher_scope')=='DOWNSTREAM_DISTRIBUTION':
+                st.info('這是下游發行版公告；修補版本及受影響範圍不能直接套用到你的產品。')
             st.caption('SHA256：'+row['raw_sha256']+(' · 內容有截斷' if row.get('truncated') else ''))
             st.text(row['text'])
         for row in (ai.get('public_sources') or {}).get('failures',[]): st.text('工具未取得：'+row['url'])
+        for url in (ai.get('public_sources') or {}).get('unsupported_references',[]):st.text('來源政策尚未支援：'+url)
+        for url in (ai.get('public_sources') or {}).get('unvisited_references',[]):st.text('本輪達時間或數量上限，尚未讀取：'+url)
+        if (ai.get('public_sources') or {}).get('references_truncated'):st.caption('CVE 參考連結清單有截短，這不是完整來源查核。')
 
 
 def render_requests(st, ai):
