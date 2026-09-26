@@ -1,5 +1,49 @@
 # Horace 開發同步
 
+## 2026-09-26 ELF 動態符號查核
+
+- 3e4ac49：有界 section-backed dynamic symbols，保留 imports／definitions、type／binding 與讀取／截短狀態；不等於呼叫路徑，缺少符號不作排除。3378e2d：中文符號明細與限制面板。
+- 九項新增測試，聚焦 31 passed；完整 584 passed、23 subtests passed（333.76 秒）。可攜工程 12／6／5 全通過（187.52 秒）。
+- 同 TEST_ONLY ROM／SDK 材料 LIVE f8efe6fa-b169-42d9-a1d0-dadbbde931ca：Sol/high，6 calls、122.36 秒、125749 tokens。AI 利用 curl_version import 與原碼，仍只要求一份建置連結紀錄；PLAN 引文與 COMPLETE 收尾各拒絕一次後修正，不宣稱零錯誤或可直接排除。
+- 實際 8506 核對符號面板、AI 解釋與單項補件；原 run bytes 不變。D/R 與界線見 docs/releases/2026-09-26-ELF動態符號查核.md。
+- CI 36209233899 工程／ROM job 成功，test 尚在執行；上輪 CI 36208972794 成功。更多 ROM 格式、可信建置、內網部署與跨案例品質仍未完成，只推個人分支。
+
+## 2026-09-26 ROM 成品與 SDK 內容對應
+
+- a4880bd：raw SquashFS 在隔離環境內探查最多六個候選 ELF，每份 4 MiB、共用原期限；相同 bytes 與 SDK 交付檔案對照。2de567e：中文擷取範圍與對應檔案面板。收據 1.1 保留 1.0 相容，不認證同建置或改正式判定。
+- 新增 11 項測試；聚焦 37 passed，完整回歸 575 passed、23 subtests passed（287.09 秒）。主機 symlink 與過量二進位拒絕、實際 ROM／SDK 相同內容通過。
+- 新編譯 TEST_ONLY ROM／SDK／兩行原碼，LIVE 9d77b448-8117-49b9-bbe7-1c22aaebaf19：Sol/high，6 calls、104.57 秒、115475 tokens；一筆引文錯誤修正後完成 NEEDS_USER_INPUT，只索取一份原碼到成品建置紀錄，明確引用 ROM／SDK bytes 相同，未索取重複 ELF 或大量 PC3。
+- 實際 8506 核對擷取一份 ELF、AI 紀錄與單項補件卡；對應表格 AppTest 通過。詳細範圍／D/R 見 docs/releases/2026-09-26-ROM成品與SDK內容對應.md。
+- CI 36208741897 尚在執行，上輪 36208351154 成功。重新 fetch main 無未納入提交；只推個人分支。更多 ROM 格式、可信建置、內網部署與跨案例品質仍待補強。
+
+## 2026-09-26 SDK 靜態函式庫分段讀取
+
+- ee2a919：archive_members 改為每次最多 1 MiB 分段 hash，GNU／BSD 長名稱有界驗證，拒絕截斷、錯誤 padding、重複與超限；不追蹤 thin archive。建置證據介面與 PC 判定不變。
+- 15 新增案例；聚焦 24 passed，16 MiB 成員解析的 tracemalloc 峰值低於 4 MiB。完整回歸 564 passed、23 subtests passed（331.69 秒）。
+- 可攜工程 12 初始／6 補件／5 反向全通過（176.584 秒）；實際 8506 網頁重跑完整 OpenSSL 包，受影響與 PC2 正常。本輪無新增 API 呼叫。
+- CI 36208074892 工程驗收／firmware-reader 成功，test 尚在執行。限制見 docs/releases/2026-09-26-SDK靜態函式庫分段讀取.md。下一步回到 ROM 內成品資訊與 SDK 對應；內網登入部署及可信建置驗證仍未完成。
+
+## 2026-09-26 可攜工程驗收
+
+- 4211fa3 修復 scripts/validate_engineering.py：直接使用 Git 內封存檔並查 catalog hash，不再依賴已不存在的本機 datasets。固定要求 12 初始、6 補件、5 反向驗證，全部通過（154.966 秒）。
+- 靜態完整必須只缺 runtime_observation；三種運作補件後要求全部條件成立，保留原成品與父材料。沒有更動產品判定或降低 PC3 門檻。
+- 新增獨立 CI engineering-acceptance。本機全量 549 passed、23 subtests passed（298.52 秒）；CI 36207664059 還在執行，firmware-reader 已成功。上一輪程式 CI 36207341628 成功。
+- 細節見 docs/releases/2026-09-26-可攜工程驗收.md；本輪只驗收與 CI，沒有新增網頁/API 測試。下一步：靜態函式庫串流讀取、ROM 執行檔與可信建置關聯、內網部署。
+
+## 2026-09-26 統一成品 ELF 查核
+
+- 922d605：BuildProof 動態依賴改用有界 Python ELF 解析，與材料盤點共用；保留來源 hash，錯誤不降為空清單。產品路徑不再呼叫 readelf。
+- 新增九項測試，聚焦 22 passed；全量 549 passed、23 subtests passed（353.23 秒）。六份 ROM／curl 成品與原 readelf 結果一致；已實際網頁匯入完整 OpenSSL 展示包並重跑，受影響初判正常。
+- 舊 engineering 驗收腳本依賴不存在目錄且含過期 PC3 預期；九包直接驗收三項旧預期不符，已查明均缺 runtime_observation，不改判定去迎合舊答案。詳見 docs/releases/2026-09-26-統一成品ELF查核.md。
+- CI 36207341628 尚在執行，上一輪 CI 36206896593 成功。後續需修復過期驗收入口、archive 讀取界線、ROM 執行檔與可信來源關聯；公司登入部署仍待辦。
+
+## 2026-09-26 建置聲明與實際補件核對
+
+- 08fa9cb：純 JSON in-toto／SLSA 聲明的 SHA256 與交付檔案核對，保留同名衝突與能力限制；不做簽章／builder 認證，不提升正式判定。649cfb7：網頁中文核對結果與實際檔案路徑。
+- 新增事後未簽章 TEST_ONLY 聲明，實際 Runner 補件並延續 AI；原 run bytes 不變。LIVE d1b1442e-4d31-4e11-a6ea-18965c826426，Sol/high，67.06 秒、5 calls、100749 tokens，五步成功，仍只要求一份關鍵原始建置紀錄。
+- 已實連 8506 核對材料面板、中文限制及最小補件卡；未測原生選檔 HTTP 上傳。核心全量 540 passed、23 subtests passed（279.10 秒）；CI 36206224304 成功。中文呈現調整後全量同為 540 passed、23 subtests passed（260.98 秒）；CI 36206745055 尚在執行。
+- 詳細範圍、D/R 與限制見 docs/releases/2026-09-26-建置聲明與補件核對.md。下一步仍需可信同建置、ROM 執行檔、公司內網登入及跨案例品質驗收；只推個人分支。
+
 ## 2026-09-26 引用修正與輸入精簡
 
 - ddbdd48：引用錯誤指出條件／來源並附同來源有限原文提示，不自動接受、替換或認證語意。606aa79：PLAN／REVIEW 模型回覆改為短確認，完整條件與實際回覆仍各自保存。

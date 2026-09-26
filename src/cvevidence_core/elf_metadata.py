@@ -11,6 +11,42 @@ from pathlib import Path
 class ELFError(ValueError):pass
 
 
+def _symbols(read,wide,endian,shoff,shsize,shnum):
+    """Section-backed dynamic symbols only, not disassembly or runtime binding."""
+    if not shoff and not shnum:return {'status':'NO_SECTION_TABLE','imports':[],'definitions':[],'coverage_limited':True}
+    if not shoff or not 0<shnum<=4096 or shsize!=(64 if wide else 40):raise ELFError('Section table limit')
+    sections=[struct.unpack(endian+('IIQQQQIIQQ' if wide else 'IIIIIIIIII'),
+                           read(shoff+i*shsize,shsize)) for i in range(shnum)]
+    tables=[s for s in sections if s[1]==11]
+    if not tables:return {'status':'NO_DYNAMIC_SYMBOL_TABLE','imports':[],'definitions':[],'coverage_limited':True}
+    if len(tables)!=1:raise ELFError('Ambiguous dynamic symbol table')
+    s=tables[0];offset,length,link,entry=s[4],s[5],s[6],s[9]
+    if s[2]&0x800 or entry!=(24 if wide else 16) or length<entry or length%entry or length//entry>16384 or link>=len(sections):
+        raise ELFError('Dynamic symbol table limit')
+    strings_section=sections[link]
+    if strings_section[1]!=3 or strings_section[2]&0x800 or not 0<strings_section[5]<=1024*1024:
+        raise ELFError('Invalid symbol string section')
+    strings=read(strings_section[4],strings_section[5])
+    if strings[0]!=0 or strings[-1]!=0:raise ELFError('Invalid symbol strings')
+    groups={'imports':[],'definitions':[]};counts={'imports':0,'definitions':0}
+    for i in range(length//entry):
+        row=struct.unpack(endian+('IBBHQQ' if wide else 'IIIBBH'),read(offset+i*entry,entry))
+        if wide:name_index,info,_,section,_,_=row
+        else:name_index,_,_,info,_,section=row
+        if not name_index:continue
+        if name_index>=len(strings) or section==65535 or (shnum<=section<0xff00):raise ELFError('Invalid symbol index')
+        end=strings.find(b'\0',name_index,min(len(strings),name_index+1025))
+        if end<0:raise ELFError('Symbol name limit')
+        try:name=strings[name_index:end].decode('utf-8')
+        except UnicodeError as exc:raise ELFError('Symbol encoding unsupported') from exc
+        if not name or any(ord(c)<32 or ord(c)==127 for c in name):raise ELFError('Invalid symbol name')
+        if info>>4==0:continue
+        group='imports' if section==0 else 'definitions';counts[group]+=1
+        if len(groups[group])<128:groups[group].append({'name':name,'type':info&15,'binding':info>>4})
+    return {'status':'READ',**groups,'counts':counts,'coverage_limited':any(n>128 for n in counts.values()),
+            'runtime_binding_verified':False,'call_path_verified':False}
+
+
 def inspect(path):
     with Path(path).open('rb') as f:
         size=f.seek(0,2);budget=2*1024*1024
@@ -27,7 +63,7 @@ def inspect(path):
         wide=ident[4]==2;endian='<' if ident[5]==1 else '>'
         fmt=endian+('HHIQQQIHHHHHH' if wide else 'HHIIIIIHHHHHH')
         header=struct.unpack(fmt,read(16,struct.calcsize(fmt)))
-        kind,machine,version,_,phoff,_,_,ehsize,phsize,phnum,_,_,_=header
+        kind,machine,version,_,phoff,shoff,_,ehsize,phsize,phnum,shsize,shnum,_=header
         expected_ph=56 if wide else 32
         if version!=1 or ehsize!=(64 if wide else 52) or phnum>1024 or (phnum and phsize!=expected_ph):
             raise ELFError('Unsupported ELF header')
@@ -42,7 +78,11 @@ def inspect(path):
         result={'class_bits':64 if wide else 32,'byte_order':'little' if endian=='<' else 'big',
                 'machine_id':machine,'elf_type':kind,'needed':[],'soname':None,
                 'dynamic_status':'NO_DYNAMIC_SEGMENT','runtime_resolution_verified':False}
-        if not dynamic:return result
+        def complete():
+            try:result['symbols']=_symbols(read,wide,endian,shoff,shsize,shnum)
+            except ELFError:result['symbols']={'status':'UNSUPPORTED_OR_LIMITED','imports':[],'definitions':[],'coverage_limited':True}
+            return result
+        if not dynamic:return complete()
         if len(dynamic)!=1:raise ELFError('Ambiguous dynamic segment')
         offset,length=dynamic[0];entry=16 if wide else 8
         if length%entry or length//entry>4096:raise ELFError('Dynamic entry limit')
@@ -72,13 +112,15 @@ def inspect(path):
             result['needed']=[name(i) for i in tags.get(1,[])]
             result['soname']=name(tags[14][0]) if 14 in tags else None
         result['dynamic_status']='READ'
-        return result
+        return complete()
 
 
 def inventory(context):
     """Bounded metadata coverage, not a binary-to-build or CVE proof."""
     rows=[];used=0;probed=0;output_bytes=0
     files=[r for r in context.sources.values() if r['kind']=='file']
+    by_hash={}
+    for source in files:by_hash.setdefault(source['sha256'],[]).append(source)
     def priority(row):
         p=row['path'].lower()
         return (0 if '.so' in p or '/bin/' in '/'+p or p.endswith('.elf') else 1,p)
@@ -91,6 +133,13 @@ def inventory(context):
         if magic!=b'\x7fELF':continue
         item={'source_id':row['source_id'],'path':row['path'],'sha256':checked['sha256'],
               'same_build_verified':False,'cve_applicability_verified':False}
+        matches=[r for r in by_hash[row['sha256']] if r['source_id']!=row['source_id']]
+        item['identical_delivered_files']=[]
+        for match in matches[:8]:
+            if used+match['size']>64*1024*1024:break
+            context.source(match['source_id']);used+=match['size']
+            item['identical_delivered_files'].append({'source_id':match['source_id'],'path':match['path']})
+        item['matches_coverage_limited']=len(matches)>len(item['identical_delivered_files'])
         try:item.update(status='READ',metadata=inspect(path))
         except ELFError:item.update(status='UNSUPPORTED_OR_MALFORMED',metadata=None)
         encoded=len(json.dumps(item,ensure_ascii=False).encode())
@@ -100,4 +149,4 @@ def inventory(context):
         rows.append(item)
     return {'files':rows,'probed_files':probed,'total_files':len(files),
             'coverage_limited':probed<len(files),
-            'note':'ELF 架構與動態依賴名稱來自檔案結構；尚未確認實際載入版本、同一建置、可達路徑或 CVE 適用性。無 dynamic segment 不代表沒有靜態整合的元件。'}
+            'note':'ELF 架構、動態依賴與符號來自檔案結構；符號存在不代表路徑可達，未列出也不代表未使用（可能靜態整合、動態查找或讀取受限）。尚未確認實際載入版本、同一建置或 CVE 適用性。'}

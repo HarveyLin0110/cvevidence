@@ -4,44 +4,19 @@ These checks establish internal consistency of delivered build records. They do
 not authenticate the supplier or prove an arbitrary compiler log is truthful.
 """
 from __future__ import annotations
-import hashlib,json,pathlib,subprocess
+import json,pathlib
 from .integrity import InputPackage,IntegrityError,file_hash
+from .elf_metadata import inspect as inspect_elf, ELFError
 
-def archive_members(path:pathlib.Path)->list[dict]:
- data=path.read_bytes()
- if not data.startswith(b'!<arch>\n'):raise IntegrityError('Unsupported or thin archive')
- offset=8;names=b'';result=[]
- while offset<len(data):
-  header=data[offset:offset+60]
-  if len(header)!=60 or header[58:60]!=b'`\n':raise IntegrityError('Malformed ar member')
-  try:size=int(header[48:58].decode().strip())
-  except ValueError as e:raise IntegrityError('Malformed ar size') from e
-  name=header[:16].decode('ascii').strip();body=data[offset+60:offset+60+size]
-  if size<0 or len(body)!=size:raise IntegrityError('Truncated ar member')
-  if name=='//':names=body
-  elif name not in ('/','/SYM64/'):
-   if name.startswith('/') and name[1:].isdigit():
-    start=int(name[1:]);end=names.find(b'/\n',start)
-    if end<0:raise IntegrityError('Invalid ar long name')
-    name=names[start:end].decode('utf-8')
-   elif name.startswith('#1/'):
-    length=int(name[3:]);name=body[:length].decode('utf-8');body=body[length:]
-   else:name=name.rstrip('/')
-   result.append({'name':name,'sha256':hashlib.sha256(body).hexdigest(),'size':len(body)})
-  offset+=60+size+(size%2)
- if len({x['name'] for x in result})!=len(result):raise IntegrityError('Ambiguous duplicate archive member')
- return result
+from .archive_reader import archive_members
 
 def elf_needed(context:InputPackage,path:str)->list[str]:
  item=context.by_path(path)
  if not item:raise IntegrityError('ELF source missing')
  p,_=item
- with p.open('rb') as handle:magic=handle.read(4)
- if magic!=b'\x7fELF':raise IntegrityError('Expected ELF artifact')
- proc=subprocess.run(['/usr/bin/readelf','-d','--',str(p)],capture_output=True,text=True,timeout=5)
- if proc.returncode:raise IntegrityError('ELF dynamic section unreadable')
- import re
- return re.findall(r'\(NEEDED\).*?\[([^\]]+)\]',proc.stdout)
+ try:return inspect_elf(p)['needed']
+ except ELFError as exc:
+  raise IntegrityError('ELF dynamic metadata unsupported or malformed') from exc
 
 def read_json(context,path):
  item=context.by_path(path)

@@ -233,6 +233,35 @@ def workspace(st, *, store_root=None):
             cols[2].metric("已核對来源數",len(run.sources or run.evidence))
             with st.expander("建置身分與完整性"): st.json(p.model_dump())
         st.info("manifest 清單核對成功只代表交付完整性；CVE 證據是否足夠由工程 Queries 確認。")
+        provenance=(payload.get('discovery',{}) if payload else run.candidates).get('build_provenance')
+        if provenance and provenance.get('records'):
+            with st.expander('建置聲明與交付檔案核對（未認證來源）'):
+                st.caption(provenance['note'])
+                status_labels={
+                    'DECLARED_DIGESTS_MATCH':'聲明中的 SHA256 均與交付檔案吻合（建置來源仍未驗證）',
+                    'PARTIAL_DIGEST_COVERAGE':'僅部分資料可核對，尚不足以建立完整對應',
+                    'NAMED_SOURCE_CONFLICT':'同名檔案內容與聲明不一致，需先釐清版本',
+                    'MALFORMED_DECLARATION':'聲明欄位格式有誤，無法核對',
+                    'ENVELOPE_NOT_SUPPORTED':'尚不支援此簽章封裝，未核對內容或簽章',
+                    'REFERENCE_LIMIT':'聲明項目超過讀取上限，未完成核對',
+                }
+                reference_labels={
+                    'MATCHES_DELIVERED_BYTES':'SHA256 與交付檔案吻合',
+                    'NOT_IN_SNAPSHOT':'本次材料中沒有相同 SHA256 的檔案',
+                    'NO_SUPPORTED_DIGEST':'未提供可核對的 SHA256',
+                }
+                source_paths={s.source_id:s.path for s in run.sources}
+                for record in provenance['records']:
+                    st.text(record['path']+' · '+status_labels.get(record['status'],'未知核對狀態'))
+                    if record.get('references'):
+                        st.dataframe([{'角色':{'subject':'產出成品','dependency':'建置輸入'}.get(r['role'],'其他'),
+                            '聲明名稱':r['declared_name'],
+                            '核對結果':'同名檔案內容不一致' if r['named_source_conflict'] else reference_labels.get(r['state'],'未知核對狀態'),
+                            '對應交付檔案':'、'.join(source_paths.get(sid,sid) for sid in r['matched_source_ids']) or '無',
+                            '聲明 SHA256':r.get('declared_sha256') or '未提供',
+                            '顯示範圍':'僅顯示前 8 個吻合檔案' if r.get('matches_truncated') else '已顯示全部吻合檔案',
+                            } for r in record['references']],hide_index=True)
+                if provenance.get('coverage_limited'):st.caption('建置聲明僅掃描有限範圍，未列出不代表不存在。')
         binaries=(payload.get('discovery',{}) if payload else run.candidates).get('binary_metadata')
         if binaries and binaries.get('files'):
             with st.expander('執行檔架構與動態依賴（PC2 線索）'):
@@ -242,24 +271,44 @@ def workspace(st, *, store_root=None):
                     '架構編號':(r.get('metadata') or {}).get('machine_id'),
                     '位元組序':(r.get('metadata') or {}).get('byte_order'),
                     '動態依賴名稱':'、'.join((r.get('metadata') or {}).get('needed',[])),
+                    '相同內容的交付檔案':'、'.join(m['path'] for m in r.get('identical_delivered_files',[])) or '未列出',
                     'SHA256':r['sha256']} for r in binaries['files']],hide_index=True)
+                st.caption('相同內容依 SHA256 比對；只能證明檔案內容一致，未認證建置來源或實際載入關係。未列出不代表不存在。')
+                with st.expander('查看成品的動態符號（PC2 線索）'):
+                    st.caption('匯入符號表示檔案中的外部符號參照，不代表執行時已呼叫或路徑可達。未列出不能排除靜態整合、動態查找或讀取限制。')
+                    for item in binaries['files']:
+                        symbols=(item.get('metadata') or {}).get('symbols',{})
+                        st.text(item['path'])
+                        if symbols.get('status')!='READ':
+                            st.caption('未取得可用動態符號表；不能據此判定未使用某 API。')
+                            continue
+                        imports=symbols.get('imports',[])
+                        if imports:
+                            st.dataframe([{'匯入符號':s['name'],
+                                '類型':{0:'未指定',1:'資料物件',2:'函式',6:'執行緒資料'}.get(s['type'],'其他'),
+                                '連結屬性':{1:'全域',2:'弱參照'}.get(s['binding'],'其他')} for s in imports],hide_index=True)
+                        else:st.caption('此動態符號表沒有列出的外部參照；仍不能排除其他呼叫方式。')
+                        if symbols.get('coverage_limited'):st.caption('符號清單已截短，僅顯示有限項目。')
                 if binaries.get('coverage_limited'):st.caption('僅完成有限範圍掃描；未列出不代表不存在。')
         firmware=(payload.get('discovery',{}) if payload else run.candidates).get('firmware_inventory',[])
         if firmware:
-            with st.expander('ROM 套件與版本讀取狀態',expanded=True):
-                labels={'PARTIAL_READ':'已讀取部分固定路徑','NO_INVENTORY_READ':'未能讀取固定路徑（不代表不存在）',
+            with st.expander('ROM 套件、版本與成品讀取狀態',expanded=True):
+                labels={'PARTIAL_READ':'已讀取部分材料（非完整 ROM）','NO_INVENTORY_READ':'未能讀取選定材料（不代表不存在）',
                         'UNSUPPORTED_FORMAT':'目前不支援此映像格式','TOOL_UNAVAILABLE':'伺服器未備妥 ROM 讀取工具',
                         'ISOLATION_UNAVAILABLE':'伺服器無法建立隔離讀取環境，未解析 ROM',
                         'INVALID_RECEIPT':'讀取紀錄無法核對'}
                 for item in firmware:
                     st.text(str(item['image_path'])+'：'+labels.get(item['status'],'讀取狀態待確認'))
+                    if item.get('binary_scan'):
+                        count=sum(r.get('kind')=='ELF_CANDIDATE' and r.get('status')=='READ' for r in item.get('files',[]))
+                        st.caption(f'本次擷取 {count} 份 ELF 候選，架構與相同內容比對見上方面板。只探查有限路徑與大小；未列出不代表不存在。')
                     if item['status']=='ISOLATION_UNAVAILABLE':
                         st.caption('請由部署維護者檢查隔離環境；不會停用隔離改成直接讀取，也不需要因此重傳相同 ROM。')
                     if item['status'] in ('UNSUPPORTED_FORMAT','TOOL_UNAVAILABLE','NO_INVENTORY_READ'):
                         st.caption('可先提供現有套件清單／SBOM 繼續調查；這是讀取能力或固定路徑限制，不是要求提供所有工程材料。')
                     with st.expander('查看 ROM 讀取範圍與 hash '+str(item['image_path'])):
                         st.json(item)
-                st.caption('原 ROM 與擷取文字的 hash 關聯不代表來源認證，也不能證明 SDK／原碼／運作紀錄屬於同次建置。')
+                st.caption('原 ROM 與擷取檔案的 hash 關聯不代表來源認證，也不能證明 SDK／原碼／運作紀錄屬於同次建置。')
         inventory=(payload.get('discovery',{}) if payload else run.candidates).get('components',[])
         if inventory:
             with st.expander('已辨識的元件與套件清單',expanded=True):

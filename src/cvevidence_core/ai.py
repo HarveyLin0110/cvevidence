@@ -270,6 +270,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             excerpts[excerpt['excerpt_id']]=excerpt
         result['initial_product_excerpts']=prepared['initial_product_excerpts']
         result['binary_metadata']=deepcopy(prepared['binary_metadata'])
+        result['build_provenance']=deepcopy(prepared['build_provenance'])
     resumed=continuation(context,verified.cve_id,controls.get('previous'))
     if resumed:
         payload['continuation']=resumed
