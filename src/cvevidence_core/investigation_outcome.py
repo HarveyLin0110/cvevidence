@@ -6,6 +6,17 @@ LABELS={'NOT_ANALYZED':'尚未完成條件分析','INCOMPLETE':'調查尚未完�
     'NEEDS_MATERIAL':'已有分析，僅需補關鍵缺口','EXCLUSION_OBSERVED':'找到排除線索，待覆核涵蓋範圍',
     'SUPPORT_OBSERVED':'必要條件均有支持線索，待工程覆核','PARTIAL_OBSERVATIONS':'已取得部分線索，尚不能作產品結論'}
 
+NEXT_STEPS={
+    'NOT_ANALYZED':'先根據公告建立條件並查閱現有材料。',
+    'INCOMPLETE':'先接續尚未完成的查核；未查完不等於使用者缺件。',
+    'CONFLICT':'先釐清互相矛盾的材料及其產品／建置範圍。',
+    'CAPABILITY_GAP':'由分析端處理工具或公開來源缺口，不要求使用者補整套資料。',
+    'NEEDS_MATERIAL':'只補本輪最小補件卡所列的關鍵材料，其餘先保留。',
+    'EXCLUSION_OBSERVED':'先覆核排除線索是否涵蓋本次目標成品及全部相關副本；其餘未解條件保留，不因它們仍未知就繼續補件。',
+    'SUPPORT_OBSERVED':'逐項覆核公告適用性、證據語意及成品關聯；這些支持線索尚未成為正式受影響判定。',
+    'PARTIAL_OBSERVATIONS':'先覆核已有觀察並確認最有價值的下一項查核。',
+}
+
 
 def summarize(ai):
     plan=ai.get('condition_plan') or {};rows=plan.get('conditions',[])
@@ -16,10 +27,13 @@ def summarize(ai):
     if not rows:status='NOT_ANALYZED'
     elif ai.get('status') not in ('COMPLETED','NEEDS_USER_INPUT'):status='INCOMPLETE'
     elif 'CONFLICT' in states:status='CONFLICT'
+    # A necessary-condition exclusion is a reason to review its scope first,
+    # even when other conditions remain unknown. Keep those gaps in the rows;
+    # do not turn this observation into a formal Not Affected verdict.
+    elif 'OBSERVED_EXCLUSION' in states:status='EXCLUSION_OBSERVED'
     elif 'NOT_REVIEWED' in states:status='INCOMPLETE'
     elif 'CAPABILITY_GAP' in states:status='CAPABILITY_GAP'
     elif 'USER_MATERIAL_MISSING' in states:status='NEEDS_MATERIAL'
-    elif 'OBSERVED_EXCLUSION' in states:status='EXCLUSION_OBSERVED'
     elif states=={'OBSERVED_SUPPORT'}:status='SUPPORT_OBSERVED'
     else:status='PARTIAL_OBSERVATIONS'
     dossier={r['condition_id']:r for r in (ai.get('condition_dossier') or {}).get('conditions',[])}
@@ -34,5 +48,9 @@ def summarize(ai):
                     for x in (d.get('focus') or d.get('evidence',[]))],
             'gap_owner':'analysis_team' if r['state'] in ('NOT_REVIEWED','CAPABILITY_GAP') else
                         'material_owner' if r['state']=='USER_MATERIAL_MISSING' else 'reviewer'})
-    return {'status':status,'title':LABELS[status],'conditions':details,'formal_verdict_unchanged':True,
+    return {'status':status,'title':LABELS[status],'next_step':NEXT_STEPS[status],
+        'decisive_condition_ids':[r['condition_id'] for r in rows if r['state']==
+            ('CONFLICT' if status=='CONFLICT' else 'OBSERVED_EXCLUSION' if status=='EXCLUSION_OBSERVED' else 'OBSERVED_SUPPORT')]
+            if status in ('CONFLICT','EXCLUSION_OBSERVED','SUPPORT_OBSERVED') else [],
+        'conditions':details,'formal_verdict_unchanged':True,
         'scope':'本次產品材料與 CVE 條件的調查結果；原文命中不等於實際出貨、可觸發、已遭利用或異常原因。'}

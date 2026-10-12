@@ -20,6 +20,9 @@ def render_overview(st, ai):
     from cvevidence_core.investigation_outcome import summarize
     outcome=summarize(ai)
     st.info(outcome['title'])
+    st.text('下一步：'+outcome['next_step'])
+    if outcome['decisive_condition_ids']:
+        st.caption('優先覆核條件：'+'、'.join(outcome['decisive_condition_ids']))
     st.caption(outcome['scope'])
     st.caption('目前查到哪裡：以下是 AI 證據觀察，並非產品受影響判定。')
     for column, layer, title in zip(st.columns(3), ('PC1', 'PC2', 'PC3'),
@@ -40,7 +43,8 @@ def lines(ai):
     if plan.get('context_hash')!=ai.get('context_hash') or plan.get('cve_id')!=ai.get('cve_id'): return []
     from cvevidence_core.investigation_outcome import summarize
     outcome=summarize(ai)
-    output=[outcome['title'],outcome['scope'],'本次 CVE 專屬條件與調查進度（AI 提案，非正式判定）']
+    output=[outcome['title'],outcome['scope'],'下一步：'+outcome['next_step'],
+            '本次 CVE 專屬條件與調查進度（AI 提案，非正式判定）']
     for row in plan.get('conditions',[]):
         output += [row['condition_id']+' · '+row['layer']+' · '+LABELS.get(row['state'],row['state']),
             '必要條件：'+row['requirement'], '排除依據：'+row['exclusion'], '查法：'+row['check'],
