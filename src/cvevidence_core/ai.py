@@ -46,9 +46,9 @@ source_index 若已有 launcher、config 或觀測，先 READ 與當次缺口相
 提到具體命令列開關時，必須在已提供的工程事實或 READ 原文看到它；不能發明開關或把 API 選項直接寫成 CLI 選項。
 UNKNOWN 條件中的判讀規則不是已成立的事實。source_index 只是部分索引，不是完整檔案清單。
 補件的成品 hash/build_id 會由工具自動附上；自由文字不用重打 hash，以免截斷或打錯。引用 ID 必須逐字照抄。
-GENERAL_TRIAGE 且有 PUBLISHED 公告時，先 PLAN 建立本 CVE 的 3–8 項條件（conditions），涵蓋 PC1/PC2/PC3。每項用 C1…C8、layer、requirement、exclusion（什麼證據可排除）、check（要查哪個實作或配置）、public_source_id、public_quote（P-ID 原文逐字摘錄）、state=NOT_REVIEWED、citations=[]、explanation。不要把「請提供檔案」當漏洞条件。
-讀取產品證據後，用 REVIEW 提交同一完整 conditions（條件定義與公告引文原封保留），只更新 state、citations、explanation、evidence_quotes。OBSERVED_SUPPORT／OBSERVED_EXCLUSION 是有原文支持的待覆核觀察，不是正式判定；CONFLICT 是證據矛盾；USER_MATERIAL_MISSING 是確實缺少使用者材料；CAPABILITY_GAP 是工具不會驗證或無法取得公開資料；NOT_REVIEWED 是尚未讀完。優先檢查可排除條件，不因 PC3 尚未知就向使用者索取所有材料。
-每條 conditions 的 evidence_quotes 在 PLAN 用 []，REVIEW 可填最多四段 {excerpt_id, quote}。quote 必須是 citations 中已讀 X-ID 的 8–1200 字逐字連續原文，不自行增刪空白或用省略號；選擇足以唯一定位的關鍵上下文。支持、反證或衝突狀態至少需一段；材料仍缺時也可保留已讀實作的精確摘錄。工具會核對並計算位置，逐字一致仍不表示語意或成品適用性成立。
+GENERAL_TRIAGE 且有 PUBLISHED 公告時，先 PLAN 建立本 CVE 的 3–8 項條件（conditions），涵蓋 PC1/PC2/PC3。每項用 C1…C8、layer、necessity、requirement、exclusion（什麼證據可排除）、check（要查哪個實作或配置）、public_source_id、public_quote（P-ID 原文逐字摘錄）、state=NOT_REVIEWED、citations=[]、explanation。不要把「請提供檔案」當漏洞条件。necessity 分 REQUIRED（所有可行觸發方式共用的必要條件）、ALTERNATIVE_PATH（多條可行路徑之一）、UNDETERMINED（公告不足以確定）。公告列出 A 或 B 路徑時，不能把 A、B 各自當成必須同時成立；以 REQUIRED 描述「至少一條適用途徑存在」，分支細節另列 ALTERNATIVE_PATH。單一替代路徑缺席不能排除整體 CVE；任何分支未釐清也不能宣稱全部路徑不存在。必要性分類本身仍是待覆核提案。
+讀取產品證據後，用 REVIEW 提交同一完整 conditions（條件定義、necessity 與公告引文原封保留），只更新 state、citations、explanation、evidence_quotes。OBSERVED_SUPPORT／OBSERVED_EXCLUSION 是有原文支持的待覆核觀察，不是正式判定；CONFLICT 是證據矛盾；USER_MATERIAL_MISSING 是確實缺少使用者材料；CAPABILITY_GAP 是工具不會驗證或無法取得公開資料；NOT_REVIEWED 是尚未讀完；即使所有條件仍未完成，也可用已核對的 evidence_quotes 與 explanation 保存具體進展，不能為了收尾改成支持或缺件。優先檢查可排除條件，不因 PC3 尚未知就向使用者索取所有材料。
+每條 conditions 的 evidence_quotes 在 PLAN 用 []，REVIEW 可填最多四段 {excerpt_id, quote}。quote 必須是 citations 中已讀 X-ID 的 1–1200 字逐字連續原文（少於 8 字只接受完整短檔案，例如整份正常輸入；一般片段須保留足夠上下文），不自行增刪空白或用省略號；選擇足以唯一定位的關鍵上下文。支持、反證或衝突狀態至少需一段；材料仍缺時也可保留已讀實作的精確摘錄。工具會核對並計算位置，逐字一致仍不表示語意或成品適用性成立。
 explanation 與 finding 不要自行填數字行號（包含「第幾行」、L123、file.c:123 等形式）。以函式／設定名稱、X-ID 及條件 ID 說明；關鍵位置由 evidence_quotes 的實際原文推算並顯示。不要為計算行號重讀檔案；只有引文不唯一或上下文不足時才 READ 較小範圍。沒有關鍵摘錄的歷史片段只是閱讀範圍，不是精準命中位置。
 條件狀態以本次目標成品為範圍：若原碼有排除線索，但缺少原碼到成品的建置對應，explanation 保留該線索，state 仍為 USER_MATERIAL_MISSING（缺建置材料）或 CAPABILITY_GAP（工具尚無能力），不可先把成品條件標成 OBSERVED_EXCLUSION 又要求同條件補件。不能為了通過補件檢查而改狀態，REVIEW 必須依證據說明原因。
 binary_metadata 是工具核對 hash 後解析的 ELF 結構線索，不是產品版本或同 build 證明；它不是文字 READ 原文，不可捏造 X-ID，也不可把只有 metadata 的 source_id 放入 existing_source_ids。不要用文字 READ 讀 ELF；現有解析能力不足要列 CAPABILITY_GAP。
@@ -57,10 +57,10 @@ ASK_USER 用 requests 結構化列 1–3 項，全部針對一個最關鍵 condi
 initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 X-ID；不用重新索取或重讀相同片段。提出 requests 前，工具會全量比對 search_terms 的檔案路徑；任何命中但未讀的材料會阻擋補件。先 READ 相關材料，再用 existing_source_ids 與 insufficiency 說明尚缺什麼；不能用很廣的搜尋詞或把已收到說成不存在。
 同一原文只在 initial_product_excerpts 保存一次；pc_evidence_packet 與 continuation 的 excerpt_ids 指向該清單的 X-ID，原文可直接使用，不代表缺件。rule_library／continuation 的 conditions_ref 若為 condition_plan.conditions，表示沿用該完整條件清單，無須再 PLAN。這些欄位共用不改變條件、引用或本輪重新 REVIEW 的要求。
 若 REVIEW 仍有 USER_MATERIAL_MISSING，且沒有成品排除線索、證據衝突或工具能力缺口，必須用 ASK_USER 提出一個最關鍵條件的最小結構化補件；不能只在 COMPLETE 摘要寫「請提供」。缺口屬工具或證據衝突時可 COMPLETE 交覆核，不要為了收尾而改條件狀態。
-如果已有必要條件的排除線索且無矛盾，先 COMPLETE 交工程覆核，不要為 PC3 等剩餘條件要求更多材料。工具未支援或尚未讀完，列工具待辦而非補件。
+如果已有 necessity=REQUIRED 的排除線索、無矛盾且全部條件必要性分類已釐清，先 COMPLETE 交工程覆核，不要為 PC3 等剩餘條件要求更多材料。工具未支援或尚未讀完，列工具待辦而非補件。ALTERNATIVE_PATH 的反證不能單獨停止其他適用途徑查核或繞過最小補件；舊計畫未保存 necessity 時保持原定義並交分析端建立新計畫，不在 REVIEW 偷改分類。
 PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收尾前必須先有 PLAN 與 REVIEW；每項 explanation 簡短說明命中或未完成原因。找不到專用驗證器屬 CAPABILITY_GAP，不應要求使用者補規則。
 每次只呼叫一個工具。所有參數必填；不適用的文字用空字串、陣列用 []、行號用 1。
-互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；不同位置的大檔案仍用 READ。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
+互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；matches 是已讀片段，failures 是尚未讀成的檔案，不要重讀成功部分或把失敗當缺件。連結圖等大檔先 SEARCH 函式／符號，再 READ 關鍵範圍。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
 runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先覆核已讀證據，可直接 REPORT，未查完明列 NOT_REVIEWED；REPORT_NOW 表示估計只剩這次呼叫，已有可交覆核進展時立即 REPORT 同時提交 conditions 與三層摘要，不要只做 REVIEW 而失去摘要。FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。真正材料缺口仍走 REVIEW／ASK_USER，不能省略補件檢查。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 '''
@@ -341,7 +341,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
         # Public text already has one dedicated slot. Do not retransmit it in
         # continuation or retain an entire nested previous investigation.
         payload['continuation']={k:v for k,v in resumed.items() if k!='public_sources'}
-    payload['budget_guidance']='保留 REVIEW 與收尾兩次呼叫；若已取得足夠原文，勿反覆搜尋。接近 token 門檻時先 REVIEW，將未完成明列，下一輪接續。'
+    payload['budget_guidance']='已可交覆核時用 REPORT 同次提交條件與摘要；真實材料缺口仍保留 REVIEW／ASK_USER。依 runtime_budget 預估及早收尾，已讀內容不重搜，未完成明列 NOT_REVIEWED。'
     payload['requires_condition_plan'] = requires_plan
     from .investigation_packet import compact as compact_packet
     payload,result['input_compaction']=compact_packet(context,payload)
@@ -485,8 +485,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 elif action in ('REVIEW','REPORT'):
                     if planned is None:raise ValueError('必須先 PLAN')
                     reviewed_rows=validate_conditions(args['conditions'],result['public_sources']['sources'],previous=planned)
-                    for row in reviewed_rows:resolve_quotes(context,row,excerpts,require=True)
-                    if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows):raise ValueError('尚無任何條件調查進展，請先讀取現有材料')
+                    focused=[resolve_quotes(context,row,excerpts,require=True) for row in reviewed_rows]
+                    if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows) and not any(focused):
+                        raise ValueError('尚無可保存的條件調查進展；請讀取材料，或以 evidence_quotes 保留已讀的具體觀察。未查完仍用 NOT_REVIEWED，不必改成支持或缺件。')
                     if action=='REPORT':
                         from .evidence_requests import require_actionable_completion
                         require_actionable_completion(reviewed_rows)

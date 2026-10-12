@@ -1,5 +1,17 @@
 # Horace 開發同步
 
+## 2026-10-13 OpenSSL 同版本回補與替代路徑查核
+
+- main 仍 b95f96d；延續原分支／PR #32，不代 Harvey 合併。35fd10b 恢復 OpenSSL 舊公告／gitweb 的固定來源映射，並在同一批公網 DNS 位址有限重試，TLS／大小／共同期限限制不放寬。
+- 實跑發現大連結圖使 READ_BATCH 整批丟失，改為保留成功原文並逐檔列失敗；完整性異常仍整批失敗。所有條件仍未查完時，也可用已核對摘錄保存進度，不要求改成支持或缺件。完整短檔案（例如正常輸入 4 17）可合法引用；一般文件的短片段仍拒絕。
+- 新條件 necessity 區分 REQUIRED／ALTERNATIVE_PATH／UNDETERMINED。單一分支缺席不能整體排除；共同必要條件都有支持時，未讀其他替代分支不再強迫補件。分類仍待語意覆核。舊無分類紀錄保留 hash、網頁標 LOGIC_REVIEW_REQUIRED；舊規則改從公告重新規劃，新規則覆核要求分類。
+- 新製公開 OpenSSL 1.1.1m 原實作／同版本套官方修補兩個真正編譯 ELF。僅正常質數輸入 4 17，未執行漏洞或外送公司材料。最後兩條成功報告鏈各 7＋2 calls：delta 186.921 秒／307102 tokens，epsilon 163.157 秒／296642 tokens；不是從頭兩次完成。
+- delta 520a9b56 讀出舊 while、直接輸入、靜態庫／map、正常交互。最後純聚合修正從原保存 INCOMPLETE 重算為 SUPPORT_OBSERVED，保留未讀替代分支。epsilon a49cac1f 讀出同版本回補的有界 for，但同成品機器碼未獨立驗證而保留 CAPABILITY_GAP，不以憑證分支缺席宣稱安全。
+- 十筆 LIVE 及失敗合計 55 calls／1914992 reported tokens；AIStore、record_hash、71 段跨紀錄關鍵原文核對，正式結果均 NEEDS_INVESTIGATION。兩個實驗 29 個建置／原文／日誌 hash 核對，不等於 builder 認證。
+- 最終全量 834 passed、23 subtests passed（296.03 秒），schema 一致；必要／替代聚合與補件聚焦 36 passed。實際網頁核對舊無分類提示及新版回補／工具缺口，最終網頁紀錄另列 release。
+- 第二目標尚未全面達標：單輪穩定性、引文格式／用量、支持與排除的取信一致性、公司可信建置、更多機制與 ROM 覆蓋待完成。詳細階段測試、真正網頁與所有失敗見 [OpenSSL 來源與回補查核](../releases/2026-10-12-OpenSSL來源與回補查核.md)。
+
+
 ## 2026-10-12 跨 CVE 深度查核與收尾
 
 - 第二目標尚未全面驗收：新 CVE 的具體分析有進展，但完整收尾、跨案例語意與公司成品仍有缺口。main 仍為 b95f96d，沿原分支／PR #32，由 Harvey 決定合併。

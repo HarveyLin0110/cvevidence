@@ -63,6 +63,27 @@ def test_report_preserves_other_gaps_when_a_required_condition_has_exclusion(tmp
     assert r['condition_plan']['conditions'][2]['state']=='USER_MATERIAL_MISSING'
 
 
+def test_report_can_save_verified_quotes_without_promoting_incomplete_conditions(tmp_path,monkeypatch):
+    def mutate(rows):
+        for row in rows:row['state']='NOT_REVIEWED'
+    r=run_report(tmp_path,monkeypatch,mutate)
+    assert r['status']=='COMPLETED' and r['investigation_outcome']['status']=='INCOMPLETE'
+    assert all(row['state']=='NOT_REVIEWED' for row in r['condition_plan']['conditions'])
+    assert all(row['focus'] for row in r['condition_dossier']['conditions'])
+
+
+@pytest.mark.parametrize('kind',['none','forged'])
+def test_incomplete_report_still_requires_exact_observation(tmp_path,monkeypatch,kind):
+    def mutate(rows):
+        for row in rows:
+            row['state']='NOT_REVIEWED'
+            if kind=='none':row['evidence_quotes']=[]
+            else:row['evidence_quotes'][0]['quote']='TEST_ONLY invented source'
+    r=run_report(tmp_path,monkeypatch,mutate)
+    assert r['status']=='BUDGET_EXHAUSTED' and r['tasks'][-1]['status']=='TOOL_ERROR'
+    assert all(not row.get('evidence_quotes') for row in r['condition_plan']['conditions'])
+
+
 def test_report_narrative_visible_in_web_without_extra_complete_task(tmp_path,monkeypatch):
     from streamlit.testing.v1 import AppTest
     r=run_report(tmp_path,monkeypatch)

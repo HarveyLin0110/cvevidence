@@ -6,14 +6,32 @@ from .evidence_quotes import SCHEMA as QUOTE_SCHEMA, validate as validate_quotes
 
 STATES = ['NOT_REVIEWED', 'OBSERVED_SUPPORT', 'OBSERVED_EXCLUSION', 'CONFLICT',
           'USER_MATERIAL_MISSING', 'CAPABILITY_GAP']
+NECESSITIES = ['REQUIRED', 'ALTERNATIVE_PATH', 'UNDETERMINED']
 FIELDS = {'condition_id', 'layer', 'requirement', 'exclusion', 'check', 'public_source_id',
           'public_quote', 'state', 'citations', 'explanation'}
 SCHEMA = {'type': 'array', 'items': {'type': 'object', 'properties': {
     'condition_id': {'type':'string'}, 'layer': {'type':'string','enum':['PC1','PC2','PC3']},
+    'necessity': {'type':'string','enum':NECESSITIES},
     **{k:{'type':'string'} for k in ('requirement','exclusion','check','public_source_id','public_quote','explanation')},
     'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','items':{'type':'string'}},
     'evidence_quotes':QUOTE_SCHEMA},
-    'required': sorted(FIELDS|{'evidence_quotes'}), 'additionalProperties': False}}
+    'required': sorted(FIELDS|{'evidence_quotes','necessity'}), 'additionalProperties': False}}
+
+
+def required_exclusions(rows):
+    """Classified proposals only; necessity itself still needs semantic review."""
+    return [r for r in rows if r.get('necessity')=='REQUIRED' and r['state']=='OBSERVED_EXCLUSION']
+
+
+def logic_unresolved(rows):
+    # Historical records were flat lists without AND/OR scope. Do not silently
+    # classify them as necessary conditions or rewrite their saved hashes.
+    return any(r.get('necessity','UNDETERMINED')=='UNDETERMINED' for r in rows)
+
+
+def required_support(rows):
+    necessary=[r for r in rows if r.get('necessity')=='REQUIRED']
+    return bool(necessary) and not logic_unresolved(rows) and all(r['state']=='OBSERVED_SUPPORT' for r in necessary)
 
 
 class QuoteMismatch(ValueError):
@@ -47,7 +65,8 @@ def validate(rows, public_sources, *, previous=None):
     for row in rows:
         # Older immutable records/rules have no quotation field. Reading them
         # does not fabricate precise quotations or rewrite their hashes.
-        if not isinstance(row,dict) or set(row) not in (FIELDS,FIELDS|{'evidence_quotes'}): raise ValueError('條件欄位不完整')
+        if not isinstance(row,dict) or set(row)-{'evidence_quotes','necessity'}!=FIELDS: raise ValueError('條件欄位不完整')
+        if 'necessity' in row and row['necessity'] not in NECESSITIES:raise ValueError('條件必要性分類不符')
         for k in FIELDS-{'citations'}:
             if not isinstance(row[k],str) or len(row[k])>700: raise ValueError('條件文字過長或格式不符')
         if (not re.fullmatch(r'C[1-8]',row['condition_id']) or row['condition_id'] in ids
@@ -75,6 +94,8 @@ def validate(rows, public_sources, *, previous=None):
         for row in rows:
             if any(row[k]!=old[row['condition_id']][k] for k in FIELDS-{'state','citations','explanation'}):
                 raise ValueError('REVIEW 不得改寫已建立條件與依據')
+            if row.get('necessity')!=old[row['condition_id']].get('necessity'):
+                raise ValueError('REVIEW 不得改寫條件必要性；須由新的計畫或規則版本釐清')
     return deepcopy(rows)
 
 

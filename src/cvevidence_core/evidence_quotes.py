@@ -1,6 +1,6 @@
 """Exact product quotations and derived locations, never semantic verdicts."""
 import re
-from .sources import read_excerpt, verify_excerpt
+from .sources import read_excerpt, verify_excerpt, text_lines
 from .integrity import IntegrityError
 
 
@@ -32,8 +32,8 @@ def validate(quotes, citations):
         if (not isinstance(q,dict) or set(q)!={'excerpt_id','quote'}
                 or not isinstance(q['excerpt_id'],str) or q['excerpt_id'] not in citations
                 or not q['excerpt_id'].startswith('X-') or not isinstance(q['quote'],str)
-                or not 8<=len(q['quote'].strip())<=1200 or len(q['quote'])>1600):
-            raise ValueError('evidence_quotes 須提供 citations 中的 X-ID 與 8–1200 字關鍵原文；不得提供行號')
+                or not 1<=len(q['quote'].strip())<=1200 or len(q['quote'])>1600):
+            raise ValueError('evidence_quotes 須提供 citations 中的 X-ID 與 1–1200 字關鍵原文；少於 8 字只能引用完整短檔案，不得提供行號')
 
 
 def resolve(context, condition, excerpts, *, require=False):
@@ -47,6 +47,10 @@ def resolve(context, condition, excerpts, *, require=False):
         if parent is None:
             raise ValueError('evidence_quotes 只能使用本輪已讀的 X-ID')
         if not verify_excerpt(context,parent):raise IntegrityError('Quoted source changed')
+        if len(q['quote'].strip())<8:
+            full='\n'.join(text_lines(context,parent['source_id']))
+            if q['quote']!=parent['text'] or q['quote']!=full:
+                raise ValueError('少於 8 字的 evidence_quotes 必須是該短檔案的完整原文；一般片段請增加關鍵上下文')
         offset=parent['text'].find(q['quote'])
         if offset<0:raise ProductQuoteMismatch(condition,parent,q['quote'])
         if parent['text'].find(q['quote'],offset+1)>=0:

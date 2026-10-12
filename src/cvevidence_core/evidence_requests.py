@@ -1,6 +1,7 @@
 """Small actionable evidence requests; distinct from the inventory or wish list."""
 import re
 from copy import deepcopy
+from .condition_plan import required_exclusions,logic_unresolved,required_support
 
 TEXT_FIELDS = {'condition_id','material','why','owner','how','alternative','insufficiency','expected_resolution'}
 FIELDS = TEXT_FIELDS | {'search_terms','existing_source_ids'}
@@ -33,7 +34,11 @@ def validate(rows, conditions, *, generic=False):
         condition=lookup.get(row['condition_id'])
         if not condition:raise ValueError('補件必須指向已知條件')
         if generic and condition['state']!='USER_MATERIAL_MISSING':raise ValueError('只能為使用者材料缺口補件，不能為工具限制或未讀完補件')
-    if generic and any(r['state']=='OBSERVED_EXCLUSION' for r in conditions) and not any(r['state']=='CONFLICT' for r in conditions):
+    if generic and logic_unresolved(conditions):
+        raise ValueError('先由分析端釐清條件必要性與替代路徑，不把條件邏輯尚未確認改成使用者補件')
+    if generic and required_support(conditions) and not any(r['state']=='CONFLICT' for r in conditions):
+        raise ValueError('共同必要條件均有支持線索；先交工程覆核，不為未採用的替代路徑追加補件')
+    if generic and required_exclusions(conditions) and not any(r['state']=='CONFLICT' for r in conditions):
         raise ValueError('已有必要條件的排除線索；先 COMPLETE 說明範圍並交工程覆核，不再為其餘條件要求補件。')
     return [dict(deepcopy(row),priority=i+1) for i,row in enumerate(rows)]
 
@@ -50,6 +55,6 @@ def validate_legacy(files):
 def require_actionable_completion(conditions):
     """Unresolved user gaps need an actionable card, not prose-only completion."""
     states={row['state'] for row in conditions}
-    if ('USER_MATERIAL_MISSING' in states and not states.intersection(
-            {'OBSERVED_EXCLUSION','CONFLICT','CAPABILITY_GAP'})):
+    if ('USER_MATERIAL_MISSING' in states and not required_exclusions(conditions) and not required_support(conditions)
+            and not logic_unresolved(conditions) and not states.intersection({'CONFLICT','CAPABILITY_GAP'})):
         raise ValueError('仍有使用者材料缺口；請 ASK_USER 提出一個最關鍵條件的最小結構化補件，不可只在 COMPLETE 摘要索取。工具限制或證據衝突須在 REVIEW 如實說明，不得為通過檢查改狀態。')

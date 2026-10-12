@@ -4,6 +4,9 @@ from cvevidence_core.evidence_quotes import numbered_text
 LABELS = {'NOT_REVIEWED':'尚未查閱完成', 'OBSERVED_SUPPORT':'原文支持線索（待覆核）',
           'OBSERVED_EXCLUSION':'原文反證／排除線索（待覆核）', 'CONFLICT':'證據矛盾（待覆核）',
           'USER_MATERIAL_MISSING':'使用者材料缺口（AI 提案）', 'CAPABILITY_GAP':'工具能力／公開來源缺口'}
+NECESSITY_LABELS={'REQUIRED':'共同必要條件（AI 分類，待覆核）',
+    'ALTERNATIVE_PATH':'替代路徑（此路徑缺席不能單獨排除 CVE）',
+    'UNDETERMINED':'必要性尚未分類，交分析端釐清'}
 
 
 def narrative_sections(value):
@@ -47,7 +50,8 @@ def lines(ai):
             '本次 CVE 專屬條件與調查進度（AI 提案，非正式判定）']
     for row in plan.get('conditions',[]):
         output += [row['condition_id']+' · '+row['layer']+' · '+LABELS.get(row['state'],row['state']),
-            '必要條件：'+row['requirement'], '排除依據：'+row['exclusion'], '查法：'+row['check'],
+            '條件類型：'+NECESSITY_LABELS.get(row.get('necessity','UNDETERMINED'),'必要性待覆核'),
+            '查核條件：'+row['requirement'], '本條件反證依據：'+row['exclusion'], '查法：'+row['check'],
             '目前觀察：'+row['explanation'], '產品引用：'+', '.join(row['citations']),
             '公告依據：'+row['public_source_id']+' · '+row['public_quote']]
     for row in (ai.get('condition_dossier') or {}).get('conditions',[]):
@@ -67,6 +71,7 @@ def render(st, ai):
     dossiers={r['condition_id']:r for r in (ai.get('condition_dossier') or {}).get('conditions',[])}
     for row in plan['conditions']:
         st.text(row['condition_id']+' · '+row['layer']+' · '+LABELS.get(row['state'],row['state']))
+        st.caption('條件類型：'+NECESSITY_LABELS.get(row.get('necessity','UNDETERMINED'),'必要性待覆核'))
         st.text(row['requirement'])
         st.text(row['explanation'])
         detail=dossiers.get(row['condition_id'],{})

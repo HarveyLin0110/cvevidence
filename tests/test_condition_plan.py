@@ -5,7 +5,7 @@ from cvevidence_core.condition_plan import validate
 PUBLIC=[{'source_id':'P-test','text':'TEST_ONLY cookie parsing must reject invalid bytes.'}]
 
 def conditions():
-    return [{'condition_id':f'C{i}','layer':layer,'requirement':'TEST_ONLY 必要條件','exclusion':'有修補可排除',
+    return [{'condition_id':f'C{i}','layer':layer,'necessity':'REQUIRED','requirement':'TEST_ONLY 必要條件','exclusion':'有修補可排除',
         'check':'讀取實作','public_source_id':'P-test','public_quote':'cookie parsing must reject invalid bytes.',
         'state':'NOT_REVIEWED','citations':[],'explanation':'待讀產品原文'} for i,layer in enumerate(['PC1','PC2','PC3'],1)]
 

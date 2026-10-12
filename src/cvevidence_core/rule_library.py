@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 import re
 from .integrity import digest, IntegrityError
-from .condition_plan import validate
+from .condition_plan import validate,logic_unresolved
 
 
 def _cve(cve):
@@ -66,6 +66,8 @@ def draft(investigation):
 def review(draft_rule, *, reviewer, rationale, applicability, validation_reference):
     check(draft_rule)
     if draft_rule['status']!='DRAFT':raise ValueError('Review a draft, not an existing release')
+    if logic_unresolved(draft_rule['conditions']):
+        raise ValueError('先在新草稿釐清必要條件與替代路徑，不能把未分類的平面條件表核准為新規則')
     result={k:deepcopy(v) for k,v in draft_rule.items() if k!='rule_hash'}
     result.update(status='REVIEWED',review_required=False,draft_hash=draft_rule['rule_hash'],
         review={'reviewer':reviewer,'rationale':rationale,'applicability':applicability,
@@ -119,6 +121,9 @@ def select(cve, current_sources, directory=None):
         if not re.fullmatch(r'[a-f0-9]{64}',rh) or active['cve_id']!=cve:raise ValueError('Invalid pointer')
         rule=check(_read(base/(cve+'-'+rh+'.json')))
         if rule['cve_id']!=cve or rule['status']!='REVIEWED':raise ValueError('Invalid active rule')
+        if logic_unresolved(rule['conditions']):
+            return {'status':'CONDITION_LOGIC_UNREVIEWED','rule_hash':rh,
+                'reason':'舊規則尚未區分必要條件與替代路徑；保留舊版本，本輪依公告重新規劃並建立新覆核版本。'}
         by_url={s['url']:s for s in current_sources}
         mapping={}
         for s in rule['public_sources']:
