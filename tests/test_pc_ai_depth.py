@@ -36,7 +36,7 @@ def test_pc_review_cannot_stop_with_only_a_missing_file(context):
     assert all(c['state']=='UNKNOWN' for c in entry['assessment']['conditions'])
     packet=json.loads(seen[0][0]['content'])
     assert packet['pc_evidence_packet'] and packet['condition_groups']['cve_id']==entry['cve_id']
-    assert all(not p['excerpts'] for p in packet['pc_evidence_packet'])  # inventory is not source content
+    assert all(not p['excerpt_ids'] for p in packet['pc_evidence_packet'])  # inventory is not source content
 
 
 def test_depth_request_preserves_high_and_reserves_reasoning_output():
