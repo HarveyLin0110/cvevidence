@@ -1,4 +1,5 @@
 """Human-readable progress for AI proposals, separate from formal assessment."""
+from cvevidence_core.evidence_quotes import numbered_text
 LABELS = {'NOT_REVIEWED':'尚未查閱完成', 'OBSERVED_SUPPORT':'原文支持線索（待覆核）',
           'OBSERVED_EXCLUSION':'原文反證／排除線索（待覆核）', 'CONFLICT':'證據矛盾（待覆核）',
           'USER_MATERIAL_MISSING':'使用者材料缺口（AI 提案）', 'CAPABILITY_GAP':'工具能力／公開來源缺口'}
@@ -45,8 +46,10 @@ def lines(ai):
             '目前觀察：'+row['explanation'], '產品引用：'+', '.join(row['citations']),
             '公告依據：'+row['public_source_id']+' · '+row['public_quote']]
     for row in (ai.get('condition_dossier') or {}).get('conditions',[]):
+        for evidence in row.get('focus',[]):
+            output += [row['condition_id']+' 關鍵原文位置：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']),numbered_text(evidence)]
         for evidence in row.get('evidence',[]):
-            output += [row['condition_id']+' 命中：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']),evidence['text']]
+            output += [row['condition_id']+' 已讀引用範圍：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']),numbered_text(evidence)]
         output.append(row['condition_id']+' 尚未確認：'+row['unconfirmed'])
     return output
 
@@ -62,10 +65,14 @@ def render(st, ai):
         st.text(row['requirement'])
         st.text(row['explanation'])
         detail=dossiers.get(row['condition_id'],{})
+        for evidence in detail.get('focus',[]):
+            st.text('關鍵原文位置：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']))
+            st.code(numbered_text(evidence),language=None)
+        if detail.get('evidence') and not detail.get('focus'):
+            st.caption('此紀錄只有已讀引用範圍，未保存可精確定位的關鍵摘錄；AI 文字中的細部行號未經獨立核對。')
         for number, evidence in enumerate(detail.get('evidence',[]), 1):
-            st.text('命中位置：'+evidence['path']+':'+str(evidence['start_line'])+'–'+str(evidence['end_line']))
-            with st.expander(row['condition_id']+' 原文片段 '+str(number)+'（'+str(evidence['start_line'])+'–'+str(evidence['end_line'])+' 行）',expanded=False):
-                st.code(evidence['text'],language=None)
+            with st.expander(row['condition_id']+' 已讀引用範圍 '+str(number)+' · '+evidence['path']+'（'+str(evidence['start_line'])+'–'+str(evidence['end_line'])+' 行）',expanded=False):
+                st.code(numbered_text(evidence),language=None)
         if detail:st.caption('尚未確認：'+detail['unconfirmed'])
         with st.expander(row['condition_id']+'：排除條件、查法與引用',expanded=False):
             st.text('排除依據：'+row['exclusion']); st.text('查法：'+row['check'])

@@ -48,6 +48,8 @@ def continuation(context,cve,previous):
     conditions=deepcopy(plan['conditions'])
     for row in conditions:
         original=list(row['citations']);row['citations']=[x for x in original if x in known]
+        if 'evidence_quotes' in row:
+            row['evidence_quotes']=[q for q in row['evidence_quotes'] if q['excerpt_id'] in row['citations']]
         # New materials may resolve an old gap. Every continuation reviews again.
         if any(x not in known for x in original) or row['state'] in ('USER_MATERIAL_MISSING','CAPABILITY_GAP','CONFLICT'):
             row.update(state='NOT_REVIEWED',explanation='前次觀察：'+row['explanation'][:400]+'；本輪須重新查核新增材料。')

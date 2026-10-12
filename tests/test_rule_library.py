@@ -9,7 +9,8 @@ from tests.test_condition_plan import conditions,PUBLIC
 def investigation():
     sources=[{**PUBLIC[0],'url':'https://example.org/advisory',
         'text_sha256':hashlib.sha256(PUBLIC[0]['text'].encode()).hexdigest()}]
-    rows=conditions();rows[0].update(state='OBSERVED_SUPPORT',citations=['X-private'],explanation='PRIVATE_PRODUCT_TEXT')
+    rows=conditions();rows[0].update(state='OBSERVED_SUPPORT',citations=['X-private'],explanation='PRIVATE_PRODUCT_TEXT',
+        evidence_quotes=[{'excerpt_id':'X-private','quote':'SECRET_PRODUCT_QUOTE'}])
     r={'cve_id':'CVE-2099-0001','context_hash':'private-scope','condition_plan':{'cve_id':'CVE-2099-0001',
         'conditions':rows,'plan_hash':digest(rows),'context_hash':'private-scope'},'public_sources':{'sources':sources},'excerpts':[{'text':'SECRET_PRODUCT'}]}
     return {**r,'record_hash':digest(r)}
@@ -106,7 +107,8 @@ def test_active_rule_reads_current_product_and_preserves_revision_after_review(t
     def review_step(kwargs):
         x=kwargs['history'][-1]['result']['excerpt_id']
         rows=deepcopy(rule['conditions'])
-        for row in rows:row.update(state='OBSERVED_SUPPORT',citations=[x],explanation='TEST_ONLY 模擬觀察，不是真實漏洞證明')
+        for row in rows:row.update(state='OBSERVED_SUPPORT',citations=[x],explanation='TEST_ONLY 模擬觀察，不是真實漏洞證明',
+            evidence_quotes=[{'excerpt_id':x,'quote':'/* TEST_ONLY current product bytes */'}])
         return decision('REVIEW',conditions=rows)
     def complete_step(kwargs):
         x=kwargs['history'][0]['result']['excerpt_id']

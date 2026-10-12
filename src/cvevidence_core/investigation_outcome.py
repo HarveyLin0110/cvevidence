@@ -29,7 +29,9 @@ def summarize(ai):
         details.append({'condition_id':r['condition_id'],'layer':r['layer'],'requirement':r['requirement'],
             'state':r['state'],'finding':r['explanation'],'next_check':r['check'],
             'hits':[{'source_id':x['source_id'],'path':x['path'],'start_line':x['start_line'],
-                     'end_line':x['end_line'],'excerpt_id':x['excerpt_id']} for x in d.get('evidence',[])],
+                     'end_line':x['end_line'],'excerpt_id':x['excerpt_id'],
+                     'location_kind':'EXACT_QUOTE' if d.get('focus') else 'READ_RANGE'}
+                    for x in (d.get('focus') or d.get('evidence',[]))],
             'gap_owner':'analysis_team' if r['state'] in ('NOT_REVIEWED','CAPABILITY_GAP') else
                         'material_owner' if r['state']=='USER_MATERIAL_MISSING' else 'reviewer'})
     return {'status':status,'title':LABELS[status],'conditions':details,'formal_verdict_unchanged':True,

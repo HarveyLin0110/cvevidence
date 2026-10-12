@@ -2,6 +2,7 @@
 from copy import deepcopy
 import re
 from .integrity import digest
+from .evidence_quotes import SCHEMA as QUOTE_SCHEMA, validate as validate_quotes
 
 STATES = ['NOT_REVIEWED', 'OBSERVED_SUPPORT', 'OBSERVED_EXCLUSION', 'CONFLICT',
           'USER_MATERIAL_MISSING', 'CAPABILITY_GAP']
@@ -10,8 +11,9 @@ FIELDS = {'condition_id', 'layer', 'requirement', 'exclusion', 'check', 'public_
 SCHEMA = {'type': 'array', 'items': {'type': 'object', 'properties': {
     'condition_id': {'type':'string'}, 'layer': {'type':'string','enum':['PC1','PC2','PC3']},
     **{k:{'type':'string'} for k in ('requirement','exclusion','check','public_source_id','public_quote','explanation')},
-    'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','items':{'type':'string'}}},
-    'required': sorted(FIELDS), 'additionalProperties': False}}
+    'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','items':{'type':'string'}},
+    'evidence_quotes':QUOTE_SCHEMA},
+    'required': sorted(FIELDS|{'evidence_quotes'}), 'additionalProperties': False}}
 
 
 class QuoteMismatch(ValueError):
@@ -43,7 +45,9 @@ def validate(rows, public_sources, *, previous=None):
     public = {r['source_id']:r for r in public_sources}
     ids=set()
     for row in rows:
-        if not isinstance(row,dict) or set(row)!=FIELDS: raise ValueError('條件欄位不完整')
+        # Older immutable records/rules have no quotation field. Reading them
+        # does not fabricate precise quotations or rewrite their hashes.
+        if not isinstance(row,dict) or set(row) not in (FIELDS,FIELDS|{'evidence_quotes'}): raise ValueError('條件欄位不完整')
         for k in FIELDS-{'citations'}:
             if not isinstance(row[k],str) or len(row[k])>700: raise ValueError('條件文字過長或格式不符')
         if (not re.fullmatch(r'C[1-8]',row['condition_id']) or row['condition_id'] in ids
@@ -60,9 +64,10 @@ def validate(rows, public_sources, *, previous=None):
             raise ValueError('條件引用格式不符')
         if row['state'] in ('OBSERVED_SUPPORT','OBSERVED_EXCLUSION','CONFLICT') and not any(x.startswith('X-') for x in row['citations']):
             raise ValueError('支持、反證或衝突須引用已讀的產品原文 X-ID，不能只靠公告或材料盤點')
+        validate_quotes(row.get('evidence_quotes',[]),row['citations'])
     if {r['layer'] for r in rows} != {'PC1','PC2','PC3'}: raise ValueError('須涵蓋 PC1、PC2、PC3')
     if previous is None:
-        if any(r['state']!='NOT_REVIEWED' or r['citations'] for r in rows):
+        if any(r['state']!='NOT_REVIEWED' or r['citations'] or r.get('evidence_quotes') for r in rows):
             raise ValueError('PLAN 只建立待查條件；讀證據後用 REVIEW 更新觀察')
     else:
         old={r['condition_id']:r for r in previous}

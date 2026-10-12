@@ -1,6 +1,7 @@
 """Verifiable condition/evidence dossiers and explicit operator review receipts."""
 from .integrity import digest, IntegrityError
 from .sources import verify_excerpt
+from .evidence_quotes import resolve as resolve_quotes
 
 
 def dossier(context, investigation):
@@ -19,7 +20,8 @@ def dossier(context, investigation):
             x=excerpts.get(citation)
             if not x or not verify_excerpt(context,x):raise IntegrityError('Condition excerpt changed')
             evidence.append({**x,'path':context.sources[x['source_id']]['path'],'verification':'EXACT_BYTES_AND_LOCATOR'})
-        rows.append({**condition,'evidence':evidence,'support_relation':'PENDING_HUMAN_SEMANTIC_REVIEW',
+        focus=resolve_quotes(context,condition,excerpts)
+        rows.append({**condition,'evidence':evidence,'focus':focus,'support_relation':'PENDING_HUMAN_SEMANTIC_REVIEW',
             'unconfirmed':condition['explanation'] if condition['state'] in ('NOT_REVIEWED','USER_MATERIAL_MISSING','CAPABILITY_GAP','CONFLICT') else
                 '需覆核引用是否充分支持條件、建置綁定與完整適用範圍；逐字一致不代表語意成立。'})
     payload={'context_hash':context.context_hash,'cve_id':investigation['cve_id'],
@@ -52,6 +54,12 @@ def verify_review(context, saved_dossier, decision):
         for x in evidence:
             raw={k:v for k,v in x.items() if k not in ('path','verification')}
             if not verify_excerpt(context,raw):raise IntegrityError('Reviewed bytes changed')
+        # Re-derive focused locations from the original cited excerpts; a hash
+        # of a dossier alone cannot certify an invented quote or line range.
+        condition=original[row['condition_id']]
+        parents={x['excerpt_id']:{k:v for k,v in x.items() if k not in ('path','verification')} for x in evidence}
+        expected=resolve_quotes(context,condition,parents)
+        if condition.get('focus',[])!=expected:raise IntegrityError('Reviewed quote locations changed')
         receipts.append({**row,'excerpt_ids':[x['excerpt_id'] for x in evidence],
             'verification':'BYTES_RECHECKED_HUMAN_RELATION_RECORDED','automated_semantic_proof':False})
     context.assert_current()

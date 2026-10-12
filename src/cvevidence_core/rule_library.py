@@ -52,7 +52,8 @@ def draft(investigation):
     public=(investigation.get('public_sources') or {}).get('sources',[])
     used={r['public_source_id'] for r in plan['conditions']}
     sources=[{k:r[k] for k in ('source_id','url','text','text_sha256')} for r in public if r['source_id'] in used]
-    rows=[{**r,'state':'NOT_REVIEWED','citations':[],'explanation':'依本次產品材料重新查核，不沿用其他案件結論。'} for r in plan['conditions']]
+    rows=[{**r,'state':'NOT_REVIEWED','citations':[],'evidence_quotes':[],
+           'explanation':'依本次產品材料重新查核，不沿用其他案件結論。'} for r in plan['conditions']]
     validate(rows,sources)
     result=_seal({'schema_version':'1.0','kind':'INVESTIGATION_RULE','status':'DRAFT',
         'cve_id':_cve(investigation['cve_id']),'conditions':rows,'public_sources':sources,
