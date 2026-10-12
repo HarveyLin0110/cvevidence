@@ -1,6 +1,5 @@
 """Read existing identity material and enforce discovery before evidence requests."""
 import re
-from .sources import read_bounded_excerpt as read_excerpt
 from .integrity import IntegrityError
 
 
@@ -27,17 +26,12 @@ def prepare(context, public_sources):
                     for r in ranked if r['source_id'] in identity_ids][:20]
     priority_ids={r['source_id'] for r in identity_index}
     index=(identity_index+[r for r in ranking['sources'] if r['source_id'] not in priority_ids])[:60]
-    excerpts=[]; errors=[]; remaining=8000
-    # Identity facts are read once before asking the model to plan. Code bodies
-    # still need targeted searches; the first lines are not treated as absence.
-    candidates=[r for r in ranked if score(r)==100][:2]
-    for row in candidates:
-        try:
-            excerpt=read_excerpt(context,row['source_id'],1,60)
-            if len(excerpt['text'])>remaining:continue
-            remaining-=len(excerpt['text']);excerpts.append({**excerpt})
-        except IntegrityError:raise
-        except (ValueError,OSError):errors.append({'source_id':row['source_id'],'gap_kind':'CAPABILITY_GAP'})
+    from .intake_reading import prepare as prepare_reading
+    reading=prepare_reading(context,[r for r in ranked if score(r)==100])
+    # Supporting original text is available before PLAN, so a short receipt or
+    # input file need not compete with implementation reads for another call.
+    # Actual code bodies still need CVE-specific inspection.
+    excerpts=reading['excerpts'];errors=reading['errors']
     from .firmware_inventory import reports
     from .elf_metadata import inventory
     from .build_provenance import inspect as provenance
@@ -45,6 +39,7 @@ def prepare(context, public_sources):
     return {'compilation_database':compilation(context,[r['source_id'] for r in index if r.get('relevance_score',0)>=100]),'build_provenance':provenance(context),'binary_metadata':inventory(context),'firmware_inventory':reports(context),'component_declarations':declarations[:20],'component_declarations_total':len(declarations),
             'component_declarations_truncated':len(declarations)>20,
             'retrieval_coverage':{k:v for k,v in ranking.items() if k!='sources'},'source_index':index,'source_index_total':len(files),'initial_product_excerpts':excerpts,
+            'initial_reading':reading['reading'],
             'read_errors':errors,'note':'已讀片段只支持其中可見內容；排序與檔案存在不是證據，不完整片段不能證明功能不存在。'}
 
 
