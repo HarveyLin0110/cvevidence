@@ -145,3 +145,27 @@ def test_pr_dedup_preserves_first_reference_order():
     with patch.object(sources,'_download',return_value=(b'TEST_ONLY patch','text/plain')) as download:
         sources.collect({'references':[first,sources.snapshot_url(first),second]})
     assert [c.args[0] for c in download.call_args_list]==[sources.snapshot_url(first),sources.snapshot_url(second)]
+
+
+def test_full_commit_uses_fixed_public_api_and_keeps_reference_provenance():
+    sha='a'*40;original='https://github.com/test/project/commit/'+sha
+    api='https://api.github.com/repos/test/project/commits/'+sha
+    assert sources.snapshot_url(original)==sources.snapshot_url(original+'.patch')==api
+    assert sources.approved(api) and sources.snapshot_url(api)==api
+    with patch.object(sources,'_download',return_value=(b'TEST_ONLY patch','application/vnd.github.patch')) as get:
+        result=sources.collect({'references':[original,original+'.patch',api]})
+    assert get.call_count==1 and result['sources'][0]['url']==api
+    assert result['sources'][0]['reference_url']==original and not result['unvisited_references']
+
+
+@pytest.mark.parametrize('tail',['main','abc1234','a'*40+'/comments','a'*40+'?x=1','../private','a'*40+'#x'])
+def test_patch_api_policy_rejects_other_endpoints_refs_queries_and_fragments(tail):
+    assert not sources.approved('https://api.github.com/repos/test/project/commits/'+tail)
+
+
+@pytest.mark.parametrize('exc,code',[(TimeoutError('private detail'),'TIMEOUT'),
+    (ValueError('HTTP_429'),'HTTP_429'),(ValueError('secret detail'),'NETWORK_OR_RESPONSE_ERROR')])
+def test_public_failure_reason_is_bounded_and_does_not_leak_exception_text(exc,code):
+    with patch.object(sources,'_download',side_effect=exc):r=sources.collect({'references':['https://curl.se/docs/test']})
+    assert r['failures'][0]['reason']==code
+    assert 'detail' not in str(r)

@@ -389,6 +389,21 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
     from .investigation_view import render as render_investigation, render_requests, render_overview, narrative_sections
     render_overview(st, ai)
+    comparisons=rows(ai.get('patch_comparisons'))
+    if comparisons:
+        with st.expander('公開修補與產品原碼逐行比較',expanded=False):
+            st.caption('比較保存的完整修補區塊；逐行吻合不表示這份原碼已編入成品，也不取代工程覆核。')
+            labels={'BEFORE_TEXT_MATCH':'符合修補前區塊','AFTER_TEXT_MATCH':'符合修補後區塊',
+                    'PARTIAL_OR_DIFFERENT':'部分吻合或不同，不能排除','SOURCE_BYTE_LIMIT':'超過比較容量',
+                    'SOURCE_UNREADABLE':'原碼無法按文字比較'}
+            for comparison in comparisons:
+                st.text(text(comparison.get('path') or comparison.get('source_id'))+'：'+
+                        labels.get(comparison.get('status'),text(comparison.get('status'))))
+                st.caption('公告 '+text(comparison.get('public_source_id'))+' · 比較 '+text(comparison.get('comparison_id')))
+                for h in rows(comparison.get('hunks')):
+                    before='、'.join(str(x.get('start_line'))+'–'+str(x.get('end_line')) for x in rows(h.get('before_locations'))) or '未匹配'
+                    after='、'.join(str(x.get('start_line'))+'–'+str(x.get('end_line')) for x in rows(h.get('after_locations'))) or '未匹配'
+                    st.text('原碼位置：修補前 '+before+'；修補後 '+after)
     has_requests = render_requests(st, ai)
     if ai.get("analysis_depth") == "PC_EVIDENCE_REVIEW":
         st.caption("本次採 PC1／PC2／PC3 原文查核；各層是否完成及限制，以保存的調查說明為準。")

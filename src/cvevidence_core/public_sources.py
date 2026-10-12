@@ -16,7 +16,7 @@ HOSTS = frozenset({'curl.se', 'openssl-library.org', 'www.openssl.org', 'zlib.ne
     'www.zlib.net', 'github.com', 'raw.githubusercontent.com', 'www.openwall.com',
     'security.gentoo.org', 'www.djangoproject.com', 'httpd.apache.org',
     'www.apache.org', 'security.apache.org', 'www.kernel.org', 'git.kernel.org', 'lists.debian.org',
-    'patch-diff.githubusercontent.com'})
+    'patch-diff.githubusercontent.com', 'api.github.com'})
 MAX_BYTES = 1_000_000
 MAX_TEXT = 120000
 
@@ -44,6 +44,9 @@ def approved(url):
             return bool(re.fullmatch(r'/[\w.-]+/[\w.-]+/(?:commit/[0-9a-f]{7,40}(?:\.patch)?|pull/[1-9][0-9]{0,8}|security/advisories/GHSA-[\w-]+|releases/tag/[\w.-]+)', p.path))
         if p.hostname == 'patch-diff.githubusercontent.com':
             return bool(re.fullmatch(r'/raw/[\w.-]+/[\w.-]+/pull/[1-9][0-9]{0,8}\.patch',p.path))
+        if p.hostname == 'api.github.com':
+            return ('..' not in p.path.split('/') and '.' not in p.path.split('/') and
+                    bool(re.fullmatch(r'/repos/[\w.-]+/[\w.-]+/commits/[0-9a-f]{40}',p.path)))
         if p.hostname == 'raw.githubusercontent.com':
             return bool(re.fullmatch(r'/[\w.-]+/[\w.-]+/[0-9a-f]{40}/[\w./-]+', p.path))
         if p.hostname == 'lists.debian.org':
@@ -56,7 +59,9 @@ def approved(url):
 def snapshot_url(url):
     """Fixed public reference mappings; no redirect or model-provided target."""
     openssl=_openssl_snapshot(url)
-    if openssl:return openssl
+    if openssl:url=openssl
+    commit=re.fullmatch(r'https://github.com/([\w.-]+)/([\w.-]+)/commit/([0-9a-f]{40})(?:\.patch)?',url)
+    if commit:return 'https://api.github.com/repos/'+ '/'.join(commit.group(1,2))+'/commits/'+commit.group(3)
     match=re.fullmatch(r'https://github.com/([\w.-]+)/([\w.-]+)/pull/([1-9][0-9]{0,8})',url)
     if match:return 'https://patch-diff.githubusercontent.com/raw/'+ '/'.join(match.group(1,2))+'/pull/'+match.group(3)+'.patch'
     return url+'.patch' if re.fullmatch(r'https://github.com/[\w.-]+/[\w.-]+/commit/[0-9a-f]{7,40}',url) else url
@@ -114,11 +119,15 @@ def _read_address(p, ip, deadline):
     if remaining <= 0: raise TimeoutError()
     conn = _PinnedHTTPS(p.hostname, ip, min(remaining, 5))
     try:
-        conn.request('GET', p.path, headers={'User-Agent': 'CVEvidence/0.1', 'Accept': 'text/plain,text/html,application/json', 'Accept-Encoding': 'identity'})
+        patch_api=p.hostname=='api.github.com'
+        accept='application/vnd.github.patch' if patch_api else 'text/plain,text/html,application/json'
+        conn.request('GET', p.path, headers={'User-Agent': 'CVEvidence/0.1', 'Accept': accept, 'Accept-Encoding': 'identity'})
         response = conn.getresponse()
         if response.status != 200: raise ValueError('HTTP_' + str(response.status))
         kind = response.getheader('Content-Type', '').split(';')[0]
-        if kind not in ('text/html', 'text/plain', 'text/x-patch', 'text/x-diff', 'application/json', 'application/octet-stream'):
+        allowed=('text/plain','text/x-patch','text/x-diff','application/vnd.github.patch') if patch_api else (
+            'text/html', 'text/plain', 'text/x-patch', 'text/x-diff', 'application/json', 'application/octet-stream')
+        if kind not in allowed:
             raise ValueError('CONTENT_TYPE')
         chunks = []; size = 0
         while True:
@@ -183,10 +192,17 @@ def collect(info, *, timeout=15, limit=3):
             row['publisher_scope'] = ('DOWNSTREAM_DISTRIBUTION' if urlsplit(url).hostname == 'lists.debian.org'
                                       else 'PUBLIC_REFERENCE_SCOPE_REQUIRES_REVIEW')
             sources.append(row)
-            patches = [(link, url) for link in links if approved(link) and re.search(r'/commit/[0-9a-f]{7,40}\.patch$', snapshot_url(link))]
+            patches = [(link, url) for link in links if approved(link) and (
+                re.search(r'/commit/[0-9a-f]{7,40}\.patch$', snapshot_url(link)) or
+                re.fullmatch(r'https://api\.github\.com/repos/[\w.-]+/[\w.-]+/commits/[0-9a-f]{40}',snapshot_url(link)))]
             queue = patches + queue
-        except (OSError, ValueError, UnicodeError, http.client.HTTPException):
-            failures.append({'url': url, 'status': 'UNAVAILABLE', 'gap_kind': 'CAPABILITY_GAP'})
+        except (OSError, ValueError, UnicodeError, http.client.HTTPException) as exc:
+            # Codes only: never expose transport internals or arbitrary exception text.
+            code=('TIMEOUT' if isinstance(exc,TimeoutError) else 'TLS_ERROR' if isinstance(exc,ssl.SSLError)
+                  else 'TEXT_ENCODING' if isinstance(exc,UnicodeError) else str(exc) if isinstance(exc,ValueError)
+                  and re.fullmatch(r'HTTP_[0-9]{3}|SOURCE_POLICY|NON_PUBLIC_ADDRESS|CONTENT_TYPE|SOURCE_TOO_LARGE|BINARY_CONTENT',str(exc))
+                  else 'NETWORK_OR_RESPONSE_ERROR')
+            failures.append({'url': url, 'status': 'UNAVAILABLE', 'gap_kind': 'CAPABILITY_GAP','reason':code})
     return {'sources': sources, 'failures': failures,
             'unsupported_references': [u for u in info.get('references', []) if not approved(u)],
             'unvisited_references': list(dict.fromkeys(u for u, _ in queue if snapshot_url(u) not in seen))[:20],

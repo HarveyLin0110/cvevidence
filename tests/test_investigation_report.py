@@ -56,11 +56,12 @@ def test_report_cannot_bypass_material_or_quote_checks(tmp_path,monkeypatch,kind
     assert all(row['state']=='NOT_REVIEWED' for row in r['condition_plan']['conditions'])
 
 
-def test_report_preserves_other_gaps_when_a_required_condition_has_exclusion(tmp_path,monkeypatch):
+def test_report_cannot_close_other_gaps_with_an_unverified_exclusion(tmp_path,monkeypatch):
     def mutate(rows):rows[1]['state']='OBSERVED_EXCLUSION';rows[2]['state']='USER_MATERIAL_MISSING'
     r=run_report(tmp_path,monkeypatch,mutate)
-    assert r['status']=='COMPLETED' and r['investigation_outcome']['status']=='EXCLUSION_OBSERVED'
-    assert r['condition_plan']['conditions'][2]['state']=='USER_MATERIAL_MISSING'
+    assert r['status']=='BUDGET_EXHAUSTED' and r['tasks'][-1]['status']=='TOOL_ERROR'
+    assert '排除依據' in r['tasks'][-1]['result']['error']
+    assert all(row['state']=='NOT_REVIEWED' for row in r['condition_plan']['conditions'])
 
 
 def test_report_can_save_verified_quotes_without_promoting_incomplete_conditions(tmp_path,monkeypatch):

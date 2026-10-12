@@ -75,3 +75,18 @@ def test_address_attempt_count_is_bounded():
          patch.object(sources,'_PinnedHTTPS',side_effect=lambda *args:Connection(ConnectionRefusedError())) as connection:
         with pytest.raises(ConnectionRefusedError):sources._download(URL,1e20)
     assert connection.call_count==4
+
+
+def test_commit_api_requests_public_patch_without_authentication_or_redirect():
+    from urllib.parse import urlsplit
+    url='https://api.github.com/repos/test/project/commits/'+'a'*40
+    conn=Connection();conn.request=lambda *a,**kw:setattr(conn,'request_args',(a,kw))
+    with patch.object(sources,'_PinnedHTTPS',return_value=conn):
+        raw,_=sources._read_address(urlsplit(url),'8.8.8.8',1e20)
+    args,kw=conn.request_args
+    assert args==('GET',urlsplit(url).path)
+    assert kw['headers']['Accept']=='application/vnd.github.patch'
+    assert 'Authorization' not in kw['headers'] and conn.closed and raw
+    conn=Connection();conn.response.getheader=lambda *a:'application/json'
+    with patch.object(sources,'_PinnedHTTPS',return_value=conn):
+        with pytest.raises(ValueError,match='CONTENT_TYPE'):sources._read_address(urlsplit(url),'8.8.8.8',1e20)

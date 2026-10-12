@@ -4,7 +4,7 @@ import pytest
 from cvevidence_core import public_sources as sources
 
 SHA='3118eb64934499d93db3230748a452351d1d9a65'
-PATCH='https://github.com/openssl/openssl/commit/'+SHA+'.patch'
+PATCH='https://api.github.com/repos/openssl/openssl/commits/'+SHA
 OLD='https://www.openssl.org/news/secadv/20220315.txt'
 CURRENT='https://openssl-library.org/news/secadv/20220315.txt'
 GIT='https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h='+SHA
@@ -67,7 +67,7 @@ def test_html_commit_link_uses_same_fixed_mapping_and_budget():
 def test_normalized_download_still_rejects_private_address():
     with patch.object(sources.socket,'getaddrinfo',return_value=[(0,0,0,'',('127.0.0.1',443))]) as dns:
         with pytest.raises(ValueError,match='NON_PUBLIC'):sources._download(GIT,1e20)
-    assert dns.call_args.args[0]=='github.com'
+    assert dns.call_args.args[0]=='api.github.com'
 
 
 def test_primary_advisory_and_patch_not_starved_by_downstream_failures():

@@ -68,6 +68,9 @@ runtime_budget.recommended_phase=LAST_CHECK_OR_REPORT 表示估計還有兩次�
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 conditions 每個文字欄最多 700 字；public_quote 優先選能支持條件的短段連續原文，無須搬整段 diff。diff 的 +、-、空白與換行都屬原文，不可省略、重排或拼接。每段產品 evidence_quotes 最多 1200 字；REVIEW／REPORT 中明確選用的 excerpt_id 也會納入該條件 citations 並重新核對，不必為了重複列 ID 再呼叫一次。這不會修正引文、接受未知 X-ID 或認證語意。
 公告原文在 public_sources.sources[].quote_options，各有 quote_id 與 text。PLAN 優先選足以支持條件的同一 P-ID 選項，public_quote_id 填該編號、public_quote 留空，由工具核對並還原確切原文，避免重抄 diff。REVIEW／REPORT 沿用相同選項，不能換條件定義或公告依據。若既有逐字引文不在選項中，可 public_quote_id 留空並保留原 public_quote；READ_PUBLIC 也會提供其保存範圍的選項。只選工具已提供的編號，不自行計算。選項若無充分支持應修改待查條件或讀更多公告，不因有編號就視為語意成立。它不是產品 X-ID，不放 citations。
+通用調查的排除線索採 exclusion_policy：目前自動接納 OBSERVED_EXCLUSION 僅限 PC2 引用原碼已由 patch_comparisons 與公開 patch 的全部對應區塊逐行匹配為 AFTER_TEXT_MATCH。BEFORE_TEXT_MATCH 是修補前區塊；舊碼中存在退出檢查不代表已修補。PARTIAL_OR_DIFFERENT 不證明有或沒有修補，等效改寫仍待人工覆核。比較只涵蓋該份原碼，不證明編入成品、全部副本或部署；不可把它寫成產品安全。其他排除方法暫不具備機器驗證能力，保留 NOT_REVIEWED／CAPABILITY_GAP，仍以原文說明具體線索，不為了改狀態索取更多材料。
+AFTER_TEXT_MATCH 仍不足以停止產品查核：若任何 REQUIRED 的 PC1／PC2 條件有缺件、未查完、能力不足或矛盾，不能提交 OBSERVED_EXCLUSION。尤其沒有成品、只有 public source／synthetic inventory／未綁定 SDK 時，修補比對只放 explanation，依真正缺口保留 USER_MATERIAL_MISSING／CAPABILITY_GAP／NOT_REVIEWED；已有使用者缺口則 REVIEW 後 ASK_USER 一個最關鍵的身分／綁定條件，不索取整套部署資料。不要為了過檢查把其他條件改成支持。
+正常輸入成功只支持這次運作觀察，不能證明所有輸入被限制；未觀察到惡意流量／沒有 TLS 不能排除 stdin、檔案、管理介面等其他適用途徑。PC3 必須分清入口是否可接收、是否有強制約束、誰能控制、哪些運作已觀察；未知不寫成不可能。當前通用工具不能自動證明所有輸入／部署路徑封閉，不接納 PC3 的 OBSERVED_EXCLUSION；保留具體分析與待覆核原因。
 '''
 
 PROPERTIES={
@@ -349,6 +352,22 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             payload['continuation_instruction']='已有條件計畫，不要再 PLAN；先處理前次未解問題與新增材料，再 REVIEW 全部條件。retained_read_excerpt_ids 是前輪成功 READ 且本輪已核對相同原文的片段，可滿足多副本閱讀檢查，不需為此重讀；不代表全文或語意充分。'
     from .public_packet import compact as compact_public
     from .public_quotes import offered_ids, resolve_submissions
+    from .patch_comparison import compare as compare_patch,check_exclusions
+    compared_sources=set()
+    result['patch_comparisons']=[]
+    def compare_read_sources(reads):
+        added=[]
+        for x in reads:
+            sid=x['source_id']
+            if sid in compared_sources:continue
+            compared_sources.add(sid)
+            added.extend(compare_patch(context,sid,result.get('public_sources',{})))
+        result['patch_comparisons'].extend(added)
+        return added
+    if requires_plan:
+        compare_read_sources(excerpts.values())
+        payload['patch_comparisons']=deepcopy(result['patch_comparisons'])
+        payload['exclusion_policy']='通用提案僅 PC2 已引用原碼的完整 AFTER_TEXT_MATCH 可記排除線索；其餘排除方法待工程覆核，正常觀測不能排除其他輸入。比較不證明成品修補或語意。'
     public_quote_offers=set()
     if result.get('public_sources'):
         payload['public_sources']=compact_public(result['public_sources'])
@@ -509,6 +528,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     if planned is None:raise ValueError('必須先 PLAN')
                     reviewed_rows=validate_conditions(submitted_conditions,result['public_sources']['sources'],previous=planned)
                     focused=[resolve_quotes(context,row,excerpts,require=True) for row in reviewed_rows]
+                    task['exclusion_checks']=check_exclusions(reviewed_rows,excerpts,result['patch_comparisons'])
                     if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows) and not any(focused):
                         raise ValueError('尚無可保存的條件調查進展；請讀取材料，或以 evidence_quotes 保留已讀的具體觀察。未查完仍用 NOT_REVIEWED，不必改成支持或缺件。')
                     if action=='REPORT':
@@ -596,6 +616,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     shown_options.update(_cli_options(x['text']))
                     result['verified_ai_facts'].append({'kind':'SOURCE_EXCERPT','excerpt_id':x['excerpt_id'],'verification':'EXACT_BYTES_AND_LOCATOR','engineering_inference_verified':False})
                 task.update(status='COMPLETED',result=tool_output)
+                if requires_plan and found:
+                    comparisons=compare_read_sources(found)
+                    if comparisons:task['patch_comparisons']=comparisons
             except IntegrityError as exc:
                 task.update(status='INPUT_CHANGED_OR_INVALID',result={'error':str(exc)});raise
             except (ValueError,KeyError) as exc:
@@ -605,6 +628,10 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     tool_output['condition_states']={r['condition_id']:r['state'] for r in result.get('condition_plan',{}).get('conditions',[])}
                     tool_output['recovery']='尚無條件計畫時先 PLAN，再 READ／REVIEW；先核對補件對象的條件狀態。確有成品排除線索時 COMPLETE；若只有未綁定原碼的線索，REVIEW 說明建置對應缺口。工具能力不足用 CAPABILITY_GAP，不向使用者索取工具規則；不得只為通過檢查而改狀態。'
             feedback=tool_output
+            if task.get('patch_comparisons'):
+                # Keep canonical READ excerpts byte-verifiable; observations
+                # belong to the feedback envelope and separate audit records.
+                feedback={**tool_output,'patch_comparisons':task['patch_comparisons']}
             if action in {'PLAN','REVIEW'} and task['status']=='COMPLETED':
                 feedback={'accepted':True,'plan_hash':tool_output['plan_hash'],
                     'condition_states':{r['condition_id']:r['state'] for r in tool_output['conditions']},
