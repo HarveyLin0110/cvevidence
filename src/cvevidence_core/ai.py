@@ -8,7 +8,7 @@ from .sources import list_sources,search_sources,read_excerpt,read_bounded_excer
 from .verifier import require_verified,verify_citations
 from .collection_guidance import collection_guide
 from .evidence_requests import SCHEMA as REQUEST_SCHEMA, validate as validate_requests, display as display_request, validate_legacy
-from .condition_plan import SCHEMA as CONDITION_SCHEMA, validate as validate_conditions, record as condition_record, QuoteMismatch
+from .condition_plan import SCHEMA as CONDITION_SCHEMA, validate as validate_conditions, record as condition_record, QuoteMismatch, submitted_quote_citations
 from .providers import ProviderStep, ProviderError, responses_request, MAX_PROVIDER_INPUT_BYTES, MAX_PROVIDER_RECEIPT_BYTES
 
 SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律用繁體中文。
@@ -63,6 +63,7 @@ PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收�
 互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；matches 是已讀片段，failures 是尚未讀成的檔案，不要重讀成功部分或把失敗當缺件。連結圖等大檔先 SEARCH 函式／符號，再 READ 關鍵範圍。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
 runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先覆核已讀證據，可直接 REPORT，未查完明列 NOT_REVIEWED；REPORT_NOW 表示估計只剩這次呼叫，已有可交覆核進展時立即 REPORT 同時提交 conditions 與三層摘要，不要只做 REVIEW 而失去摘要。FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。真正材料缺口仍走 REVIEW／ASK_USER，不能省略補件檢查。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
+conditions 每個文字欄最多 700 字；public_quote 優先選能支持條件的短段連續原文，無須搬整段 diff。diff 的 +、-、空白與換行都屬原文，不可省略、重排或拼接。每段產品 evidence_quotes 最多 1200 字；REVIEW／REPORT 中明確選用的 excerpt_id 也會納入該條件 citations 並重新核對，不必為了重複列 ID 再呼叫一次。這不會修正引文、接受未知 X-ID 或認證語意。
 '''
 
 PROPERTIES={
@@ -422,7 +423,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 args.setdefault('conditions',[]); args.setdefault('requests',[])
             _validate_args(args)
             action=args['action'];ids=args['source_ids'];stage='CITATIONS'
-            condition_citations=[citation for row in args['conditions'] if isinstance(row,dict) for citation in row.get('citations',[]) ]
+            submitted_conditions,expanded_citations=(submitted_quote_citations(args['conditions'])
+                if action in ('REVIEW','REPORT') else (args['conditions'],{}))
+            condition_citations=[citation for row in submitted_conditions if isinstance(row,dict) for citation in row.get('citations',[]) ]
             citation_check=verify_citations(context,verified,args['citations']+condition_citations,list(excerpts.values()))
             known_hashes={r['sha256'] for r in context.sources.values()}|{context.context_hash,verified.collection_hash}
             if public_brief and public_brief.get('record_sha256'):
@@ -446,6 +449,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             task={'task_id':'I-'+digest({'context':context.context_hash,'number':number,'arguments':args})[:24],
                   **args,'status':'RUNNING','citation_verification':citation_check}
             result['tasks'].append(task)
+            if expanded_citations:task['expanded_quote_citations']=expanded_citations
             unsupported=sorted(_cli_options(_proposal_text(args))-shown_options) if verified.cve_id=='CVE-2023-38545' else []
             task['source_grounding']={'valid':not unsupported,'unsupported_cli_options':unsupported,'meaning_verified':False}
             if not citation_check['valid'] or unsupported:
@@ -484,7 +488,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     tool_output=result['condition_plan']
                 elif action in ('REVIEW','REPORT'):
                     if planned is None:raise ValueError('必須先 PLAN')
-                    reviewed_rows=validate_conditions(args['conditions'],result['public_sources']['sources'],previous=planned)
+                    reviewed_rows=validate_conditions(submitted_conditions,result['public_sources']['sources'],previous=planned)
                     focused=[resolve_quotes(context,row,excerpts,require=True) for row in reviewed_rows]
                     if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows) and not any(focused):
                         raise ValueError('尚無可保存的條件調查進展；請讀取材料，或以 evidence_quotes 保留已讀的具體觀察。未查完仍用 NOT_REVIEWED，不必改成支持或缺件。')

@@ -9,13 +9,34 @@ STATES = ['NOT_REVIEWED', 'OBSERVED_SUPPORT', 'OBSERVED_EXCLUSION', 'CONFLICT',
 NECESSITIES = ['REQUIRED', 'ALTERNATIVE_PATH', 'UNDETERMINED']
 FIELDS = {'condition_id', 'layer', 'requirement', 'exclusion', 'check', 'public_source_id',
           'public_quote', 'state', 'citations', 'explanation'}
-SCHEMA = {'type': 'array', 'items': {'type': 'object', 'properties': {
+SCHEMA = {'type': 'array', 'maxItems': 8, 'items': {'type': 'object', 'properties': {
     'condition_id': {'type':'string'}, 'layer': {'type':'string','enum':['PC1','PC2','PC3']},
     'necessity': {'type':'string','enum':NECESSITIES},
-    **{k:{'type':'string'} for k in ('requirement','exclusion','check','public_source_id','public_quote','explanation')},
-    'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','items':{'type':'string'}},
+    **{k:{'type':'string','pattern':r'^[\s\S]{0,700}$'} for k in ('requirement','exclusion','check','public_source_id','public_quote','explanation')},
+    'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','maxItems':8,'items':{'type':'string'}},
     'evidence_quotes':QUOTE_SCHEMA},
     'required': sorted(FIELDS|{'evidence_quotes','necessity'}), 'additionalProperties': False}}
+
+
+def submitted_quote_citations(rows):
+    """Treat explicitly selected quote IDs as citations in new submissions.
+
+    No text repair or source lookup. The caller must still validate every ID,
+    exact quote, scope and condition. Preserve the raw provider decision for
+    history/receipts; never apply this normalization to old saved records.
+    """
+    output=deepcopy(rows); additions={}
+    for row in output:
+        if not isinstance(row,dict) or not isinstance(row.get('citations'),list):continue
+        quotes=row.get('evidence_quotes',[])
+        if not isinstance(quotes,list):continue
+        added=[]
+        for quote in quotes:
+            xid=quote.get('excerpt_id') if isinstance(quote,dict) else None
+            if isinstance(xid,str) and xid.startswith('X-') and xid not in row['citations']:
+                row['citations'].append(xid);added.append(xid)
+        if added:additions[str(row.get('condition_id',''))]=added
+    return output,additions
 
 
 def required_exclusions(rows):
@@ -68,7 +89,8 @@ def validate(rows, public_sources, *, previous=None):
         if not isinstance(row,dict) or set(row)-{'evidence_quotes','necessity'}!=FIELDS: raise ValueError('條件欄位不完整')
         if 'necessity' in row and row['necessity'] not in NECESSITIES:raise ValueError('條件必要性分類不符')
         for k in FIELDS-{'citations'}:
-            if not isinstance(row[k],str) or len(row[k])>700: raise ValueError('條件文字過長或格式不符')
+            if not isinstance(row[k],str) or len(row[k])>700:
+                raise ValueError(f"條件 {row.get('condition_id','?')} 的 {k} 須為最多 700 字的文字；公告摘錄須保留逐字一致，不可用省略號拼接")
         if (not re.fullmatch(r'C[1-8]',row['condition_id']) or row['condition_id'] in ids
                 or row['layer'] not in ('PC1','PC2','PC3') or row['state'] not in STATES):
             raise ValueError('條件 ID、面向或狀態不符')

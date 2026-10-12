@@ -20,8 +20,9 @@ class ProductQuoteMismatch(ValueError):
             'accepted':False,'original_text_hint':hint,
             'note':'只指出這條件的引文錯誤及同一片段的部分原文，不代表建議摘錄足以支持條件。請核對已讀全文後重新提交 REVIEW；不要為修字重新索取材料。'}
 
-SCHEMA = {'type':'array','items':{'type':'object','properties':{
-    'excerpt_id':{'type':'string'}, 'quote':{'type':'string'}},
+SCHEMA = {'type':'array','maxItems':4,'items':{'type':'object','properties':{
+    'excerpt_id':{'type':'string','pattern':r'^X-.+$'},
+    'quote':{'type':'string','pattern':r'^[\s\S]{1,1200}$'}},
     'required':['excerpt_id','quote'],'additionalProperties':False}}
 
 

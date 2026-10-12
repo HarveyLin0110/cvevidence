@@ -92,3 +92,33 @@ def test_report_narrative_visible_in_web_without_extra_complete_task(tmp_path,mo
         ',assessment_id='+repr(r['engineering_assessment_id'])+')').run(timeout=15)
     assert not app.exception
     assert any('PC1：TEST_ONLY 元件觀察' in x.value for x in app.text)
+
+
+@pytest.mark.parametrize('provider_id',['openai_api','codex_cli'])
+def test_explicit_quote_id_need_not_be_repeated_in_condition_citations(tmp_path,monkeypatch,provider_id):
+    def mutate(rows):
+        for row in rows:row['citations']=[]
+    r=run_report(tmp_path,monkeypatch,mutate,provider_id)
+    assert r['status']=='COMPLETED'
+    task=r['tasks'][-1]
+    assert all(row['citations']==[] for row in task['conditions'])  # Raw decision retained.
+    for row in r['condition_plan']['conditions']:
+        xid=row['evidence_quotes'][0]['excerpt_id']
+        assert row['citations']==[xid]
+        assert task['expanded_quote_citations'][row['condition_id']]==[xid]
+    assert task['citation_verification']['valid']
+    assert all(row['focus'] for row in r['condition_dossier']['conditions'])
+
+
+@pytest.mark.parametrize('kind',['foreign','invented','empty','public','capacity'])
+def test_quote_citation_expansion_never_repairs_unverified_evidence(tmp_path,monkeypatch,kind):
+    def mutate(rows):
+        row=rows[1];row['citations']=[]
+        if kind=='foreign':row['evidence_quotes'][0]['excerpt_id']='X-another-run'
+        if kind=='invented':row['evidence_quotes'][0]['quote']='invented TEST_ONLY text'
+        if kind=='empty':row['evidence_quotes'][0]['quote']=''
+        if kind=='public':row['evidence_quotes'][0]['excerpt_id']='P-test'
+        if kind=='capacity':row['citations']=[rows[0]['citations'][0]]*8;row['evidence_quotes']*=5
+    r=run_report(tmp_path,monkeypatch,mutate)
+    assert r['status']!='COMPLETED' and r['tasks'][-1]['status'] in ('REJECTED','TOOL_ERROR')
+    assert all(row['state']=='NOT_REVIEWED' for row in r['condition_plan']['conditions'])

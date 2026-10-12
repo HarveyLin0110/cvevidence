@@ -67,3 +67,35 @@ def test_unknown_public_source_does_not_suggest_another_sources_text():
     with pytest.raises(QuoteMismatch) as caught:validate(rows,PUBLIC)
     assert not caught.value.feedback['source_known']
     assert caught.value.feedback['candidate_quotes']==[]
+
+
+def test_oversize_announcement_names_condition_and_field_without_truncation():
+    rows=conditions();rows[1]['public_quote']='TEST_ONLY '+('x'*700)
+    before=deepcopy(rows)
+    with pytest.raises(ValueError,match='C2 的 public_quote'):
+        validate(rows,[{'source_id':'P-test','text':rows[0]['public_quote']+'\n'+rows[1]['public_quote']}])
+    assert rows==before
+
+
+def test_submission_expansion_is_local_explicit_and_non_mutating():
+    from cvevidence_core.condition_plan import submitted_quote_citations
+    rows=conditions();rows[1]['evidence_quotes']=[{'excerpt_id':'X-explicit','quote':'TEST_ONLY'}]*2
+    before=deepcopy(rows)
+    expanded,added=submitted_quote_citations(rows)
+    assert expanded[1]['citations']==['X-explicit'] and added=={'C2':['X-explicit']}
+    assert rows==before
+    assert submitted_quote_citations(expanded)==(expanded,{})
+    # Storage validation does not silently normalize historical records.
+    with pytest.raises(ValueError,match='evidence_quotes'):validate(rows,PUBLIC,previous=conditions())
+
+
+def test_model_schema_bounds_preserve_multiline_unicode_quotes():
+    import re
+    from cvevidence_core.condition_plan import SCHEMA
+    from cvevidence_core.evidence_quotes import SCHEMA as QS
+    p=SCHEMA['items']['properties']['public_quote']['pattern']
+    q=QS['items']['properties']['quote']['pattern']
+    assert re.fullmatch(p,'+ 修補\n- 舊碼\t')
+    assert re.fullmatch(p,'中'*700) and not re.fullmatch(p,'中'*701)
+    assert re.fullmatch(q,'x'*1200) and not re.fullmatch(q,'x'*1201)
+    assert re.fullmatch(q,'4 17') and not re.fullmatch(q,'')

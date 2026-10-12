@@ -1,5 +1,11 @@
 # Horace 開發同步
 
+## 2026-10-13 調查引用提交改善
+
+- 新模型 schema 明列條件／摘錄長度與數量限制；REVIEW／REPORT 明確選取的 X-ID 自動納入條件引用，仍核對 scope、hash、逐字原文。原始模型決策與新增引用分開保存，歷史不重寫。
+- 全量 844 passed、23 subtests passed（301.20 秒）；新 LIVE 兩組同版本 OpenSSL，5／6 calls，總 351922 tokens，strict schema 可用。delta 錯誤 X-ID 被拒後修正，仍有關鍵實作未讀；epsilon 讀出回補修補及正常運作。兩組 LOGIC_REVIEW_REQUIRED、正式 NEEDS_INVESTIGATION，不能以報告保存宣稱完成 PC 查核。
+- 模型與 200000 token 門檻不變；可信建置、PC3 必要性分類及有限預算下完整閱讀仍待補強。詳見 [驗收與限制](../releases/2026-10-13-調查引用提交改善.md)。本機 8506 更新，沿用 PR #32，Harvey 決定合併。
+
 ## 2026-10-13 OpenSSL 同版本回補與替代路徑查核
 
 - main 仍 b95f96d；延續原分支／PR #32，不代 Harvey 合併。35fd10b 恢復 OpenSSL 舊公告／gitweb 的固定來源映射，並在同一批公網 DNS 位址有限重試，TLS／大小／共同期限限制不放寬。
