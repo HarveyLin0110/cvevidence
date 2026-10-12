@@ -3,12 +3,13 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 import hashlib
 import http.client
+import errno
 import ipaddress
 import re
 import socket
 import ssl
 import time
-from urllib.parse import urlsplit, urljoin
+from urllib.parse import urlsplit, urljoin, unquote
 
 # Operator-reviewed origins, not a claim that all content on them is trustworthy.
 HOSTS = frozenset({'curl.se', 'openssl-library.org', 'www.openssl.org', 'zlib.net',
@@ -20,8 +21,21 @@ MAX_BYTES = 1_000_000
 MAX_TEXT = 120000
 
 
+def _openssl_snapshot(url):
+    """Exact published legacy patterns; never follow a remote Location header."""
+    if not isinstance(url,str):return None
+    advisory=re.fullmatch(r'https://www\.openssl\.org/news/secadv/([0-9]{8})\.txt',url)
+    if advisory:return 'https://openssl-library.org/news/secadv/'+advisory.group(1)+'.txt'
+    legacy=re.fullmatch(r'https://git\.openssl\.org/gitweb/\?([^#\s\\]+)',url)
+    if legacy:
+        commit=re.fullmatch(r'p=openssl\.git;a=commitdiff;h=([0-9a-f]{40})',unquote(legacy.group(1)))
+        if commit:return 'https://github.com/openssl/openssl/commit/'+commit.group(1)+'.patch'
+    return None
+
+
 def approved(url):
     try:
+        url=_openssl_snapshot(url) or url
         p = urlsplit(url)
         if (p.scheme != 'https' or p.hostname not in HOSTS or p.port not in (None, 443)
                 or p.username or p.password or p.query or p.fragment or '\\' in url):
@@ -40,7 +54,9 @@ def approved(url):
 
 
 def snapshot_url(url):
-    """Fixed GitHub PR-to-patch mapping; no redirect or model-provided target."""
+    """Fixed public reference mappings; no redirect or model-provided target."""
+    openssl=_openssl_snapshot(url)
+    if openssl:return openssl
     match=re.fullmatch(r'https://github.com/([\w.-]+)/([\w.-]+)/pull/([1-9][0-9]{0,8})',url)
     if match:return 'https://patch-diff.githubusercontent.com/raw/'+ '/'.join(match.group(1,2))+'/pull/'+match.group(3)+'.patch'
     return url+'.patch' if re.fullmatch(r'https://github.com/[\w.-]+/[\w.-]+/commit/[0-9a-f]{7,40}',url) else url
@@ -71,14 +87,32 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
 
 
 def _download(url, deadline):
+    url=snapshot_url(url)
     if not approved(url): raise ValueError('SOURCE_POLICY')
     p = urlsplit(url)
     addresses = sorted({row[4][0] for row in socket.getaddrinfo(p.hostname, 443, type=socket.SOCK_STREAM)})
     if not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses):
         raise ValueError('NON_PUBLIC_ADDRESS')
+    last_error=None
+    # A valid public IPv6 answer need not be reachable from this deployment.
+    # Try other answers from the same checked DNS result, never a redirect or
+    # a fresh hostname lookup. All attempts consume the original deadline.
+    for ip in addresses[:4]:
+        if deadline<=time.monotonic():raise TimeoutError()
+        try:return _read_address(p,ip,deadline)
+        except OSError as exc:
+            if isinstance(exc,ssl.SSLError):raise
+            if not isinstance(exc,(ConnectionError,TimeoutError)) and exc.errno not in {
+                    errno.ENETUNREACH,errno.EHOSTUNREACH,errno.EADDRNOTAVAIL,errno.ETIMEDOUT}:
+                raise
+            last_error=exc
+    raise last_error
+
+
+def _read_address(p, ip, deadline):
     remaining = deadline - time.monotonic()
     if remaining <= 0: raise TimeoutError()
-    conn = _PinnedHTTPS(p.hostname, addresses[0], min(remaining, 5))
+    conn = _PinnedHTTPS(p.hostname, ip, min(remaining, 5))
     try:
         conn.request('GET', p.path, headers={'User-Agent': 'CVEvidence/0.1', 'Accept': 'text/plain,text/html,application/json', 'Accept-Encoding': 'identity'})
         response = conn.getresponse()
@@ -121,7 +155,8 @@ def collect(info, *, timeout=15, limit=3):
         unique.setdefault(snapshot_url(url), (url, parent))
     queue = list(unique.values())
     # Prefer the vendor advisory over mirrors and commit patch bytes over HTML.
-    queue.sort(key=lambda row: (urlsplit(row[0]).hostname != 'curl.se', 'github.com' in row[0], '/docs/' not in row[0]))
+    queue.sort(key=lambda row: (urlsplit(snapshot_url(row[0])).hostname not in {'curl.se','openssl-library.org'},
+                               urlsplit(row[0]).hostname == 'lists.debian.org', '/docs/' not in row[0]))
     while queue and len(sources) < limit and attempts < limit*2 and time.monotonic() < deadline:
         original, parent = queue.pop(0)
         url = snapshot_url(original)
@@ -148,7 +183,7 @@ def collect(info, *, timeout=15, limit=3):
             row['publisher_scope'] = ('DOWNSTREAM_DISTRIBUTION' if urlsplit(url).hostname == 'lists.debian.org'
                                       else 'PUBLIC_REFERENCE_SCOPE_REQUIRES_REVIEW')
             sources.append(row)
-            patches = [(link, url) for link in links if approved(link) and re.search(r'/commit/[0-9a-f]{7,40}(?:\.patch)?$', link)]
+            patches = [(link, url) for link in links if approved(link) and re.search(r'/commit/[0-9a-f]{7,40}\.patch$', snapshot_url(link))]
             queue = patches + queue
         except (OSError, ValueError, UnicodeError, http.client.HTTPException):
             failures.append({'url': url, 'status': 'UNAVAILABLE', 'gap_kind': 'CAPABILITY_GAP'})
