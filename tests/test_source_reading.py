@@ -36,10 +36,12 @@ def test_invalid_batch_request_fails_as_a_whole(tmp_path,variant):
         read_batch(c,selected,1,201 if variant=='overlong' else 1)
 
 
-def test_batch_aggregate_utf8_limit_preserves_only_returned_reads(tmp_path):
+@pytest.mark.parametrize('ranged',[False,True])
+def test_batch_aggregate_utf8_limit_preserves_only_returned_reads(tmp_path,ranged):
     c=context(tmp_path,{n:('中'*6000).encode() for n in ('a.txt','b.txt','c.txt')})
     a,b,last=ids(c,'a.txt','b.txt','c.txt')
-    result=read_batch(c,[a,b,last],1,1)
+    result=(read_batch(c,[],1,1,read_ranges=[{'source_id':sid,'start_line':1,'end_line':1} for sid in (a,b,last)])
+        if ranged else read_batch(c,[a,b,last],1,1))
     assert [x['source_id'] for x in result['matches']]==[a,b]
     assert result['coverage_limited'] and result['failures'][0]['source_id']==last
     assert '48000' in result['failures'][0]['error']
@@ -114,3 +116,92 @@ def test_later_changed_file_invalidates_whole_batch(tmp_path):
     c=context(tmp_path,{'a.txt':b'TEST_ONLY valid','b.txt':b'TEST_ONLY original'})
     a,b=ids(c,'a.txt','b.txt');c.source(b)[0].write_text('TEST_ONLY changed')
     with pytest.raises(IntegrityError):read_batch(c,[a,b],1,1)
+
+
+def test_ranges_read_implementation_entry_and_runtime_at_distinct_positions(tmp_path):
+    c=context(tmp_path,{'source.c':b'\n'*299+b'TEST_ONLY critical loop\n'+b'\n'*199+b'TEST_ONLY input caller\n',
+        'runtime.txt':b'TEST_ONLY normal observation\n'})
+    source,runtime=ids(c,'source.c','runtime.txt')
+    ranges=[{'source_id':source,'start_line':300,'end_line':300},
+        {'source_id':source,'start_line':500,'end_line':500},
+        {'source_id':runtime,'start_line':1,'end_line':1}]
+    result=read_batch(c,[],1,1,read_ranges=ranges)
+    assert [x['text'] for x in result['matches']]==['TEST_ONLY critical loop','TEST_ONLY input caller','TEST_ONLY normal observation']
+    assert all(verify_excerpt(c,x) for x in result['matches']) and not result['failures']
+    task={'action':'READ_BATCH','status':'COMPLETED','read_ranges':ranges,'result':result}
+    resumed=continuation(c,'CVE-2024-1179',previous_reads(c,result['matches'],[task]))
+    assert len(resumed['retained_read_excerpt_ids'])==3
+    assert set(evaluate({'tasks':[task]})['explicit_read_source_ids'])=={source,runtime}
+
+
+@pytest.mark.parametrize('kind',['one','four','duplicate','extra','bool','negative','overlong','reversed','mix_ids','mix_lines','not_list'])
+def test_bad_ranges_rejected_before_any_file_read(tmp_path,monkeypatch,kind):
+    c=context(tmp_path,{'a.txt':b'TEST_ONLY a','b.txt':b'TEST_ONLY b'});a,b=ids(c,'a.txt','b.txt')
+    ranges=[{'source_id':a,'start_line':1,'end_line':1},{'source_id':b,'start_line':1,'end_line':1}]
+    source_ids=[];first=1
+    if kind=='one':ranges=ranges[:1]
+    if kind=='four':ranges=ranges*2
+    if kind=='duplicate':ranges=[ranges[0],ranges[0]]
+    if kind=='extra':ranges[1]['path']='private/file'
+    if kind=='bool':ranges[1]['start_line']=True
+    if kind=='negative':ranges[1]['start_line']=0
+    if kind=='overlong':ranges[1]['end_line']=201
+    if kind=='reversed':ranges[1]['start_line']=2
+    if kind=='mix_ids':source_ids=[a,b]
+    if kind=='mix_lines':first=2
+    if kind=='not_list':ranges={}
+    monkeypatch.setattr('cvevidence_core.source_reading.read_bounded_excerpt',lambda *a:pytest.fail('invalid batch must not start reading'))
+    with pytest.raises(ValueError):read_batch(c,source_ids,first,1,read_ranges=ranges)
+
+
+def test_range_failures_keep_exact_requested_positions_and_remaining_reads(tmp_path):
+    c=context(tmp_path,{'a.txt':b'\n'*299+b'x'*24001,'b.txt':b'TEST_ONLY b'})
+    a,b=ids(c,'a.txt','b.txt')
+    result=read_batch(c,[],1,1,read_ranges=[{'source_id':a,'start_line':300,'end_line':300},
+        {'source_id':b,'start_line':1,'end_line':1}])
+    assert [x['source_id'] for x in result['matches']]==[b]
+    assert result['failures'][0]['start_line']==result['failures'][0]['end_line']==300
+    assert result['coverage_limited'] and result['failures'][0]['read_completed'] is False
+
+
+@pytest.mark.parametrize('kind',['changed','foreign'])
+def test_range_integrity_failure_does_not_publish_partial_success(tmp_path,kind):
+    c=context(tmp_path,{'a.txt':b'TEST_ONLY a','b.txt':b'TEST_ONLY b'});a,b=ids(c,'a.txt','b.txt')
+    if kind=='changed':c.source(b)[0].write_text('changed TEST_ONLY')
+    else:b='S-foreign'
+    with pytest.raises(IntegrityError):read_batch(c,[],1,1,read_ranges=[{'source_id':a,'start_line':1,'end_line':1},
+        {'source_id':b,'start_line':1,'end_line':1}])
+
+
+@pytest.mark.parametrize('provider_id',['openai_api','codex_cli'])
+def test_providers_expose_distinct_ranges_and_keep_raw_history(tmp_path,provider_id):
+    from tests.test_ai_provider_core import SimulatedProvider,decision
+    from cvevidence_core.ai import investigate
+    from cvevidence_core.queries import collect_evidence
+    from cvevidence_core.verifier import verify
+    from cvevidence_core.assessment import assess
+    c=context(tmp_path,{'a.txt':b'\n'*299+b'TEST_ONLY loop','b.txt':b'TEST_ONLY caller'})
+    a,b=ids(c,'a.txt','b.txt');ranges=[{'source_id':a,'start_line':300,'end_line':300},
+        {'source_id':b,'start_line':1,'end_line':1}]
+    v=verify(c,collect_evidence(c,'CVE-2023-38545'))
+    def finish(kw):
+        step=kw['history'][0];assert step['decision']['read_ranges']==ranges
+        return decision('COMPLETE',finding='TEST_ONLY 已讀兩處，待覆核',citations=[x['excerpt_id'] for x in step['result']['matches']])
+    provider=SimulatedProvider([decision('READ_BATCH',read_ranges=ranges),finish]);provider.provider_id=provider_id
+    result=investigate(c,v,assess(c,v),mode='LIVE',provider=provider,max_calls=2)
+    assert result['status']=='COMPLETED' and len(result['excerpts'])==2
+    assert result['tasks'][0]['read_ranges']==ranges and result['tasks'][0]['source_ids']==[]
+
+
+def test_ranges_cannot_be_hidden_in_another_tool_action(tmp_path):
+    from tests.test_ai_provider_core import SimulatedProvider,decision
+    from cvevidence_core.ai import investigate
+    from cvevidence_core.queries import collect_evidence
+    from cvevidence_core.verifier import verify
+    from cvevidence_core.assessment import assess
+    c=context(tmp_path,{'a.txt':b'TEST_ONLY a','b.txt':b'TEST_ONLY b'});a,b=ids(c,'a.txt','b.txt')
+    v=verify(c,collect_evidence(c,'CVE-2023-38545'))
+    provider=SimulatedProvider([decision('LIST',read_ranges=[{'source_id':sid,'start_line':1,'end_line':1} for sid in (a,b)])])
+    r=investigate(c,v,assess(c,v),mode='LIVE',provider=provider,max_calls=1)
+    assert r['tasks'][0]['status']=='TOOL_ERROR' and r['excerpts']==[]
+    assert '只用於 READ_BATCH' in r['tasks'][0]['result']['error']

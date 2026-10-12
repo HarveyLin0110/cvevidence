@@ -8,7 +8,7 @@ EXCERPT_FIELDS=('excerpt_id','source_id','file_sha256','start_line','end_line','
 
 
 def compact(context, packet):
-    """Keep one copy of each exact excerpt and condition set in this packet.
+    """Share exact excerpts, condition sets and duplicate reference URL lists.
 
     No truncation, semantic summary, range merging, or provider history editing.
     References are fixed application fields; external text never chooses them.
@@ -16,6 +16,19 @@ def compact(context, packet):
     size=lambda value:len(json.dumps(value,ensure_ascii=False,allow_nan=False).encode('utf-8'))
     before=size(packet)
     output=deepcopy(packet)
+    # The brief carries both a URL list and the same URLs with CNA/ADP
+    # provenance. Share only when order/content match exactly; retain every
+    # reference, provenance field and coverage flag in the detailed rows.
+    reference_urls_shared=0
+    brief=output.get('public_cve_record')
+    if isinstance(brief,dict):
+        details=brief.get('reference_details');refs=brief.get('references')
+        if (isinstance(refs,list) and refs and isinstance(details,list)
+                and all(isinstance(row,dict) and isinstance(row.get('url'),str) for row in details)
+                and refs==[row['url'] for row in details]):
+            reference_urls_shared=len(refs)
+            brief.pop('references')
+            brief['references_ref']='reference_details[].url'
     conditions_removed=0
     plan=(output.get('condition_plan') or {}).get('conditions')
     for name in ('rule_library','continuation'):
@@ -58,6 +71,7 @@ def compact(context, packet):
     return output,{'scope':'INITIAL_MODEL_PACKET_ONLY','original_bytes':before,'transmitted_bytes':after,
         'bytes_removed':before-after,'duplicate_condition_sets_removed':conditions_removed,
         'excerpt_occurrences_before':occurrences,'unique_excerpts_after':len(canonical),
+        'duplicate_reference_urls_shared':reference_urls_shared,
         'duplicate_excerpt_occurrences_removed':occurrences-len(canonical),
         'content_truncated_by_compaction':False,
-        'note':'本步僅共用逐字相同的條件與片段，不新增截短；既有來源／索引截短標記保留。byte 差值不是 token 或費用節省，完整保存紀錄不變。'}
+        'note':'本步僅共用逐字相同的條件、片段與同序公告網址，不新增截短；來源出處及既有截短標記保留。byte 差值不是 token 或費用節省，完整保存紀錄不變。'}

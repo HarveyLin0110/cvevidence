@@ -41,14 +41,14 @@ def test_partial_usage_keeps_known_lower_bound_without_claiming_complete():
     assert not summary['complete']
 
 
-def test_token_forecast_reserves_review_and_final_without_raising_limit():
+def test_token_forecast_reserves_one_report_and_allows_one_last_read():
     from cvevidence_core.investigation_control import budget_forecast
     calls=[{'usage':{'total_tokens':n}} for n in (27000,29000,35000)]
     advice=budget_forecast(calls,200000,9,True)
     assert advice['remaining_reported_token_allowance']==109000
     assert advice['estimated_next_call_tokens']==50000
     assert advice['estimated_affordable_calls_including_current']==2
-    assert advice['recommended_phase']=='REVIEW_NOW'
+    assert advice['recommended_phase']=='LAST_CHECK_OR_REPORT'
     calls.append({'usage':{'total_tokens':44000}})
     advice=budget_forecast(calls,200000,8,False)
     assert advice['recommended_phase']=='FINALIZE_NOW'
@@ -59,7 +59,7 @@ def test_token_forecast_unknown_usage_and_call_limit_still_disclosed():
     from cvevidence_core.investigation_control import budget_forecast
     advice=budget_forecast([{'usage':None}],200000,2,True)
     assert advice['estimated_next_call_tokens'] is None
-    assert advice['recommended_phase']=='REVIEW_NOW'
+    assert advice['recommended_phase']=='LAST_CHECK_OR_REPORT'
     advice=budget_forecast([{'usage':{'input_tokens':10000}}],200000,8,False)
     assert advice['estimated_next_call_tokens'] is None
     assert advice['remaining_reported_token_allowance']==190000

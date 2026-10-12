@@ -10,6 +10,7 @@ from .collection_guidance import collection_guide
 from .evidence_requests import SCHEMA as REQUEST_SCHEMA, validate as validate_requests, display as display_request, validate_legacy
 from .condition_plan import SCHEMA as CONDITION_SCHEMA, validate as validate_conditions, record as condition_record, QuoteMismatch, submitted_quote_citations
 from .providers import ProviderStep, ProviderError, responses_request, MAX_PROVIDER_INPUT_BYTES, MAX_PROVIDER_RECEIPT_BYTES
+from .source_reading import RANGES_SCHEMA
 
 SYSTEM='''你是 CVEvidence 的工程調查助理，對使用者的內容一律用繁體中文。
 先讀取 Q1–Q5 的實際狀態、事實與缺口，自行提出值得追加的具體問題，再使用 investigation_step。
@@ -56,12 +57,13 @@ compilation_database 是已交 compile_commands.json 的有界宣告摘要。can
 ASK_USER 用 requests 結構化列 1–3 項，全部針對一個最關鍵 condition_id，依重要性排序；每項只是一份具體材料（不能打包整個 SDK）。欄位 material、why、owner、how、alternative（可留空）、search_terms（1–3 個精確路徑／檔名詞）、existing_source_ids（已讀相關來源）、insufficiency（已交材料為何不足）、expected_resolution（取得後驗證什麼）。新 CVE 的 condition_id 用 PLAN 的 C-ID；已有專用規則用原 condition_id。required_files 留 []，系統會產生精簡清單。其餘 action 的 requests=[]。
 initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 X-ID；不用重新索取或重讀相同片段。提出 requests 前，工具會全量比對 search_terms 的檔案路徑；任何命中但未讀的材料會阻擋補件。先 READ 相關材料，再用 existing_source_ids 與 insufficiency 說明尚缺什麼；不能用很廣的搜尋詞或把已收到說成不存在。
 同一原文只在 initial_product_excerpts 保存一次；pc_evidence_packet 與 continuation 的 excerpt_ids 指向該清單的 X-ID，原文可直接使用，不代表缺件。rule_library／continuation 的 conditions_ref 若為 condition_plan.conditions，表示沿用該完整條件清單，無須再 PLAN。這些欄位共用不改變條件、引用或本輪重新 REVIEW 的要求。
+public_cve_record.references_ref 若為 reference_details[].url，完整參考網址就在 reference_details 各列，CNA／ADP 出處與截短標記保留；不是未取得參考連結。
 若 REVIEW 仍有 USER_MATERIAL_MISSING，且沒有成品排除線索、證據衝突或工具能力缺口，必須用 ASK_USER 提出一個最關鍵條件的最小結構化補件；不能只在 COMPLETE 摘要寫「請提供」。缺口屬工具或證據衝突時可 COMPLETE 交覆核，不要為了收尾而改條件狀態。
 如果已有 necessity=REQUIRED 的排除線索、無矛盾且全部條件必要性分類已釐清，先 COMPLETE 交工程覆核，不要為 PC3 等剩餘條件要求更多材料。工具未支援或尚未讀完，列工具待辦而非補件。ALTERNATIVE_PATH 的反證不能單獨停止其他適用途徑查核或繞過最小補件；舊計畫未保存 necessity 時保持原定義並交分析端建立新計畫，不在 REVIEW 偷改分類。
 PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收尾前必須先有 PLAN 與 REVIEW；每項 explanation 簡短說明命中或未完成原因。找不到專用驗證器屬 CAPABILITY_GAP，不應要求使用者補規則。
 每次只呼叫一個工具。所有參數必填；不適用的文字用空字串、陣列用 []、行號用 1。
-互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；matches 是已讀片段，failures 是尚未讀成的檔案，不要重讀成功部分或把失敗當缺件。連結圖等大檔先 SEARCH 函式／符號，再 READ 關鍵範圍。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
-runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先覆核已讀證據，可直接 REPORT，未查完明列 NOT_REVIEWED；REPORT_NOW 表示估計只剩這次呼叫，已有可交覆核進展時立即 REPORT 同時提交 conditions 與三層摘要，不要只做 REVIEW 而失去摘要。FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。真正材料缺口仍走 REVIEW／ASK_USER，不能省略補件檢查。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
+READ_BATCH 可一次讀 2–3 段：使用 read_ranges 為各段指定 source_id/start_line/end_line，source_ids=[]、外層行號=1；也可 read_ranges=[] 且以 source_ids 共用同一段範圍。各段最多 200 行／24000 bytes、合計 48000 bytes。先 SEARCH 定位實作／map，再把不同位置的實作、完整短入口或運作原文合併閱讀，避免多輪只查版本。可讀同檔不同段落；勿重複已讀範圍。各份回傳自己的 X-ID，仍須逐項分析；matches 已讀，failures 尚未讀成，不是缺件。其餘 action 的 read_ranges=[]。
+runtime_budget.recommended_phase=LAST_CHECK_OR_REPORT 表示估計還有兩次呼叫：若關鍵未知可由現有材料解除，先用一次有界 READ／READ_BATCH／SEARCH 完成最重要查核，下次 REPORT。已足以交覆核才立即 REPORT；不要因摘要能寫三段就提前放棄現有關鍵實作或入口。若已知真正缺件，兩次仍應保留 REVIEW／ASK_USER。REPORT_NOW 表示估計只剩這次，立即 REPORT 同時提交 conditions 與三層摘要，未查完保持 NOT_REVIEWED。FINALIZE_NOW 時 COMPLETE 或合法 ASK_USER。不得把工具未查完改成使用者缺件，不為收尾捏造答案；不要只看 remaining_calls，token 預算可能先用完。
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 conditions 每個文字欄最多 700 字；public_quote 優先選能支持條件的短段連續原文，無須搬整段 diff。diff 的 +、-、空白與換行都屬原文，不可省略、重排或拼接。每段產品 evidence_quotes 最多 1200 字；REVIEW／REPORT 中明確選用的 excerpt_id 也會納入該條件 citations 並重新核對，不必為了重複列 ID 再呼叫一次。這不會修正引文、接受未知 X-ID 或認證語意。
 '''
@@ -69,9 +71,10 @@ conditions 每個文字欄最多 700 字；public_quote 優先選能支持條件
 PROPERTIES={
  'action':{'type':'string','enum':['PLAN','REVIEW','REPORT','LIST','SEARCH','READ','READ_BATCH','SEARCH_PUBLIC','READ_PUBLIC','COMPARE','VERIFY','ASK_USER','COMPLETE']},
  'question':{'type':'string'},'reason':{'type':'string'},'term':{'type':'string'},
- 'source_ids':{'type':'array','items':{'type':'string'},'description':'READ 恰好一個產品 ID；READ_BATCH 2–3 個不同產品 ID，共用行範圍；READ_PUBLIC 恰好一個公告 P-ID；SEARCH_PUBLIC 可提供公告 P-ID 或 []；COMPARE 恰好兩個產品 ID；SEARCH 可提供多個已知產品 ID 或 []；其餘 action 用 []。'},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
+ 'source_ids':{'type':'array','items':{'type':'string'},'description':'READ 恰好一個產品 ID；READ_BATCH 共同行範圍用 2–3 個不同 ID，若使用 read_ranges 則用 []；READ_PUBLIC 恰好一個公告 P-ID；SEARCH_PUBLIC 可提供公告 P-ID 或 []；COMPARE 恰好兩個產品 ID；SEARCH 可提供多個已知產品 ID 或 []；其餘 action 用 []。'},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
  'finding':{'type':'string'},'citations':{'type':'array','items':{'type':'string'}},
- 'required_files':{'type':'array','items':{'type':'string'}}, 'conditions':CONDITION_SCHEMA, 'requests':REQUEST_SCHEMA}
+ 'required_files':{'type':'array','items':{'type':'string'}}, 'conditions':CONDITION_SCHEMA, 'requests':REQUEST_SCHEMA,
+ 'read_ranges':RANGES_SCHEMA}
 TOOL={'type':'function','name':'investigation_step','description':'提出與執行一項動態追加調查；只有目前快照中的唯讀操作。',
       'strict':True,'parameters':{'type':'object','properties':PROPERTIES,'required':list(PROPERTIES),'additionalProperties':False}}
 
@@ -132,9 +135,14 @@ def _request(config,items,timeout):
                              max_output_tokens=9000 if config.get('_analysis_depth')=='pc' else 3000)
 
 def _validate_args(args):
-    if not isinstance(args,dict) or set(args)!=set(PROPERTIES):raise ValueError('工具參數欄位不符')
+    # Older provider decisions need not contain the additive range field.
+    # Do not mutate them: provider history must preserve exact raw decisions.
+    if not isinstance(args,dict) or set(args)|{'read_ranges'}!=set(PROPERTIES):raise ValueError('工具參數欄位不符')
     for key,schema in PROPERTIES.items():
-        value=args[key];kind=schema['type']
+        value=args.get(key,[]) if key=='read_ranges' else args[key];kind=schema['type']
+        if key=='read_ranges':
+            if not isinstance(value,list) or len(value)>3:raise ValueError('read_ranges 最多三段')
+            continue
         if key in ('conditions','requests'):
             if not isinstance(value,list) or len(value)>8:raise ValueError('條件清單格式不符')
             continue
@@ -479,6 +487,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     if not args['citations']:raise ValueError('PC 查核收尾須引用本次已核對的 E-ID 或原文 X-ID。')
                 if args['conditions'] and action not in {'PLAN','REVIEW','REPORT'}:raise ValueError('conditions 只用於 PLAN/REVIEW/REPORT')
                 if args['requests'] and action!='ASK_USER':raise ValueError('requests 只用於 ASK_USER')
+                if args.get('read_ranges') and action!='READ_BATCH':raise ValueError('read_ranges 只用於 READ_BATCH')
                 if requires_plan and action in {'ASK_USER','COMPLETE'} and not reviewed:
                     raise ValueError('先 PLAN 建立 CVE 條件、讀產品證據並 REVIEW；不可只輸出三段標題或直接補件。')
                 if action=='PLAN':
@@ -523,7 +532,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     tool_output=read_bounded_excerpt(context,ids[0],args['start_line'],args['end_line'])
                 elif action=='READ_BATCH':
                     from .source_reading import read_batch
-                    tool_output=read_batch(context,ids,args['start_line'],args['end_line'])
+                    tool_output=read_batch(context,ids,args['start_line'],args['end_line'],read_ranges=args.get('read_ranges'))
                 elif action=='COMPARE':
                     if len(ids)!=2:raise ValueError('COMPARE 需要兩個 source_id')
                     tool_output=compare_sources(context,*ids)

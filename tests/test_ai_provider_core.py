@@ -214,11 +214,14 @@ def api_response(args, number):
                         'call_id': f'TEST_ONLY_CALL_{number}', 'arguments': json.dumps(args)}]}
 
 
-def test_openai_adapter_keeps_native_tool_linkage_and_simulated_mode(case):
+@pytest.mark.parametrize('legacy_ranges',[False,True])
+def test_openai_adapter_keeps_native_tool_linkage_and_simulated_mode(case,legacy_ranges):
     seen = []
     def transport(config, items, timeout):
         seen.append(deepcopy(items))
-        return api_response(decision('LIST') if len(seen) == 1 else completed(case), len(seen))
+        args=decision('LIST') if len(seen) == 1 else completed(case)
+        if legacy_ranges:args.pop('read_ranges')
+        return api_response(args, len(seen))
     provider = OpenAIAdapter({'OPENAI_API_KEY': 'TEST_ONLY_SECRET', 'OPENAI_MODEL': 'TEST_ONLY_CONFIGURED_MODEL'}, transport=transport)
     result = ai.investigate(*case, mode='LIVE', provider=provider, max_calls=2)
     assert result['mode'] == 'SIMULATED' and result['status'] == 'COMPLETED'

@@ -57,6 +57,26 @@ def test_distinct_overlapping_ranges_and_changed_conditions_are_not_discarded(ma
     assert stats['duplicate_condition_sets_removed']==stats['duplicate_excerpt_occurrences_removed']==0
 
 
+@pytest.mark.parametrize('variant',['equal','different_order','different_content','invalid_detail'])
+def test_reference_urls_share_only_exact_order_without_losing_provenance(material,variant):
+    c,_=material;urls=['https://example.org/TEST_ONLY-one','https://example.org/TEST_ONLY-two']
+    p={'public_cve_record':{'references':urls,'reference_details':[
+        {'url':u,'providers':['CNA','ADP'],'tags':['vendor-advisory']} for u in urls],
+        'references_truncated':True,'record_sha256':'TEST_ONLY hash','description':'TEST_ONLY original'}}
+    if variant=='different_order':p['public_cve_record']['references']=urls[::-1]
+    if variant=='different_content':p['public_cve_record']['references']=['https://example.org/TEST_ONLY-third']
+    if variant=='invalid_detail':p['public_cve_record']['reference_details'][0].pop('url')
+    original=deepcopy(p);out,stats=compact(c,p)
+    assert p==original
+    if variant!='equal':
+        assert out==p and stats['duplicate_reference_urls_shared']==0
+        return
+    detail=out['public_cve_record'];assert detail['reference_details']==p['public_cve_record']['reference_details']
+    assert detail['references_ref']=='reference_details[].url' and detail['references_truncated']
+    assert [r['url'] for r in detail['reference_details']]==p['public_cve_record']['references']
+    assert stats['duplicate_reference_urls_shared']==2 and stats['bytes_removed']>0
+
+
 @pytest.mark.parametrize('change',['text','scope','path','unknown_field'])
 def test_conflicting_or_forged_excerpt_fails_closed(material,change):
     c,x=material;y=deepcopy(x)
