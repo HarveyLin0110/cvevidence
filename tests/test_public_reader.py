@@ -13,7 +13,7 @@ def bundle(text):
 def test_search_and_read_recover_saved_detail_omitted_from_model_packet():
     data=bundle(('p'*149+'\n')*40+'target_condition = check_length(input)\nreturn reject\n')
     packet=compact(data)
-    assert 'target_condition' not in packet['sources'][0]['text']
+    assert not any('target_condition' in q['text'] for q in packet['sources'][0]['quote_options'])
     assert packet['sources'][0]['total_saved_lines']==42
     found=search(data,[],'target_condition')['public_matches'][0]
     assert found['line']==41

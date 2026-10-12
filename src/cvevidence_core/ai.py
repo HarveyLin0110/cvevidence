@@ -66,6 +66,7 @@ READ_BATCH 可一次讀 2–3 段：使用 read_ranges 為各段指定 source_id
 runtime_budget.recommended_phase=LAST_CHECK_OR_REPORT 表示估計還有兩次呼叫：若關鍵未知可由現有材料解除，先用一次有界 READ／READ_BATCH／SEARCH 完成最重要查核，下次 REPORT。已足以交覆核才立即 REPORT；不要因摘要能寫三段就提前放棄現有關鍵實作或入口。若已知真正缺件，兩次仍應保留 REVIEW／ASK_USER。REPORT_NOW 表示估計只剩這次，立即 REPORT 同時提交 conditions 與三層摘要，未查完保持 NOT_REVIEWED。FINALIZE_NOW 時 COMPLETE 或合法 ASK_USER。不得把工具未查完改成使用者缺件，不為收尾捏造答案；不要只看 remaining_calls，token 預算可能先用完。
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 conditions 每個文字欄最多 700 字；public_quote 優先選能支持條件的短段連續原文，無須搬整段 diff。diff 的 +、-、空白與換行都屬原文，不可省略、重排或拼接。每段產品 evidence_quotes 最多 1200 字；REVIEW／REPORT 中明確選用的 excerpt_id 也會納入該條件 citations 並重新核對，不必為了重複列 ID 再呼叫一次。這不會修正引文、接受未知 X-ID 或認證語意。
+公告原文在 public_sources.sources[].quote_options，各有 quote_id 與 text。PLAN 優先選足以支持條件的同一 P-ID 選項，public_quote_id 填該編號、public_quote 留空，由工具核對並還原確切原文，避免重抄 diff。REVIEW／REPORT 沿用相同選項，不能換條件定義或公告依據。若既有逐字引文不在選項中，可 public_quote_id 留空並保留原 public_quote；READ_PUBLIC 也會提供其保存範圍的選項。只選工具已提供的編號，不自行計算。選項若無充分支持應修改待查條件或讀更多公告，不因有編號就視為語意成立。它不是產品 X-ID，不放 citations。
 '''
 
 PROPERTIES={
@@ -344,8 +345,11 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             result['initial_product_excerpts']+=resumed['excerpts']
             payload['continuation_instruction']='已有條件計畫，不要再 PLAN；先處理前次未解問題與新增材料，再 REVIEW 全部條件。retained_read_excerpt_ids 是前輪成功 READ 且本輪已核對相同原文的片段，可滿足多副本閱讀檢查，不需為此重讀；不代表全文或語意充分。'
     from .public_packet import compact as compact_public
+    from .public_quotes import offered_ids, resolve_submissions
+    public_quote_offers=set()
     if result.get('public_sources'):
         payload['public_sources']=compact_public(result['public_sources'])
+        public_quote_offers=offered_ids(payload['public_sources']['sources'])
     if resumed:
         # Public text already has one dedicated slot. Do not retransmit it in
         # continuation or retain an entire nested previous investigation.
@@ -490,9 +494,12 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 if args.get('read_ranges') and action!='READ_BATCH':raise ValueError('read_ranges 只用於 READ_BATCH')
                 if requires_plan and action in {'ASK_USER','COMPLETE'} and not reviewed:
                     raise ValueError('先 PLAN 建立 CVE 條件、讀產品證據並 REVIEW；不可只輸出三段標題或直接補件。')
+                if action in {'PLAN','REVIEW','REPORT'}:
+                    submitted_conditions,public_selections=resolve_submissions(submitted_conditions,result.get('public_sources',{}),public_quote_offers)
+                    if public_selections:task['public_quote_selections']=public_selections
                 if action=='PLAN':
                     if not requires_plan or planned is not None:raise ValueError('本輪不能重設條件計畫')
-                    planned=validate_conditions(args['conditions'],result['public_sources']['sources'])
+                    planned=validate_conditions(submitted_conditions,result['public_sources']['sources'])
                     result['condition_plan']=condition_record(context,verified.cve_id,planned)
                     tool_output=result['condition_plan']
                 elif action in ('REVIEW','REPORT'):
@@ -520,6 +527,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     from .public_reader import read as read_public
                     if len(ids)!=1:raise ValueError('READ_PUBLIC 需要一個公告 P-ID')
                     tool_output=read_public(result.get('public_sources',{}),ids[0],args['start_line'],args['end_line'])
+                    public_quote_offers.update((ids[0],q['quote_id']) for q in tool_output['quote_options'])
                 elif action=='SEARCH':
                     if not ids:
                         from .relevance import rank
@@ -589,7 +597,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if action in {'PLAN','REVIEW'} and task['status']=='COMPLETED':
                 feedback={'accepted':True,'plan_hash':tool_output['plan_hash'],
                     'condition_states':{r['condition_id']:r['state'] for r in tool_output['conditions']},
-                    'note':'條件定義與本次提交相同，完整內容已保存；後續 REVIEW 保留原定義與公告引文。接受格式與引用不表示語意已驗證。'}
+                    'note':'條件定義已保存；public_quote_id 選項已核對並還原原文。後續 REVIEW 保留原定義與同一選項／公告引文。接受格式與引用不表示語意已驗證。'}
                 task['model_feedback']=deepcopy(feedback)
             if provider is None:
                 items.extend(output)

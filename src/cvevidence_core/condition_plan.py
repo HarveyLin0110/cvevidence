@@ -12,10 +12,12 @@ FIELDS = {'condition_id', 'layer', 'requirement', 'exclusion', 'check', 'public_
 SCHEMA = {'type': 'array', 'maxItems': 8, 'items': {'type': 'object', 'properties': {
     'condition_id': {'type':'string'}, 'layer': {'type':'string','enum':['PC1','PC2','PC3']},
     'necessity': {'type':'string','enum':NECESSITIES},
+    'public_quote_id':{'type':'string','pattern':r'^(Q[0-9]+-[0-9]+)?$',
+        'description':'優先選同一 P-ID 已提供的 quote_options 編號並將 public_quote 留空；沿用逐字摘錄時此欄留空。'},
     **{k:{'type':'string','pattern':r'^[\s\S]{0,700}$'} for k in ('requirement','exclusion','check','public_source_id','public_quote','explanation')},
     'state': {'type':'string','enum':STATES}, 'citations': {'type':'array','maxItems':8,'items':{'type':'string'}},
     'evidence_quotes':QUOTE_SCHEMA},
-    'required': sorted(FIELDS|{'evidence_quotes','necessity'}), 'additionalProperties': False}}
+    'required': sorted(FIELDS|{'evidence_quotes','necessity','public_quote_id'}), 'additionalProperties': False}}
 
 
 def submitted_quote_citations(rows):

@@ -21,9 +21,11 @@ def read(bundle, source_id, start, end):
     if start>len(lines):raise ValueError('公告行號超出保存範圍')
     end=min(end,len(lines));text='\n'.join(lines[start-1:end])
     if len(text.encode())>8000:raise ValueError('公告片段超過 8000 bytes，請縮小行數；單行超限屬工具限制')
+    from .public_quotes import options
     return {'public_source_id':source_id,'url':source['url'],'start_line':start,'end_line':end,
             'total_lines':len(lines),'text':text,'text_sha256':source['text_sha256'],
             'snapshot_truncated':source.get('truncated',False),
+            'quote_options':options(source,start_line=start,end_line=end)['quote_options'],
             'role':'PUBLIC_REFERENCE_NOT_PRODUCT_EVIDENCE',
             'note':'保存文字的行號，不是上游網頁／原碼行號。P-ID 只作公告引用，不產生產品 X-ID 或受影響判定。'}
 
