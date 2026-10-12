@@ -103,23 +103,17 @@ def test_worker_environment_has_only_ai_credentials(case, monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "TEST_ONLY_GITHUB_SECRET")
     monkeypatch.setenv("OAUTH_CLIENT_SECRET", "TEST_ONLY_OAUTH_SECRET")
     captured = {}
-    class Process:
-        returncode = 0
-        pid = 999999
-        def __init__(self, args, **kwargs):
-            captured.update(kwargs)
-            self.output = kwargs["stdout"]
-        def communicate(self, raw, timeout):
-            request = json.loads(raw)
-            assert "TEST_ONLY_SECRET" not in raw.decode()
-            from types import SimpleNamespace
-            scope = SimpleNamespace(context_hash=request["context_hash"], cve_id=request["cve_id"],
-                assessment_id=request["assessment_id"], model="TEST_ONLY_MODEL")
-            self.output.write(json.dumps(synthetic(scope)).encode())
-    monkeypatch.setattr(subprocess, "Popen", Process)
+    def worker(args,raw,**kwargs):
+        captured.update(kwargs)
+        request=json.loads(raw)
+        assert 'TEST_ONLY_SECRET' not in raw.decode()
+        from types import SimpleNamespace
+        scope=SimpleNamespace(context_hash=request['context_hash'],cve_id=request['cve_id'],assessment_id=request['assessment_id'],model='TEST_ONLY_MODEL')
+        return 0,json.dumps(synthetic(scope)).encode()
+    monkeypatch.setattr('cvevidence.ai_service.run_worker',worker)
     result = runner.investigate_ai(parent.run_id, consent=True)
     assert result["status"] == "NEEDS_USER_INPUT"
-    assert captured["start_new_session"] is True
+    assert callable(captured['cancel_check'])
     assert captured["env"]["OPENAI_API_KEY"] == "TEST_ONLY_SECRET"
     assert not {"GITHUB_TOKEN", "OAUTH_CLIENT_SECRET", "CVEVIDENCE_AI_ENV_FILE"} & captured["env"].keys()
 
@@ -153,21 +147,12 @@ def test_concurrent_attempt_executes_once(case, monkeypatch):
     assert calls == [ai_id]
 
 
-def test_timeout_kills_process_group(case, monkeypatch):
-    import signal
-    import cvevidence.ai_service as service
-    runner, parent = case
-    killed, waited = [], []
-    class Process:
-        pid = 999999
-        def __init__(self, *args, **kwargs): pass
-        def communicate(self, *args, **kwargs):
-            raise subprocess.TimeoutExpired("TEST_ONLY", 1)
-        def wait(self): waited.append(True)
-    monkeypatch.setattr(subprocess, "Popen", Process)
-    monkeypatch.setattr(service.os, "killpg", lambda pid, sig: killed.append((pid, sig)))
-    assert runner.investigate_ai(parent.run_id, consent=True)["status"] == "TIMED_OUT"
-    assert killed == [(999999, signal.SIGKILL)] and waited == [True]
+def test_timeout_preserves_failure_record(case, monkeypatch):
+    runner,parent=case
+    def worker(*args,**kwargs):raise subprocess.TimeoutExpired('TEST_ONLY',1)
+    monkeypatch.setattr('cvevidence.ai_service.run_worker',worker)
+    result=runner.investigate_ai(parent.run_id,consent=True)
+    assert result['status']=='TIMED_OUT' and result['outcome']['error_code']=='AI_DEADLINE_EXCEEDED'
 
 
 def test_ai_form_requires_consent_and_report_preserves_engineering(case, monkeypatch):
@@ -192,6 +177,8 @@ def test_ai_form_requires_consent_and_report_preserves_engineering(case, monkeyp
     assert not app.exception and not calls and app.warning
     app.checkbox[0].check()
     next(b for b in app.button if b.label == "開始 AI 調查").click().run()
+    from tests.test_ai_provider_ui import settle
+    settle(app)
     assert not app.exception and len(calls) == 1
     record = runner.read_ai(calls[0])
     original = runner.read_engineering(parent.run_id)
@@ -199,6 +186,8 @@ def test_ai_form_requires_consent_and_report_preserves_engineering(case, monkeyp
     assert report["analyses"][0]["ai"]["mode"] == "LIVE"
     assert original["analyses"][0]["ai"]["mode"] == "OFFLINE"
     next(b for b in app.button if b.label == "開始 AI 調查").click().run()
+    from tests.test_ai_provider_ui import settle
+    settle(app)
     assert not app.exception and len(calls) == 1
 
 

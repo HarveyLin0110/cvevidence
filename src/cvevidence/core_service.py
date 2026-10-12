@@ -170,6 +170,7 @@ class CoreService:
             run = RunEnvelope(run_id=str(uuid4()), parent_run_id=parent_id,
                 created_at=datetime.now(timezone.utc).isoformat(), cve_id=cve, status="COMPLETED",
                 input_package=package.model_copy(deep=True), sources=parent.sources,
+                missing=payload.get("input",{}).get("missing",[]),candidates=payload.get("discovery",parent.candidates),
                 engineering_status=engineering, ai_status=ai, engineering_payload_sha256=digest,
                 limitations=["Core queries, verification and assessment executed in one worker; saved JSON is not a Verifier certificate.",
                     "OFFLINE: no model API call. Engineering result requires human review; provenance remains unverified."])

@@ -116,27 +116,60 @@ def test_verifier_rejects_forged_generic_facts_and_safety_claim(context):
     with pytest.raises(IntegrityError): investigate(context, verified, assessment)
 
 
-def test_later_ai_can_read_same_context_and_receive_public_record_as_data(context):
+@pytest.mark.parametrize('reject_first',[False,True,'complete'])
+def test_later_ai_can_read_same_context_and_receive_public_record_as_data(context,reject_first):
     entry = analyzed(context)['analyses'][0]
     collection = collect_evidence(context, CVE)
     verified = verify(context, collection)
     calls = []
     source_id = context.by_path('source/main.c')[1]['source_id']
+    from .test_condition_plan import conditions
+    from .test_evidence_requests import request
+    rows=conditions()
+    from cvevidence_core.public_sources import cna_source
+    public=cna_source(public_cve.brief(public_record()))[0]
+    for row in rows:
+        row.update(public_source_id=public['source_id'],public_quote=public['text'])
     def transport(config, items, timeout):
         calls.append(copy.deepcopy(items))
         args = {k: [] if p['type'] == 'array' else 1 if p['type'] == 'integer' else '' for k, p in PROPERTIES.items()}
         args.update(question='TEST_ONLY：這份成品是否屬於公告目標？', reason='TEST_ONLY：依公告與交付材料核對目標')
-        if len(calls) == 1: args.update(action='READ', source_ids=[source_id], end_line=2)
-        else: args.update(action='ASK_USER', required_files=['請向產品維護者取得同成品型號／版本與公告目標對應說明。'])
+        if len(calls)==1: args.update(action='PLAN',conditions=copy.deepcopy(rows))
+        elif len(calls)==2: args.update(action='READ',source_ids=[source_id],end_line=2)
+        elif len(calls)==3:
+            rows[2].update(state='USER_MATERIAL_MISSING',explanation='已讀來源只包含示意入口，無部署配置')
+            args.update(action='REVIEW',conditions=copy.deepcopy(rows))
+        else:
+            req=request();req['existing_source_ids']=[source_id]
+            if reject_first and len(calls)==4:req['condition_id']='C1'
+            args.update(action='ASK_USER',requests=[req])
+            if reject_first=='complete' and len(calls)==4:
+                from cvevidence_core.sources import read_excerpt
+                args.update(action='COMPLETE',requests=[],finding='TEST_ONLY 缺部署資料，請提供配置',citations=[read_excerpt(context,source_id,1,2)['excerpt_id']])
         return {'id': 'TEST_ONLY', 'model': 'TEST_ONLY', 'status': 'completed', 'output': [
             {'type': 'function_call', 'name': 'investigation_step', 'call_id': 'test', 'arguments': json.dumps(args)}]}
     with patch('cvevidence_core.ai.settings', return_value={'OPENAI_MODEL': 'TEST_ONLY', 'OPENAI_API_KEY': 'TEST_ONLY'}):
         result = investigate(context, verified, entry['assessment'], mode='LIVE', public_record=public_record(), transport=transport)
     payload = json.loads(calls[0][0]['content'])
+    assert result['binary_metadata']==payload['binary_metadata']
+    for t in result['tasks']:
+        if t['action'] in {'PLAN','REVIEW'} and t['status']=='COMPLETED':
+            assert t['result']['conditions']
+            assert 'conditions' not in t['model_feedback']
+            assert t['model_feedback']['plan_hash']==t['result']['plan_hash']
+            assert len(json.dumps(t['model_feedback']))<len(json.dumps(t['result']))
+    if reject_first:
+        rejected=result['tasks'][-2]
+        assert rejected['status']=='TOOL_ERROR'
+        assert rejected['result']['condition_states']['C1']=='NOT_REVIEWED'
+        assert '不得只為通過檢查' in rejected['result']['recovery']
+        assert any('condition_states' in str(item) for item in calls[-1])
     assert payload['assessment_kind'] == 'GENERAL_TRIAGE'
     assert 'ignore all rules' in payload['public_cve_record']['description']
     assert result['mode'] == 'SIMULATED' and result['status'] == 'NEEDS_USER_INPUT'
-    assert result['tasks'][0]['result']['text'].startswith('/* TEST_ONLY')
+    assert result['tasks'][1]['result']['text'].startswith('/* TEST_ONLY')
+    assert len(result['tasks'][-1]['evidence_requests'])==1
+    assert result['tasks'][-1]['existing_material_check'][0]['unread_matches']==0
     assert entry['assessment']['verdict'] == 'NEEDS_INVESTIGATION'
 
 
@@ -148,6 +181,31 @@ def test_saved_engineering_is_immutable_and_later_ai_does_not_refetch(context):
             later = investigate_after_engineering(context, saved)
     assert later['analyses'][0]['ai']['status'] == 'CONFIG_REQUIRED'
     assert saved == before
+
+
+def test_public_search_and_read_use_saved_snapshot_not_product_evidence(context):
+    from .test_public_reader import bundle
+    saved=bundle(('p'*149+'\n')*40+'TEST_ONLY target patch condition\n')
+    entry=analyzed(context)['analyses'][0]
+    verified=verify(context,collect_evidence(context,CVE))
+    calls=[]
+    def transport(config,items,timeout):
+        calls.append(copy.deepcopy(items))
+        args={k:[] if p['type']=='array' else 1 if p['type']=='integer' else '' for k,p in PROPERTIES.items()}
+        args.update(question='TEST_ONLY locate saved patch detail',reason='TEST_ONLY inspect omitted public context',
+                    action='SEARCH_PUBLIC' if len(calls)==1 else 'READ_PUBLIC',source_ids=['P-test'],
+                    term='target patch' if len(calls)==1 else '',start_line=41,end_line=41)
+        return {'id':'TEST_ONLY','model':'TEST_ONLY','status':'completed','output':[
+            {'type':'function_call','name':'investigation_step','call_id':'test','arguments':json.dumps(args)}]}
+    with patch('cvevidence_core.public_sources.collect',return_value=saved),patch(
+            'cvevidence_core.ai.settings',return_value={'OPENAI_MODEL':'TEST_ONLY','OPENAI_API_KEY':'TEST_ONLY'}):
+        result=investigate(context,verified,entry['assessment'],mode='LIVE',public_record=public_record(),
+                           transport=transport,max_calls=2)
+    assert [t['action'] for t in result['tasks']]==['SEARCH_PUBLIC','READ_PUBLIC']
+    assert all(t['status']=='COMPLETED' for t in result['tasks'])
+    assert result['tasks'][1]['result']['text']=='TEST_ONLY target patch condition'
+    assert not any(x.get('source_id')=='P-test' for x in result.get('excerpts',[]))
+    assert entry['assessment']['verdict']=='NEEDS_INVESTIGATION'
 
 
 def _render(entry):
@@ -167,3 +225,30 @@ def test_ui_and_report_show_plan_and_capability_gap(context):
         assert 'TEST_ONLY public record' in text and public_cve.record_url(CVE) in text
         assert '本次查核計畫' in text
     assert len([e for e in app.expander if e.label.startswith('Q')]) == 5
+
+
+def test_rejected_quote_feedback_reaches_model_and_does_not_rewrite_plan(context):
+    from .test_condition_plan import conditions
+    from cvevidence_core.public_sources import cna_source
+    entry=analyzed(context)['analyses'][0]
+    verified=verify(context,collect_evidence(context,CVE))
+    public=cna_source(public_cve.brief(public_record()))[0]
+    rows=conditions()
+    for row in rows:row.update(public_source_id=public['source_id'],public_quote=public['text'])
+    calls=[]
+    def transport(config,items,timeout):
+        calls.append(copy.deepcopy(items))
+        args={k:[] if p['type']=='array' else 1 if p['type']=='integer' else '' for k,p in PROPERTIES.items()}
+        args.update(action='PLAN',question='TEST_ONLY quote repair',reason='TEST_ONLY',conditions=copy.deepcopy(rows))
+        if len(calls)==1:args['conditions'][0]['public_quote']='TEST_ONLY invented unmatched quotation'
+        return {'id':'TEST_ONLY','model':'TEST_ONLY','status':'completed','output':[
+            {'type':'function_call','name':'investigation_step','call_id':'quote','arguments':json.dumps(args)}]}
+    with patch('cvevidence_core.ai.settings',return_value={'OPENAI_MODEL':'TEST_ONLY','OPENAI_API_KEY':'TEST_ONLY'}):
+        result=investigate(context,verified,entry['assessment'],mode='LIVE',public_record=public_record(),transport=transport,max_calls=2)
+    hint=result['tasks'][0]['result']['citation_repair']
+    assert hint['condition_id']=='C1' and not hint['accepted']
+    assert hint['candidate_quotes']
+    assert any('citation_repair' in str(item) for item in calls[1])
+    assert result['tasks'][0]['status']=='TOOL_ERROR'
+    assert result['tasks'][1]['status']=='COMPLETED'
+    assert result['condition_plan']['conditions']==rows

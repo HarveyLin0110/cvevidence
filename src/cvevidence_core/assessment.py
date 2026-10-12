@@ -81,7 +81,7 @@ def _review_statements(context,facts,states,statements,conflicts):
 
 def assess(context,verified,statements=()):
     require_verified(context,verified)
-    if verified.cve_id not in CATALOG:
+    if verified.cve_id not in CATALOG or context.manifest['format']=='partial':
         from .general_triage import assess as assess_general
         return assess_general(context,verified,statements)
     facts={r['fact_key']:r for r in verified.records};conditions=[]

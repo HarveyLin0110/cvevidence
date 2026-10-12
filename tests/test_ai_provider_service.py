@@ -215,3 +215,26 @@ def test_changed_worker_code_is_rejected_before_material_read(monkeypatch):
         ai_worker.execute(payload)
     assert error.value.status == "INPUT_CHANGED_OR_INVALID"
     assert error.value.code == "AI_IMPLEMENTATION_CHANGED"
+
+@pytest.mark.parametrize('failure,status', [(subprocess.TimeoutExpired('test',1),'TIMED_OUT'), ('cancel','CANCELLED')])
+def test_invalid_checkpoint_still_saves_terminal_failure(settings,monkeypatch,tmp_path,failure,status):
+    from cvevidence.ai_process import WorkerCancelled
+    from cvevidence.ai_jobs import path
+    runner=Runner(RunStore(tmp_path/'runtime'))
+    intake=runner.start_file(ROOT/'demo-inputs/cmake/06_cmake.tar.gz',cve='CVE-2022-37434')
+    parent=runner.analyze_offline(intake.run_id)
+    before=runner.store._run_path(parent.run_id).read_bytes()
+    calls=[]
+    def invoke(self,req,*args):
+        calls.append(req.ai_id)
+        path(self.store,req.ai_id,'.json').write_text('{invalid checkpoint')
+        raise WorkerCancelled('test') if failure=='cancel' else failure
+    monkeypatch.setattr(AIService,'invoke',invoke)
+    inputs=dict(provider='openai_api',config_id=provider_configuration('openai_api')[1]['config_id'],consent=True,ai_id=str(uuid4()))
+    result=runner.investigate_ai(parent.run_id,**inputs)
+    assert result['status']==status
+    assert result['outcome']['error_code']=='AI_CHECKPOINT_REJECTED'
+    assert result['outcome']['payload_sha256'] is None
+    assert runner.investigate_ai(parent.run_id,**inputs)==result
+    assert len(calls)==1
+    assert runner.store._run_path(parent.run_id).read_bytes()==before

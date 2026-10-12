@@ -387,17 +387,37 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
     if ai.get("status") in ("OFFLINE", "NOT_RUN", "CONFIG_REQUIRED"):
         st.info("本次沒有完成模型調查；工程结果仍可查閱與下載。")
     st.caption("AI 調查與工程判定分開；原文引用核對不表示語意已證明。")
+    from .investigation_view import render as render_investigation, render_requests, render_overview, narrative_sections
+    render_overview(st, ai)
+    comparisons=rows(ai.get('patch_comparisons'))
+    if comparisons:
+        with st.expander('公開修補與產品原碼逐行比較',expanded=False):
+            st.caption('比較保存的完整修補區塊；逐行吻合不表示這份原碼已編入成品，也不取代工程覆核。')
+            labels={'BEFORE_TEXT_MATCH':'符合修補前區塊','AFTER_TEXT_MATCH':'符合修補後區塊',
+                    'PARTIAL_OR_DIFFERENT':'部分吻合或不同，不能排除','SOURCE_BYTE_LIMIT':'超過比較容量',
+                    'SOURCE_UNREADABLE':'原碼無法按文字比較'}
+            for comparison in comparisons:
+                st.text(text(comparison.get('path') or comparison.get('source_id'))+'：'+
+                        labels.get(comparison.get('status'),text(comparison.get('status'))))
+                st.caption('公告 '+text(comparison.get('public_source_id'))+' · 比較 '+text(comparison.get('comparison_id')))
+                for h in rows(comparison.get('hunks')):
+                    before='、'.join(str(x.get('start_line'))+'–'+str(x.get('end_line')) for x in rows(h.get('before_locations'))) or '未匹配'
+                    after='、'.join(str(x.get('start_line'))+'–'+str(x.get('end_line')) for x in rows(h.get('after_locations'))) or '未匹配'
+                    st.text('原碼位置：修補前 '+before+'；修補後 '+after)
+    has_requests = render_requests(st, ai)
     if ai.get("analysis_depth") == "PC_EVIDENCE_REVIEW":
         st.caption("本次採 PC1／PC2／PC3 原文查核；各層是否完成及限制，以保存的調查說明為準。")
         if ai.get("status") in ("COMPLETED", "NEEDS_USER_INPUT"):
             final = next((task for task in reversed(rows(ai.get("tasks")))
-                          if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER")), None)
+                          if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER", "REPORT")), None)
             if final and final.get("finding"):
                 st.subheader("PC1／PC2／PC3 查核說明")
-                st.text(text(final["finding"]))
+                for section in narrative_sections(text(final["finding"])):
+                    st.text(section)
     st.caption("追加 Query 來源：MODEL。LIST／READ 等動作完成只代表工具已執行；ASK_USER 完成代表已提出補件要求。")
+    render_investigation(st, ai)
     guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id, assessment_id=assessment_id)
-    if guide:
+    if guide and not has_requests:
         st.subheader("需要準備的最小材料")
         st.caption("清單依核心可接受的收件格式整理；已收到不等於已通過驗證。AI 調查與詳細格式可展開查看。")
         for item in guide["items"]:
@@ -409,7 +429,7 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
             for item in guide["items"]: st.text(item["title"] + "：" + item["purpose"])
             st.code(text(guide["details"]), language="json")
     for index, task in enumerate(rows(ai.get("tasks")), 1):
-        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=not bool(guide)):
+        with st.expander("追加 Query · MODEL · " + text(task.get("task_id") or index), expanded=False):
             st.text(text(task.get("question")))
             st.text("目的：" + text(task.get("reason")))
             st.text("動作：" + text(task.get("action")) + " · " + model_task_status(task))

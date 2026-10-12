@@ -7,6 +7,15 @@ def partition_candidates(candidates, selected_cve):
 def render_candidates(st, candidates, selected_cve):
     def row(item):
         st.text(item["cve_id"] + " · " + item.get("status", "未提供"))
+        if item.get("summary"):
+            st.text(item["summary"])
+        packages = list(dict.fromkeys(
+            str(entry.get("name", "")) + " " + str(entry.get("version", ""))
+            for entry in item.get("match_basis", []) if entry.get("name")))
+        if packages:
+            st.caption("命中套件宣告：" + "、".join(packages))
+        if item.get("symptom_terms"):
+            st.caption("症狀排序線索：" + "、".join(item["symptom_terms"]) + "；尚未證明因果。")
         hints = {entry.get("version_hint") for entry in item.get("match_basis", [])}
         if "FIX_RELEASE_VERSION" in hints:
             st.info("版本線索包含修正版本；這不是產品不受影響的判定，仍須核對實際成品與工程證據。")

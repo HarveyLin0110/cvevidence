@@ -4,6 +4,7 @@ from .sources import read_excerpt,verify_excerpt
 from .queries import collect_evidence
 from .verifier import verify
 from .assessment import assess
+from .source_reading import completed_reads
 
 def reassess_after_investigation(context,previous_assessment,investigation,statements=()):
     """Raw observations are facts about bytes, never inferred condition booleans.
@@ -23,7 +24,7 @@ def reassess_after_investigation(context,previous_assessment,investigation,state
     for task in investigation.get('tasks',[]):
         if task.get('status')!='COMPLETED':continue
         action=task.get('action');output=task.get('result',{});excerpts=[]
-        if action=='READ' and output.get('excerpt_id'):excerpts=[output]
+        if action in ('READ','READ_BATCH'):excerpts=completed_reads(task)
         elif action=='SEARCH':excerpts=output.get('matches',[])
         ids=[]
         for excerpt in excerpts:
@@ -49,8 +50,10 @@ def reassess_after_investigation(context,previous_assessment,investigation,state
         if previous_assessment['verdict']=='NEEDS_INVESTIGATION':current=previous_assessment
         elif previous_assessment['verdict']!=current['verdict']:raise IntegrityError('聲明不能使未支持的安全判定被沿用')
     context.assert_current()
+    from .condition_review import dossier
+    condition_dossier=dossier(context,investigation)
     changed=current['verdict']!=previous_assessment['verdict']
     return {'schema_version':'1.0','context_hash':context.context_hash,'cve_id':cve,'queries':queries,
-            'new_evidence':list(observations.values()),'assessment':current,'verdict_changed':changed,
+            'condition_review_dossier':condition_dossier,'new_evidence':list(observations.values()),'assessment':current,'verdict_changed':changed,
             'status':'REVERIFIED_AND_REASSESSED','condition_promotion':'DETERMINISTIC_PROFILE_ONLY',
             'explanation':'已把 AI 新找到的原文重新核對並記為來源觀測，再重跑 profile 與 Verifier。自由文字推論不升格為條件；若只是查閱同一快照，結果可能維持不變。'}

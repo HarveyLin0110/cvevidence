@@ -16,6 +16,7 @@ from .ai_versions import execution_versions
 def execute(request):
     allowed = {"archive", "archive_sha256", "context_hash", "temporary_root", "engineering_blob",
                "engineering_payload_sha256", "cve_id", "assessment_id", "user_context", "consent"}
+    if "controls" in request:allowed.add("controls")
     provider_name = request.get("provider")
     if provider_name is not None:
         allowed |= {"provider", "auth_type", "config_id", "provider_config", "deadline_monotonic", "versions"}
@@ -65,9 +66,33 @@ def execute(request):
                 from cvevidence_core.codex_provider import CodexCLIAdapter
                 provider = CodexCLIAdapter(config)
             options = {"provider": provider, "timeout_seconds": remaining}
+        from cvevidence_core.investigation_control import control
+        controls=request.get('controls',{})
+        if not isinstance(controls,dict) or set(controls)-{'progress_path','max_calls','token_limit','previous_blob','previous_sha256'}:raise ValueError('Invalid controls')
+        active={'max_calls':controls.get('max_calls',12),'token_limit':controls.get('token_limit',200000)}
+        if not 1<=active['max_calls']<=12 or not 1000<=active['token_limit']<=1000000:raise ValueError('Invalid budget')
+        if controls.get('previous_blob'):
+            previous_path=Path(controls['previous_blob'])
+            if previous_path.is_symlink() or previous_path.parent!=blob.parent or previous_path.stat().st_size>16*1024*1024:raise ValueError('Invalid continuation blob')
+            previous_bytes=previous_path.read_bytes()
+            if hashlib.sha256(previous_bytes).hexdigest()!=controls['previous_sha256']:raise ValueError('Continuation blob changed')
+            active['previous']=json.loads(previous_bytes)['analyses'][0]['ai']
+        if controls.get('progress_path'):
+            progress_path=Path(controls['progress_path'])
+            expected=Path(request['temporary_root']).parent/'ai-progress'
+            if progress_path.parent!=expected or progress_path.is_symlink():raise ValueError('Invalid progress location')
+            def publish(value):
+                raw=json.dumps(value,ensure_ascii=False,allow_nan=False).encode()
+                if len(raw)>16*1024*1024:raise ValueError('Progress limit')
+                temporary=progress_path.with_suffix('.writing')
+                with temporary.open('xb') as out:out.write(raw)
+                temporary.chmod(0o600);os.replace(temporary,progress_path)
+            active['progress']=publish
+        token=control.set(active)
         try:
             result = investigate_after_engineering(context, saved, request["user_context"], analysis_depth="pc", **options)
         finally:
+            control.reset(token)
             if provider is not None:
                 provider.close()
         if file_hash(archive) != actual or hashlib.sha256(blob.read_bytes()).hexdigest() != request["engineering_payload_sha256"]:

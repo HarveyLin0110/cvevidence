@@ -14,7 +14,7 @@ from uuid import uuid4
 from .ai_store import AIRequest, AIRequestV2, AIOutcome, AIStore, validate_ai_payload
 from .engineering import read_engineering
 from .ai_config import provider_configuration
-from .ai_process import run_worker, WorkerLimitError
+from .ai_process import run_worker, WorkerLimitError, WorkerCancelled
 
 
 class AIExecutionError(RuntimeError):
@@ -51,6 +51,20 @@ class AIService:
                    "engineering_payload_sha256": request.engineering_payload_sha256,
                    "cve_id": request.cve_id, "assessment_id": request.assessment_id,
                    "user_context": user_context, "consent": request.consent}
+        from .ai_jobs import path
+        progress_path=path(self.store,request.ai_id,'.json')
+        cancel_path=path(self.store,request.ai_id,'.cancel')
+        payload['controls']={'progress_path':str(progress_path),'max_calls':request.max_calls,'token_limit':request.token_limit}
+        if request.continuation_ai_id:
+            old=self.records.read(request.continuation_ai_id)
+            if not old.get('result'):raise ValueError('Continuation has no saved result')
+            old_run=self.store.read(old['request']['parent_run_id'])
+            cursor=parent;seen=set()
+            while cursor.run_id!=old_run.run_id and cursor.parent_run_id and cursor.run_id not in seen:
+                seen.add(cursor.run_id);cursor=self.store.read(cursor.parent_run_id)
+            if cursor.run_id!=old_run.run_id or old_run.cve_id!=parent.cve_id:raise ValueError('Continuation must belong to same run or explicit ancestor')
+            payload['controls']['previous_blob']=str(self.store.root/'blobs'/old['outcome']['payload_sha256'])
+            payload['controls']['previous_sha256']=old['outcome']['payload_sha256']
         env = {key: os.environ[key] for key in ("PATH", "LANG") if key in os.environ}
         env.update({key: config[key] for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_REASONING_EFFORT") if config.get(key)})
         env.update(PYTHONPATH=str(Path(__file__).resolve().parents[1]), CVEVIDENCE_AI_ENABLED="1")
@@ -66,7 +80,7 @@ class AIService:
                 env = {key: value for key, value in env.items() if not key.startswith("OPENAI_")}
                 env["HOME"] = str(Path.home())
             code, raw = run_worker([sys.executable, "-m", "cvevidence.ai_worker"],
-                json.dumps(payload, ensure_ascii=False, allow_nan=False).encode(), env=env, timeout=timeout)
+                json.dumps(payload, ensure_ascii=False, allow_nan=False).encode(), env=env, timeout=timeout, cancel_check=lambda:cancel_path.exists())
             if code:
                 raise AIExecutionError("FAILED", "AI_WORKER_FAILED")
             result = json.loads(raw)
@@ -74,23 +88,37 @@ class AIService:
                 error = result["worker_error"]
                 raise AIExecutionError(error["status"], error["code"])
             return result
-        with tempfile.TemporaryFile(dir=temp) as output:
-            process = subprocess.Popen([sys.executable, "-m", "cvevidence.ai_worker"], stdin=subprocess.PIPE,
-                                       stdout=output, stderr=subprocess.DEVNULL, env=env, start_new_session=True)
-            try:
-                process.communicate(json.dumps(payload, ensure_ascii=False).encode(), timeout=timeout)
-            except BaseException:
-                try: os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError: pass
-                process.wait()
-                raise
-            if process.returncode: raise ValueError("AI worker rejected input or failed")
-            if output.tell() > 16 * 1024 * 1024: raise ValueError("AI output limit exceeded")
-            output.seek(0)
-            return json.loads(output.read())
+        code,raw=run_worker([sys.executable,"-m","cvevidence.ai_worker"],
+            json.dumps(payload,ensure_ascii=False).encode(),env=env,timeout=timeout,cancel_check=lambda:cancel_path.exists())
+        if code:raise ValueError('AI worker rejected input or failed')
+        return json.loads(raw)
+
+    def retain_checkpoint(self,request,outcome):
+        from .ai_jobs import progress
+        from cvevidence_core.integrity import digest
+        checkpoint=progress(self.store,request.ai_id)
+        if not checkpoint:return
+        checkpoint['status']=outcome.status
+        checkpoint['record_hash']=digest({k:v for k,v in checkpoint.items() if k!='record_hash'})
+        payload={'schema_version':'1.0','mode':'LIVE','context_hash':request.context_hash,
+            'status':'INCOMPLETE','analyses':[{'cve_id':request.cve_id,'engineering_assessment_id':request.assessment_id,
+            'ai':checkpoint,'investigation_verification':None}]}
+        if isinstance(request,AIRequestV2):
+            payload.update(schema_version='2.0',provider=request.provider,auth_type=request.auth_type,versions=request.versions.model_dump())
+        validate_ai_payload(payload,request)
+        outcome.payload_sha256=self.store.put_blob(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode())
+
+    def retain_checkpoint_safely(self, request, outcome):
+        try:
+            self.retain_checkpoint(request, outcome)
+        except (ValueError, OSError, RuntimeError, KeyError, TypeError):
+            # Bad progress must not prevent an immutable terminal failure receipt.
+            # Keep the original timeout/cancel status and never attach bad bytes.
+            outcome.payload_sha256 = None
+            outcome.error_code = "AI_CHECKPOINT_REJECTED"
 
     def start(self, parent_run_id, *, user_context="", consent=False, ai_id=None, timeout=180,
-              provider=None, config_id=None):
+              provider=None, config_id=None, continuation_ai_id=None, max_calls=12, token_limit=200000):
         started = monotonic()
         if type(consent) is not bool or not isinstance(user_context, str) or len(user_context) > 4000:
             raise ValueError("Invalid AI user input")
@@ -119,7 +147,7 @@ class AIService:
             assessment_id=assessment["assessment_id"], consent=consent,
             context_text_sha256=hashlib.sha256(user_context.encode()).hexdigest(),
             model=public["model"], reasoning_effort=public["reasoning_effort"], created_at=now(), timeout_seconds=float(timeout),
-            **identity)
+            continuation_ai_id=continuation_ai_id,max_calls=max_calls,token_limit=token_limit,**identity)
         try:
             self.records.begin(request)
         except FileExistsError:
@@ -143,9 +171,14 @@ class AIService:
                 payload = self.invoke(request, user_context, config, float(timeout) - (monotonic() - started))
                 outcome.status = validate_ai_payload(payload, request)
                 outcome.payload_sha256 = self.store.put_blob(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode())
+            except WorkerCancelled:
+                outcome.status="CANCELLED"
+                outcome.error_code="USER_CANCELLED"
+                self.retain_checkpoint_safely(request,outcome)
             except subprocess.TimeoutExpired:
                 outcome.status = "TIMED_OUT"
                 outcome.error_code = "AI_DEADLINE_EXCEEDED"
+                self.retain_checkpoint_safely(request,outcome)
             except WorkerLimitError:
                 outcome.status = "BUDGET_EXHAUSTED"
                 outcome.error_code = "AI_IO_LIMIT_EXCEEDED"

@@ -198,7 +198,8 @@
             "core-adapter-v0.2",
             "rom",
             "cmake",
-            "curl"
+            "curl",
+            "partial"
           ],
           "title": "Format",
           "type": "string"

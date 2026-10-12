@@ -98,6 +98,8 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
             output += receipt_lines(call, metadata.get("provider"))
         if ai.get("mode") == "REPLAY": output.append("舊紀錄播放，本次未呼叫模型。")
         output.append("追加 Query 來源：MODEL；工具動作完成不代表 CVE 條件成立。")
+        from .investigation_view import lines as investigation_lines
+        output += investigation_lines(ai)
         guide = saved_collection_guide(ai, context_hash=context_hash, cve_id=cve_id,
                                        assessment_id=assessment.get("assessment_id"))
         if guide:
@@ -113,6 +115,10 @@ def export_analysis(payload, *, context_hash, cve_id, run_id):
             if task.get("status") != "COMPLETED":
                 output.append("此項未完成或被拒絕，不列為有效調查結果。")
                 continue
+            for row in task.get("evidence_requests", []):
+                output += ["本輪最小補件：" + row["material"], "取得方式：向" + row["owner"] + "；" + row["how"],
+                           "用途：" + row["why"], "現有材料不足原因：" + row["insufficiency"],
+                           "取得後能確認：" + row["expected_resolution"], "替代方式：" + row["alternative"]]
             for field in ("action", "finding", "citations", "required_files"):
                 output.append(field + ": " + text(task.get(field)))
         output.append("引用核對不等於語意已證明；AI 建議仍需覆核。")
