@@ -76,7 +76,7 @@ def test_inventory_web_table_preserves_versions_and_source_paths(tmp_path):
     app.run()
     next(b for b in app.button if b.label=='02 資料確認與缺件').click().run()
     assert not app.exception
-    rows=app.dataframe[0].value.to_dict('records')
+    rows=next(table.value for table in app.dataframe if '版本聲明' in table.value.columns).to_dict('records')
     assert rows[0]['版本聲明']=='8.3.0-vendor2'
     assert rows[0]['來源']=='opkg-list-installed.txt'
     assert rows[0]['原文行']=='1–1'

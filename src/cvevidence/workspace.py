@@ -144,14 +144,22 @@ def workspace(st, *, store_root=None):
             partial_large=material_mode=="大型單檔（最多 256 MiB）"
             st.info("多種材料可合併查核：小檔直接一起選取；若有大型 ROM／SDK，先匯入大型檔，再到「05 報告與後續行動」補上 SBOM、原碼等。補件保留原材料並建立新紀錄，不必另開不相關案件。")
             if partial_large:
-                single=st.file_uploader('大型 ROM 或 SDK 封存檔（單檔 256 MiB）',max_upload_size=256)
+                single=st.file_uploader('大型 ROM／MFI／ELF／map 或 SDK（單檔 256 MiB）',max_upload_size=256)
                 partial_files=[single] if single else []
-                st.caption('一次一檔，原檔及展開內容合計最多 384 MiB、5000 個檔案。接受 ROM／IMG／BIN／SquashFS 或 ZIP／tar／tar.gz／wheel。SDK 只展開為資料，不安裝或執行；網頁元件仍會暫存上傳內容。')
+                st.caption('一次一檔，原檔及展開內容合計最多 384 MiB、5000 個檔案。接受 ROM／MFI／ELF／map／TXT／IMG／BIN／SquashFS 或 ZIP／tar／tar.gz／wheel。SDK 只展開為資料，不安裝或執行；網頁元件仍會暫存上傳內容。')
             else:
                 partial_files=st.file_uploader("產品材料：ROM、SBOM、原碼、設定可一起選（每檔 20 MiB，最多 100 檔）",accept_multiple_files=True,max_upload_size=20)
                 st.caption("最多 100 檔、每檔 20 MiB，全部材料含壓縮包展開後合計 100 MiB。可交 SBOM、日誌、原碼、設定或原始 wheel／ZIP／tar.gz；壓縮包只讀取，不安裝或執行。")
             st.caption('封存檔只展開一層，內層 ZIP／tar 不遞迴展開；其中的 ROM 會和直接上傳的 ROM 一起計入三份上限。')
             st.caption('亦可交原始 SquashFS ROM（每次最多 3 份）；工具只讀固定套件／版本路徑，不啟動韌體。其他 ROM 格式會保留原檔並顯示尚不支援。')
+            turnkey_family=st.selectbox('Turnkey 材料布局',['auto','2506','e5v40-01','unknown'],
+                format_func=lambda v:{'auto':'自動辨識','2506':'2506：多 repo ＋ BSP','e5v40-01':'e5v40-01：整包目錄','unknown':'其他／未知'}[v])
+            st.caption('先交手邊的成品或來源即可。多 repo 請用 ZIP/tar 保留相對目錄，避免同名配置混在一起；不必一次交齊所有檔案。')
+            with st.expander('各種材料何時需要'):
+                st.text('開始：待查 MFI／ROM／SPI，或 target manifest／SBOM／來源設定，擇手邊已有材料。')
+                st.text('元件缺口：此 target 的 legal-info/manifest.csv；host-manifest 只代表建置主機。')
+                st.text('實作缺口：相關原碼、patch、同 stage ELF／application linker map（也可能是 .txt）。')
+                st.text('關聯缺口：該次建置的輸入輸出 hash／CI 紀錄。只有具體 CVE 必要條件需要時，才補部署設定／正常日誌。')
             partial_product=st.text_input("產品名稱",value="未提供",max_chars=200)
             partial_release=st.text_input("產品版本",value="未提供",max_chars=200)
             partial_build=st.text_input("建置識別（不知道可保留未確認）",value="未確認",max_chars=200)
@@ -165,7 +173,7 @@ def workspace(st, *, store_root=None):
         if kind=="先描述情境": ready=bool(symptom.strip() or cve.strip())
         signature=(kind,material_mode,selected["archive"]["sha256"] if selected else None,
             getattr(upload,"file_id",None),tuple((f.name,f.file_id) for f in partial_files),
-            (partial_product,partial_release,partial_build) if kind.startswith("部分材料") else None,path,cve,symptom,st.session_state.get("follow_parent"))
+            (partial_product,partial_release,partial_build,turnkey_family) if kind.startswith("部分材料") else None,path,cve,symptom,st.session_state.get("follow_parent"))
         if st.session_state.get("request_signature")!=signature:
             if st.session_state.get("request_signature") is not None:
                 st.session_state.selected_run=None
@@ -190,7 +198,7 @@ def workspace(st, *, store_root=None):
                         import tempfile
                         with tempfile.TemporaryDirectory(dir=runner.store.root) as temporary:
                             archive=Path(temporary)/"partial.tar.gz"
-                            create([(f.name,f) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build,large=partial_large)
+                            create([(f.name,f) for f in partial_files],archive,product=partial_product,release=partial_release,build=partial_build,large=partial_large,turnkey_family=turnkey_family)
                             result=runner.submit_request(path=archive,**kwargs)
                     elif upload:
                         upload.seek(0)
@@ -299,6 +307,8 @@ def workspace(st, *, store_root=None):
                         else:st.caption('此動態符號表沒有列出的外部參照；仍不能排除其他呼叫方式。')
                         if symbols.get('coverage_limited'):st.caption('符號清單已截短，僅顯示有限項目。')
                 if binaries.get('coverage_limited'):st.caption('僅完成有限範圍掃描；未列出不代表不存在。')
+        from .turnkey_view import render as render_turnkey
+        render_turnkey(st,(payload.get('discovery',{}) if payload else run.candidates).get('turnkey_inventory'))
         firmware=(payload.get('discovery',{}) if payload else run.candidates).get('firmware_inventory',[])
         if firmware:
             with st.expander('ROM 套件、版本與成品讀取狀態',expanded=True):
@@ -481,7 +491,7 @@ def workspace(st, *, store_root=None):
             if real and run.input_package.format=='partial':
                 st.caption('僅補本輪要求的材料即可，不需把所有可能檔案都補齊。每檔 20 MiB，最多 100 檔；新增材料含展開後合計 100 MiB，同名衝突拒收。')
                 loose=st.file_uploader('補上原始檔案（保留原材料，拒絕同名覆寫）',accept_multiple_files=True,max_upload_size=20,key='partial-delta-'+run.run_id)
-                large_loose=st.file_uploader('或補一份大型 ROM／SDK（單檔 256 MiB）',max_upload_size=256,key='partial-large-delta-'+run.run_id)
+                large_loose=st.file_uploader('或補一份大型 ROM／MFI／ELF／map／SDK（單檔 256 MiB）',max_upload_size=256,key='partial-large-delta-'+run.run_id)
                 st.caption('一般多檔與大型單檔請擇一。大型檔案及展開内容、以及補件後整份快照，最多 384 MiB／5000 檔。')
                 if st.button('保存部分材料補件',disabled=not (loose or large_loose) or bool(loose and large_loose)):
                     try:

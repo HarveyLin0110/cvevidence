@@ -52,7 +52,7 @@ def test_stream_retry_rewinds_and_creates_identical_request(tmp_path):
 
 def test_large_mode_is_single_supported_input_and_bounded(tmp_path,monkeypatch):
     with pytest.raises(ValueError):intake.create([('a.rom',b'x'),('b.rom',b'y')],tmp_path/'two',large=True)
-    with pytest.raises(ValueError):intake.create([('a.txt',b'x')],tmp_path/'text',large=True)
+    with pytest.raises(ValueError):intake.create([('a.exe',b'x')],tmp_path/'unsupported',large=True)
     monkeypatch.setattr(intake,'LARGE_FILE',8)
     with pytest.raises(ValueError):intake.create([('a.rom',ChunkedInput(9))],tmp_path/'big',large=True)
     assert not (tmp_path/'big').exists()

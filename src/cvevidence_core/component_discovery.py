@@ -12,12 +12,20 @@ def components(context):
     for source in sorted(context.sources.values(),key=lambda s:(not s['path'].lower().endswith('.json'),s['path'])):
         if source['kind']!='file' or source['size']>2_000_000:continue
         path=source['path'].lower()
-        if not path.endswith(('.json','.txt','.manifest','.list','/status','.control')) and path not in ('status','manifest'):continue
+        if not path.endswith(('.json','.csv','.txt','.manifest','.list','/status','.control')) and path not in ('status','manifest'):continue
         if scanned>=100:break
         scanned+=1
         try:lines=text_lines(context,source['source_id'])
         except IntegrityError:raise
         except (ValueError,UnicodeError):continue
+        if path.endswith('.csv'):
+            from .turnkey import manifest_rows
+            if path.rsplit('/',1)[-1]=='host-manifest.csv':continue
+            for row in manifest_rows('\n'.join(lines)):
+                rows.append({**row,'purl':'','source_id':source['source_id'],'source_path':source['path'],
+                    'source_kind':'TARGET_MANIFEST_DECLARATION','query':None,'identity_verified':False})
+                if len(rows)>=100:return rows
+            continue
         if not path.endswith('.json'):
             from .package_inventory import parse
             for row in parse(lines):

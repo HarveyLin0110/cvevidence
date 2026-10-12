@@ -74,7 +74,9 @@ def _copy_input(data,target,limit):
     return size
 
 
-def create(files, output, *, product='未提供', release='未提供', build='未確認', base=None, large=False):
+def create(files, output, *, product='未提供', release='未提供', build='未確認', base=None, large=False, turnkey_family="auto"):
+    from .turnkey import FAMILIES
+    if turnkey_family not in FAMILIES:raise ValueError('Unknown turnkey family')
     if not files or len(files)>100:raise ValueError('請提供 1–100 個檔案')
     if type(large) is not bool:raise ValueError('Invalid intake mode')
     if large and len(files)!=1:raise ValueError('大型材料一次只接受一個檔案')
@@ -91,8 +93,8 @@ def create(files, output, *, product='未提供', release='未提供', build='�
             if large:
                 from .firmware_inventory import candidate
                 with target.open('rb') as stream:head=stream.read(4)
-                if not candidate(name,head) and not name.lower().endswith(('.whl','.zip','.tar.gz','.tgz','.tar')):
-                    raise ValueError('大型入口只接受 ROM 或 SDK 封存檔')
+                if not candidate(name,head) and not name.lower().endswith(('.mfi','.elf','.map','.txt','.csv','.config','.whl','.zip','.tar.gz','.tgz','.tar')):
+                    raise ValueError('大型入口接受 ROM／MFI／ELF、map／文字清單或 SDK 封存檔')
         # Archives remain data. Expand once through the same bounded extractor;
         # never install wheels, execute setup code, or recurse into nested archives.
         import shutil
@@ -140,7 +142,8 @@ def create(files, output, *, product='未提供', release='未提供', build='�
             (root/'intake-identity.json').write_text(json.dumps(identity,ensure_ascii=False))
             manifest={'schema_version':'1.0','format':'partial','product_id':product,'release_id':release,'build_id':build,
                 'primary_artifact':{'path':'intake-identity.json','sha256':file_hash(root/'intake-identity.json')},
-                'artifact_role':'MATERIAL_INVENTORY_NOT_PRODUCT_BINARY','identity_verified':False}
+                'artifact_role':'MATERIAL_INVENTORY_NOT_PRODUCT_BINARY','identity_verified':False,
+                'turnkey_family':turnkey_family}
         manifest['files']=scan(root)
         if len(manifest['files'])>MAX_FILES:raise IntakeError('FILE_LIMIT')
         manifest['package_id']='partial-'+digest(manifest)[:24]
