@@ -1,4 +1,5 @@
 """Actual local source workspace; all collection/supplement calls share Runner."""
+from .private_downloads import download_button
 import os
 from cvevidence_core.partial_intake import IntakeError
 from pathlib import Path
@@ -348,7 +349,7 @@ def workspace(st, *, store_root=None):
             public_result=st.session_state.get("public-discovery-"+run.run_id)
             if public_result:
                 import json
-                st.download_button('下載公開候選查詢紀錄',json.dumps(public_result,ensure_ascii=False,indent=2),file_name=run.run_id+'-public-candidates.json',mime='application/json')
+                download_button(st, '下載公開候選查詢紀錄',json.dumps(public_result,ensure_ascii=False,indent=2),file_name=run.run_id+'-public-candidates.json',mime='application/json')
                 st.text("查詢狀態："+public_result["discovery"]["status"])
                 st.caption("已保存本次查詢；重新整理後可還原，查看紀錄不會重新連網。重新查詢才會更新候選。")
                 st.caption(public_result["discovery"]["scope"])
@@ -447,7 +448,7 @@ def workspace(st, *, store_root=None):
             st.text(assessment.get("reason","請查看紀錄中的未完成原因。"))
         with st.expander("完整報告預覽"):
             st.code(text,language=None)
-        st.download_button("下載查核紀錄",text,file_name=run.run_id+".txt",mime="text/plain")
+        download_button(st, "下載查核紀錄",text,file_name=run.run_id+".txt",mime="text/plain")
         with st.expander("來源操作紀錄"):
             try:
                 history=runner.tool_history(run.run_id)
@@ -459,7 +460,7 @@ def workspace(st, *, store_root=None):
                 else: st.caption("尚無手動來源查詢紀錄。")
                 st.caption("未保存搜尋詞或原文，只保留run/context與參數／結果摘要hash；缺少結束紀錄不算成功。")
                 import json
-                st.download_button("下載操作紀錄",json.dumps(history,ensure_ascii=False,indent=2),
+                download_button(st, "下載操作紀錄",json.dumps(history,ensure_ascii=False,indent=2),
                     file_name=run.run_id+"-events.json",mime="application/json")
             except (ValueError,OSError): st.error("操作紀錄無法讀取，沒有顯示未核對內容。")
         if run.parent_run_id:

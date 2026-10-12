@@ -358,3 +358,12 @@ D 的 integration a47a1a3 未接分析屬當時結果，main 新 OFFLINE 已取�
 - 真實 API 固定版公開 curl 8.11.0：7 calls／88.563 秒／194664 tokens，15 段摘錄核對一致；只要求一份成品綁定材料，沒有誤判產品安全。
 - 實際網頁接續 `2f4145b7` → `20d916fe`：4 calls／66.947 秒／134093 tokens，四個步驟成功；保留前次 hsts.c 原文，不重跑 PLAN 或重讀相同區間。13 段摘錄核對一致，原 AIStore 紀錄完全不變，仍只提出一項最小補件。
 - 本機 8506 已使用現有 API 認證實連；Codex CLI 來源目前未啟用，沒有把 API 測試說成雙來源 LIVE。D01–D09、R01/R02/R05/R06/R08–R12、驗收與成本限制見 docs/releases/2026-10-12-AI輸入共用.md。公司登入／HTTPS 部署仍待環境與登入方式確定，沒有宣告正式上線。
+
+## 2026-10-12 團隊報告下載隔離
+
+- 前一筆 `5e74114` 的 push／PR CI 三項工作皆成功，已更新 PR32。
+- 公司部署檢查重現：固定 Streamlit 原生 media handler 不按請求者帳號核對已知下載 URL，原 team_app 的首頁登入／帳號資料夾不能涵蓋此邊界。統一九種匯出經共用 helper；帳號模式以 session component data 交給瀏覽器直接下載，不登記共用 media。程式資產固定，內容只作資料；本機原生下載相容。
+- 未登入、格式錯誤、超過 32 MiB 均明確拒絕且不退回公開 URL。不是撤銷已交付檔案的 DRM；重新部署須完整重啟原團隊程序，使舊 media 退出記憶體。
+- 真正瀏覽器：合成 A／B 的中文報告分別落地，bytes 完全一致；未登入沒有下載；對確切 media ID 的 8 次 HTTP 請求全部 404。屬新傳輸驗收，不冒充 Google／公司 SSO 端對端登入。
+- 最終 **740 passed、23 subtests passed（321.55 秒）**；schema 重產一致。8506 已重啟並還原現有結果，其原生附件端點與保存紀錄一致；無新增模型呼叫。TEST_ONLY 服務已停止。
+- D01/D02/D05–D10、R01/R06/R10–R12 與部署限制見 docs/releases/2026-10-12-團隊報告下載隔離.md。Authlib 已列 deploy/requirements.txt，但本機開發 venv 未安裝；實際公司主機、HTTPS／登入與兩真實帳號驗收仍未完成。

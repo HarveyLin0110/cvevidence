@@ -1,4 +1,5 @@
 """Turnkey intake observations; separate availability from proven association."""
+from .private_downloads import download_button
 from cvevidence_core.turnkey import STATE_LABELS
 
 
@@ -30,5 +31,5 @@ def render(st, report):
             if r.get('container'):
                 st.text('內嵌版本／BSP 欄位（不是已驗建置）');st.json(r['container']['rootfs'])
     import json
-    st.download_button('下載 Turnkey 盤點與補件清單',json.dumps(report,ensure_ascii=False,indent=2),
+    download_button(st, '下載 Turnkey 盤點與補件清單',json.dumps(report,ensure_ascii=False,indent=2),
         file_name='turnkey-inventory.json',mime='application/json')

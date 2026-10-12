@@ -1,4 +1,5 @@
 """Explicitly authorized AI attempts, scoped history and immutable report views."""
+from .private_downloads import download_button
 from copy import deepcopy
 import json
 from uuid import uuid4
@@ -203,7 +204,7 @@ def ai_workspace(st, runner, run, engineering):
         if (record.get("outcome") or {}).get("error_code"):
             st.text("失敗原因代碼：" + str(record["outcome"]["error_code"]))
         st.caption("以下為選取的保存紀錄，切換歷史不會重新呼叫模型。")
-        st.download_button("下載 AI 調查紀錄", json.dumps(record, ensure_ascii=False, indent=2),
+        download_button(st, "下載 AI 調查紀錄", json.dumps(record, ensure_ascii=False, indent=2),
                            file_name=chosen + "-ai.json", mime="application/json", key="ai-download-" + run.run_id)
         if record["result"]:
             ai_entry = record["result"]["analyses"][0]

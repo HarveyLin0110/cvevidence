@@ -1,4 +1,5 @@
 """Local operator review UI, separate from automatic engineering assessments."""
+from .private_downloads import download_button
 import json
 from uuid import uuid4
 from cvevidence_core.integrity import digest
@@ -53,7 +54,7 @@ def review_workspace(st, runner, run, ai_record):
         if selected:
             with st.expander('查看已保存的逐條覆核'):
                 st.text(report_text(selected))
-            st.download_button('下載人工覆核紀錄',json.dumps(selected,ensure_ascii=False,indent=2),
+            download_button(st, '下載人工覆核紀錄',json.dumps(selected,ensure_ascii=False,indent=2),
                 file_name=selected['review_id']+'-review.json',mime='application/json',key='review-download-'+ai_id)
     else:
         st.info('尚無人工覆核紀錄。可展開下方逐條記錄，或先保留待覆核報告。')

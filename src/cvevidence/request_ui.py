@@ -1,4 +1,5 @@
 """Request controls keep request selection distinct from immutable child runs."""
+from .private_downloads import download_button
 from uuid import uuid4
 from .requests import RequestStore
 from .workflow_navigation import PAGES
@@ -129,5 +130,5 @@ def request_summary(st, result):
         st.dataframe([{"CVE":r.cve_id or "候選探索","執行狀態":r.status,"Run":r.run_id} for r in result.runs],
             hide_index=True)
         st.caption("從側邊「此請求的 CVE 紀錄」切換；不同 CVE 的結果不互相覆寫。")
-    st.download_button("下載請求紀錄",result.model_dump_json(indent=2),
+    download_button(st, "下載請求紀錄",result.model_dump_json(indent=2),
         file_name=result.spec.request_id+".json",mime="application/json")
