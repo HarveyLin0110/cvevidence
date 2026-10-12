@@ -64,3 +64,16 @@ def test_token_forecast_unknown_usage_and_call_limit_still_disclosed():
     assert advice['estimated_next_call_tokens'] is None
     assert advice['remaining_reported_token_allowance']==190000
     assert advice['recommended_phase']=='INVESTIGATE'
+
+
+def test_final_affordable_call_requests_combined_report_not_review_only():
+    from cvevidence_core.investigation_control import budget_forecast
+    # Receipt sizes from a real failed continuation: REVIEW alone left no
+    # budget for COMPLETE. The advice must name the combined validated action.
+    calls=[{'usage':{'total_tokens':n}} for n in (36820,37254,40235,42843)]
+    advice=budget_forecast(calls,200000,8,True)
+    assert advice['remaining_reported_token_allowance']==42848
+    assert advice['estimated_affordable_calls_including_current']==1
+    assert advice['recommended_phase']=='REPORT_NOW'
+    assert budget_forecast([],200000,1,True)['recommended_phase']=='REPORT_NOW'
+    assert budget_forecast(calls,200000,8,False)['recommended_phase']=='FINALIZE_NOW'

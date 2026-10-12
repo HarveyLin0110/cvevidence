@@ -61,7 +61,7 @@ initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 
 PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收尾前必須先有 PLAN 與 REVIEW；每項 explanation 簡短說明命中或未完成原因。找不到專用驗證器屬 CAPABILITY_GAP，不應要求使用者補規則。
 每次只呼叫一個工具。所有參數必填；不適用的文字用空字串、陣列用 []、行號用 1。
 互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；不同位置的大檔案仍用 READ。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
-runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先 REVIEW 已讀證據、未查完明列 NOT_REVIEWED；FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
+runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先覆核已讀證據，可直接 REPORT，未查完明列 NOT_REVIEWED；REPORT_NOW 表示估計只剩這次呼叫，已有可交覆核進展時立即 REPORT 同時提交 conditions 與三層摘要，不要只做 REVIEW 而失去摘要。FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。真正材料缺口仍走 REVIEW／ASK_USER，不能省略補件檢查。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
 已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 '''
 
@@ -361,7 +361,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if remaining<=0:failure('TIMED_OUT','INVESTIGATION_DEADLINE');break
             stage='REQUEST'
             budget={'max_calls':max_calls,'remaining_calls_including_current':max_calls-number,
-                    'remaining_seconds':round(remaining,3),'reserve_final_call_for':'COMPLETE_OR_ASK_USER',
+                    'remaining_seconds':round(remaining,3),'reserve_final_call_for':'REPORT_OR_COMPLETE_OR_ASK_USER',
                     'condition_review_pending':requires_plan and not reviewed,
                     'reported_tokens_so_far':usage(result['calls'])['total_tokens'],
                     'token_stop_threshold':controls.get('token_limit',1000000)}

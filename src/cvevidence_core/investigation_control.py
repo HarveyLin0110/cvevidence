@@ -16,10 +16,12 @@ def budget_forecast(calls,threshold,remaining_calls,review_pending):
     estimate=max(costs[-2:])+max(0,costs[-1]-costs[-2] if len(costs)>1 else 0)+9000 if costs else None
     affordable=min(remaining_calls,max(1,left//estimate)) if estimate else remaining_calls
     reserve=2 if review_pending else 1
-    phase='REVIEW_NOW' if review_pending and affordable<=reserve else 'FINALIZE_NOW' if not review_pending and affordable<=reserve else 'INVESTIGATE'
+    phase=('REPORT_NOW' if review_pending and affordable<=1 else
+           'REVIEW_NOW' if review_pending and affordable<=reserve else
+           'FINALIZE_NOW' if not review_pending and affordable<=reserve else 'INVESTIGATE')
     return {'remaining_reported_token_allowance':left,'estimated_next_call_tokens':estimate,
         'estimated_affordable_calls_including_current':affordable,'recommended_phase':phase,
-        'estimate_note':'依供應者用量估算，非保證。保留 REVIEW 與收尾；查不完要保留 NOT_REVIEWED 並接續，不能改成使用者缺件或捏造支持。'}
+        'estimate_note':'依供應者用量估算，非保證。只剩一次且已可交覆核時用 REPORT 同次提交條件與摘要；需要補件仍須合法 REVIEW／ASK_USER。查不完保留 NOT_REVIEWED 並接續，不捏造支持。'}
 
 
 def usage(calls):
