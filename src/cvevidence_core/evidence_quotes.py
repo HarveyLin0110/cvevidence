@@ -3,6 +3,23 @@ import re
 from .sources import read_excerpt, verify_excerpt
 from .integrity import IntegrityError
 
+
+class ProductQuoteMismatch(ValueError):
+    """Point to one rejected quotation, without accepting or rewriting it."""
+    def __init__(self,condition,parent,quote):
+        super().__init__('evidence_quotes 原文不一致；請逐字摘錄，不省略中間文字、不加行號前綴')
+        # Find one bounded raw-text hint using shared words only. No inferred
+        # correction or semantic claim; the next REVIEW must pass exact checks.
+        terms=set(re.findall(r'[A-Za-z_][A-Za-z_0-9]{2,}',quote))
+        lines=parent['text'].splitlines(keepends=True)
+        scored=[(len(terms & set(re.findall(r'[A-Za-z_][A-Za-z_0-9]{2,}',line))),i)
+                for i,line in enumerate(lines)]
+        position=max(scored,key=lambda p:(p[0],-p[1]))[1] if scored else 0
+        hint=''.join(lines[max(0,position-1):position+5])[:1200]
+        self.feedback={'condition_id':condition['condition_id'],'excerpt_id':parent['excerpt_id'],
+            'accepted':False,'original_text_hint':hint,
+            'note':'只指出這條件的引文錯誤及同一片段的部分原文，不代表建議摘錄足以支持條件。請核對已讀全文後重新提交 REVIEW；不要為修字重新索取材料。'}
+
 SCHEMA = {'type':'array','items':{'type':'object','properties':{
     'excerpt_id':{'type':'string'}, 'quote':{'type':'string'}},
     'required':['excerpt_id','quote'],'additionalProperties':False}}
@@ -31,7 +48,7 @@ def resolve(context, condition, excerpts, *, require=False):
             raise ValueError('evidence_quotes 只能使用本輪已讀的 X-ID')
         if not verify_excerpt(context,parent):raise IntegrityError('Quoted source changed')
         offset=parent['text'].find(q['quote'])
-        if offset<0:raise ValueError('evidence_quotes 原文不一致；請逐字摘錄，不省略中間文字、不加行號前綴')
+        if offset<0:raise ProductQuoteMismatch(condition,parent,q['quote'])
         if parent['text'].find(q['quote'],offset+1)>=0:
             raise ValueError('evidence_quotes 在此片段出現多次；請增加前後原文使位置唯一，或先 READ 較小範圍')
         start=parent['start_line']+parent['text'][:offset].count('\n')

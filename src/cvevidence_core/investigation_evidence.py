@@ -4,6 +4,7 @@ from .sources import read_excerpt,verify_excerpt
 from .queries import collect_evidence
 from .verifier import verify
 from .assessment import assess
+from .source_reading import completed_reads
 
 def reassess_after_investigation(context,previous_assessment,investigation,statements=()):
     """Raw observations are facts about bytes, never inferred condition booleans.
@@ -23,7 +24,7 @@ def reassess_after_investigation(context,previous_assessment,investigation,state
     for task in investigation.get('tasks',[]):
         if task.get('status')!='COMPLETED':continue
         action=task.get('action');output=task.get('result',{});excerpts=[]
-        if action=='READ' and output.get('excerpt_id'):excerpts=[output]
+        if action in ('READ','READ_BATCH'):excerpts=completed_reads(task)
         elif action=='SEARCH':excerpts=output.get('matches',[])
         ids=[]
         for excerpt in excerpts:

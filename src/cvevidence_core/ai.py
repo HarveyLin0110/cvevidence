@@ -60,12 +60,15 @@ initial_product_excerpts 是工具已讀的本次產品原文，可直接引用 
 如果已有必要條件的排除線索且無矛盾，先 COMPLETE 交工程覆核，不要為 PC3 等剩餘條件要求更多材料。工具未支援或尚未讀完，列工具待辦而非補件。
 PLAN/REVIEW 的 finding 用一句摘要；其他 action 的 conditions=[]。收尾前必須先有 PLAN 與 REVIEW；每項 explanation 簡短說明命中或未完成原因。找不到專用驗證器屬 CAPABILITY_GAP，不應要求使用者補規則。
 每次只呼叫一個工具。所有參數必填；不適用的文字用空字串、陣列用 []、行號用 1。
+互相獨立的短檔案（例如入口原碼、建置收據、正常輸出）可用 READ_BATCH 一次讀 2–3 個 source_ids，共用 start_line/end_line，每檔仍最多 200 行／24000 bytes，合計最多 48000 bytes。各份回傳自己的 X-ID，不能因批次閱讀就省略逐項分析；不同位置的大檔案仍用 READ。優先合併已知短檔的讀取，保留 REVIEW 與收尾預算。
+runtime_budget.recommended_phase=REVIEW_NOW 時，本輪先 REVIEW 已讀證據、未查完明列 NOT_REVIEWED；FINALIZE_NOW 時先 COMPLETE 或合法的 ASK_USER。這是預算收尾建議，不授權捏造結論或把工具未查完改成使用者缺件。不要只看 remaining_calls，token 預算可能先用完。
+已有 PLAN 且本輪調查已可交覆核、不需結構化補件時，優先用 REPORT 一次提交完整 conditions 與 PC1／PC2／PC3 finding、citations，合併 REVIEW 和 COMPLETE，省去另一次摘要呼叫。REPORT 仍逐項驗證公告、原文摘錄與完成條件；不會自動改工程判定。只有使用者材料缺口、沒有排除／衝突／工具缺口時，仍先 REVIEW 再 ASK_USER，不能用 REPORT 省略補件卡。requests=[]。
 '''
 
 PROPERTIES={
- 'action':{'type':'string','enum':['PLAN','REVIEW','LIST','SEARCH','READ','SEARCH_PUBLIC','READ_PUBLIC','COMPARE','VERIFY','ASK_USER','COMPLETE']},
+ 'action':{'type':'string','enum':['PLAN','REVIEW','REPORT','LIST','SEARCH','READ','READ_BATCH','SEARCH_PUBLIC','READ_PUBLIC','COMPARE','VERIFY','ASK_USER','COMPLETE']},
  'question':{'type':'string'},'reason':{'type':'string'},'term':{'type':'string'},
- 'source_ids':{'type':'array','items':{'type':'string'},'description':'READ 恰好一個產品 ID；READ_PUBLIC 恰好一個公告 P-ID；SEARCH_PUBLIC 可提供公告 P-ID 或 []；COMPARE 恰好兩個產品 ID；SEARCH 可提供多個已知產品 ID 或 []；其餘 action 用 []。'},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
+ 'source_ids':{'type':'array','items':{'type':'string'},'description':'READ 恰好一個產品 ID；READ_BATCH 2–3 個不同產品 ID，共用行範圍；READ_PUBLIC 恰好一個公告 P-ID；SEARCH_PUBLIC 可提供公告 P-ID 或 []；COMPARE 恰好兩個產品 ID；SEARCH 可提供多個已知產品 ID 或 []；其餘 action 用 []。'},'start_line':{'type':'integer'},'end_line':{'type':'integer'},
  'finding':{'type':'string'},'citations':{'type':'array','items':{'type':'string'}},
  'required_files':{'type':'array','items':{'type':'string'}}, 'conditions':CONDITION_SCHEMA, 'requests':REQUEST_SCHEMA}
 TOOL={'type':'function','name':'investigation_step','description':'提出與執行一項動態追加調查；只有目前快照中的唯讀操作。',
@@ -362,6 +365,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     'condition_review_pending':requires_plan and not reviewed,
                     'reported_tokens_so_far':usage(result['calls'])['total_tokens'],
                     'token_stop_threshold':controls.get('token_limit',1000000)}
+            from .investigation_control import budget_forecast
+            budget.update(budget_forecast(result['calls'],budget['token_stop_threshold'],
+                                         max_calls-number,requires_plan and not reviewed))
             attempt={'call_number':number+1,'model':result['model'] if provider is None else None,'status':'STARTED','usage':None,'runtime_budget':budget}
             if provider is None:attempt['response_id']=None
             else:attempt['provider']=provider.provider_id
@@ -425,7 +431,16 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if result.get('rule_library',{}).get('status')=='CURRENT_REVIEWED_RULE':
                 known_hashes.add(result['rule_library']['rule_hash'])
             known_hashes.update(x.removeprefix('E-') for x in [r['evidence_id'] for r in verified.records])
-            mentions=re.findall(r'(?<![a-fA-F0-9])[a-fA-F0-9]{41,64}(?![a-fA-F0-9])',json.dumps(args,ensure_ascii=False))
+            # Exact quotation fields may describe an external archive/hash that
+            # is not an uploaded artifact. They are independently checked below
+            # against their cited original bytes; do not mistake quoted data for
+            # a new verified hash claim. Generated prose retains the old guard.
+            hash_claims=deepcopy(args)
+            if action in ('PLAN','REVIEW','REPORT'):
+                for row in hash_claims['conditions']:
+                    if isinstance(row,dict):
+                        row.pop('public_quote',None);row.pop('evidence_quotes',None)
+            mentions=re.findall(r'(?<![a-fA-F0-9])[a-fA-F0-9]{41,64}(?![a-fA-F0-9])',json.dumps(hash_claims,ensure_ascii=False))
             bad_hashes=[x for x in mentions if x.lower() not in known_hashes]
             if bad_hashes:citation_check.update(valid=False,invalid_hash_mentions=bad_hashes)
             task={'task_id':'I-'+digest({'context':context.context_hash,'number':number,'arguments':args})[:24],
@@ -449,16 +464,16 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 failure('INVALID_CITATION' if not citation_check['valid'] else 'INVALID_MODEL_OUTPUT','PROPOSAL_REJECTED');break
             tool_output={};stage='TOOL'
             try:
-                from .evidence_quotes import reject_prose_locations, resolve as resolve_quotes
-                if action in {'PLAN','REVIEW','ASK_USER','COMPLETE'}:
+                from .evidence_quotes import reject_prose_locations, resolve as resolve_quotes, ProductQuoteMismatch
+                if action in {'PLAN','REVIEW','REPORT','ASK_USER','COMPLETE'}:
                     reject_prose_locations(args['finding'])
                     for row in args['conditions']:
                         if isinstance(row,dict):reject_prose_locations(row.get('explanation',''))
-                if analysis_depth=='pc' and action in {'ASK_USER','COMPLETE'}:
+                if analysis_depth=='pc' and action in {'ASK_USER','COMPLETE','REPORT'}:
                     if not all(layer in args['finding'] for layer in ('PC1','PC2','PC3')):
                         raise ValueError('收尾須在 finding 分別交代 PC1、PC2、PC3 的條件、觀察、理由與缺口；未完成的面向明說未完成。')
                     if not args['citations']:raise ValueError('PC 查核收尾須引用本次已核對的 E-ID 或原文 X-ID。')
-                if args['conditions'] and action not in {'PLAN','REVIEW'}:raise ValueError('conditions 只用於 PLAN/REVIEW')
+                if args['conditions'] and action not in {'PLAN','REVIEW','REPORT'}:raise ValueError('conditions 只用於 PLAN/REVIEW/REPORT')
                 if args['requests'] and action!='ASK_USER':raise ValueError('requests 只用於 ASK_USER')
                 if requires_plan and action in {'ASK_USER','COMPLETE'} and not reviewed:
                     raise ValueError('先 PLAN 建立 CVE 條件、讀產品證據並 REVIEW；不可只輸出三段標題或直接補件。')
@@ -467,14 +482,22 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     planned=validate_conditions(args['conditions'],result['public_sources']['sources'])
                     result['condition_plan']=condition_record(context,verified.cve_id,planned)
                     tool_output=result['condition_plan']
-                elif action=='REVIEW':
+                elif action in ('REVIEW','REPORT'):
                     if planned is None:raise ValueError('必須先 PLAN')
                     reviewed_rows=validate_conditions(args['conditions'],result['public_sources']['sources'],previous=planned)
                     for row in reviewed_rows:resolve_quotes(context,row,excerpts,require=True)
                     if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows):raise ValueError('尚無任何條件調查進展，請先讀取現有材料')
+                    if action=='REPORT':
+                        from .evidence_requests import require_actionable_completion
+                        require_actionable_completion(reviewed_rows)
+                        if not args['citations'] or not args['finding'].strip():raise ValueError('REPORT 需要有引用的調查摘要')
                     provenance={k:v for k,v in result['condition_plan'].items() if k in ('origin','rule_hash')}
                     result['condition_plan']={**condition_record(context,verified.cve_id,reviewed_rows),**provenance}
                     reviewed=True;tool_output=result['condition_plan']
+                    if action=='REPORT':
+                        tool_output={'condition_plan':deepcopy(result['condition_plan']),
+                                     'summary':args['finding'],'citation_check':citation_check}
+                        result['status']='COMPLETED'
                 elif action=='LIST':tool_output=list_sources(context,args['term'],60)
                 elif action=='SEARCH_PUBLIC':
                     from .public_reader import search as search_public
@@ -493,6 +516,9 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 elif action=='READ':
                     if len(ids)!=1:raise ValueError('READ 需要一個 source_id')
                     tool_output=read_bounded_excerpt(context,ids[0],args['start_line'],args['end_line'])
+                elif action=='READ_BATCH':
+                    from .source_reading import read_batch
+                    tool_output=read_batch(context,ids,args['start_line'],args['end_line'])
                 elif action=='COMPARE':
                     if len(ids)!=2:raise ValueError('COMPARE 需要兩個 source_id')
                     tool_output=compare_sources(context,*ids)
@@ -509,7 +535,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                         request_rows=validate_requests(args['requests'],result['condition_plan']['conditions'] if requires_plan else assessment['conditions'],generic=generic)
                         from .investigation_intake import check_existing
                         visible=[x for t in result['tasks'] if t['status']=='COMPLETED' for x in
-                                 ([t['result']] if t['action']=='READ' else t['result'].get('matches',[]) if t['action']=='SEARCH' else [])]
+                                 ([t['result']] if t['action']=='READ' else t['result'].get('matches',[]) if t['action'] in ('SEARCH','READ_BATCH') else [])]
                         visible += result.get('initial_product_excerpts',[])
                         visible += [x for row in packet for x in row.get('excerpts',[])]
                         precheck=check_existing(context,request_rows,visible)
@@ -541,7 +567,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 task.update(status='INPUT_CHANGED_OR_INVALID',result={'error':str(exc)});raise
             except (ValueError,KeyError) as exc:
                 task.update(status='TOOL_ERROR',result={'error':str(exc)});tool_output=task['result']
-                if isinstance(exc,QuoteMismatch):tool_output['citation_repair']=deepcopy(exc.feedback)
+                if isinstance(exc,(QuoteMismatch,ProductQuoteMismatch)):tool_output['citation_repair']=deepcopy(exc.feedback)
                 if action in {'ASK_USER','COMPLETE'} and requires_plan:
                     tool_output['condition_states']={r['condition_id']:r['state'] for r in result.get('condition_plan',{}).get('conditions',[])}
                     tool_output['recovery']='尚無條件計畫時先 PLAN，再 READ／REVIEW；先核對補件對象的條件狀態。確有成品排除線索時 COMPLETE；若只有未綁定原碼的線索，REVIEW 說明建置對應缺口。工具能力不足用 CAPABILITY_GAP，不向使用者索取工具規則；不得只為通過檢查而改狀態。'

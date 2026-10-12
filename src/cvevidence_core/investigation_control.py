@@ -6,6 +6,22 @@ from .sources import verify_excerpt
 control=ContextVar('investigation_control',default={})
 
 
+def budget_forecast(calls,threshold,remaining_calls,review_pending):
+    """Conservative scheduling advice from receipts, never a token hard cap."""
+    reported=usage(calls)
+    costs=[usage([call])['total_tokens'] for call in calls
+           if usage([call])['complete'] and usage([call])['total_tokens']>0]
+    left=max(0,threshold-reported['total_tokens'])
+    # Account for growing context and room for a larger structured REVIEW.
+    estimate=max(costs[-2:])+max(0,costs[-1]-costs[-2] if len(costs)>1 else 0)+9000 if costs else None
+    affordable=min(remaining_calls,max(1,left//estimate)) if estimate else remaining_calls
+    reserve=2 if review_pending else 1
+    phase='REVIEW_NOW' if review_pending and affordable<=reserve else 'FINALIZE_NOW' if not review_pending and affordable<=reserve else 'INVESTIGATE'
+    return {'remaining_reported_token_allowance':left,'estimated_next_call_tokens':estimate,
+        'estimated_affordable_calls_including_current':affordable,'recommended_phase':phase,
+        'estimate_note':'依供應者用量估算，非保證。保留 REVIEW 與收尾；查不完要保留 NOT_REVIEWED 並接續，不能改成使用者缺件或捏造支持。'}
+
+
 def usage(calls):
     """Sum known counts without turning absent provider fields into zero usage."""
     totals={'input_tokens':0,'output_tokens':0,'total_tokens':0}
@@ -40,11 +56,11 @@ def continuation(context,cve,previous):
         else:stale.append(x['excerpt_id'])
     known={x['excerpt_id'] for x in retained}
     read_ids=set(previous.get('retained_read_excerpt_ids',[])) & known
+    from .source_reading import completed_reads
     for task in previous.get('tasks',[]):
-        if task.get('action')!='READ' or task.get('status')!='COMPLETED':continue
-        excerpt=task.get('result') or {}
-        if excerpt.get('excerpt_id') in known and verify_excerpt(context,{**excerpt,'context_hash':context.context_hash}):
-            read_ids.add(excerpt['excerpt_id'])
+        for excerpt in completed_reads(task):
+            if excerpt.get('excerpt_id') in known and verify_excerpt(context,{**excerpt,'context_hash':context.context_hash}):
+                read_ids.add(excerpt['excerpt_id'])
     conditions=deepcopy(plan['conditions'])
     for row in conditions:
         original=list(row['citations']);row['citations']=[x for x in original if x in known]
@@ -57,7 +73,7 @@ def continuation(context,cve,previous):
         'retained_read_excerpt_ids':sorted(read_ids),
         'stale_excerpt_ids':stale,'public_sources':deepcopy(previous.get('public_sources',{})),
         'previous_questions':[{'question':t.get('question'),'finding':t.get('finding'),'required_files':t.get('required_files',[])}
-            for t in previous.get('tasks',[]) if t.get('status')=='COMPLETED' and t.get('action') in ('ASK_USER','COMPLETE')][-3:],
+            for t in previous.get('tasks',[]) if t.get('status')=='COMPLETED' and t.get('action') in ('ASK_USER','COMPLETE','REPORT')][-3:],
         'note':'沿用的是重新核對相同 bytes 的觀察；未回答問題與新增材料必須再 REVIEW，不能沿用舊正式判定。'}
 
 

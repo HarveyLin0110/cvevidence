@@ -394,7 +394,7 @@ def render_ai(st, ai, *, context_hash, cve_id, assessment_id, request=None):
         st.caption("本次採 PC1／PC2／PC3 原文查核；各層是否完成及限制，以保存的調查說明為準。")
         if ai.get("status") in ("COMPLETED", "NEEDS_USER_INPUT"):
             final = next((task for task in reversed(rows(ai.get("tasks")))
-                          if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER")), None)
+                          if task.get("status") == "COMPLETED" and task.get("action") in ("COMPLETE", "ASK_USER", "REPORT")), None)
             if final and final.get("finding"):
                 st.subheader("PC1／PC2／PC3 查核說明")
                 for section in narrative_sections(text(final["finding"])):

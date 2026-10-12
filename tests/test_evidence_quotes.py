@@ -35,6 +35,20 @@ def test_exact_quote_derives_original_lines_without_rewriting_parent(material):
     assert '  278 |   if(' in numbered_text(focus[0])
 
 
+def test_quote_repair_names_only_rejected_condition_and_keeps_exact_validation(material):
+    from cvevidence_core.evidence_quotes import ProductQuoteMismatch
+    c,x,row=material
+    row['evidence_quotes'][0]['quote']='if(subdomain && sts->includeSubDomains) { ADDITION'
+    before=deepcopy(row)
+    with pytest.raises(ProductQuoteMismatch) as caught:resolve(c,row,{x['excerpt_id']:x},require=True)
+    feedback=caught.value.feedback
+    assert feedback['condition_id']==row['condition_id'] and feedback['excerpt_id']==x['excerpt_id']
+    assert feedback['accepted'] is False
+    assert 0<len(feedback['original_text_hint'])<=1200 and feedback['original_text_hint'] in x['text']
+    assert row==before
+    with pytest.raises(ProductQuoteMismatch):resolve(c,row,{x['excerpt_id']:x},require=True)
+
+
 @pytest.mark.parametrize('case',['invented','ambiguous','foreign','uncited','empty','oversize','tampered','missing'])
 def test_quote_rejects_unverifiable_locations(material,case):
     c,x,row=material;excerpts={x['excerpt_id']:x}

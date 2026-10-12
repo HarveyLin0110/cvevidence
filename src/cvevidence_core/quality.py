@@ -1,4 +1,5 @@
 """Auditable investigation metrics; no model self-grade or correctness claim."""
+from .source_reading import completed_reads
 
 def evaluate(ai, *, expected_paths=(), previous=None):
     tasks=[t for t in ai.get('tasks',[]) if t.get('status')=='COMPLETED']
@@ -7,8 +8,7 @@ def evaluate(ai, *, expected_paths=(), previous=None):
     paths={e['path'] for row in rows for e in row.get('evidence',[])}
     available={e['source_id'] for e in ai.get('excerpts',[]) if e.get('source_id')}
     available.update(e['source_id'] for e in ai.get('initial_product_excerpts',[]) if e.get('source_id'))
-    read_ids={t['result']['source_id'] for t in tasks if t.get('action')=='READ'
-              and isinstance(t.get('result'),dict) and t['result'].get('source_id')}
+    read_ids={x['source_id'] for t in tasks for x in completed_reads(t) if x.get('source_id')}
     cited_ids={e['source_id'] for row in rows for e in row.get('evidence',[]) if e.get('source_id')}
     errors={}
     for task in ai.get('tasks',[]):

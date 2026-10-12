@@ -76,13 +76,14 @@ def check_copy_reads(context, tasks, retained_reads=()):
     from pathlib import PurePosixPath
     groups={};read_ids=set()
     from .sources import verify_excerpt
+    from .source_reading import completed_reads
     for excerpt in retained_reads:
         if not verify_excerpt(context,excerpt):raise IntegrityError('Retained READ does not match current source')
         read_ids.add(excerpt['source_id'])
     for task in tasks:
         if task.get('status')!='COMPLETED':continue
         result=task.get('result') or {}
-        if task.get('action')=='READ':read_ids.add(result.get('source_id'))
+        read_ids.update(x.get('source_id') for x in completed_reads(task))
         if task.get('action')!='SEARCH':continue
         for row in result.get('matching_sources',[]):
             sid=row['source_id']
