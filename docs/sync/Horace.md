@@ -330,3 +330,15 @@ D 的 integration a47a1a3 未接分析屬當時結果，main 新 OFFLINE 已取�
 - 新發現並以失敗測試重現：空／不完整 usage 被當完整；損壞 checkpoint 使 timeout／cancel 無法保存 end。dcce7a0 修用量與共用門檻；bb401cf 保留終止結果並處理網頁進度錯誤；03ec156 讓個人分支 push 也跑既有 CI。
 - 完整回歸 450 passed、23 subtests passed（343.72 秒），schema 再產生一致；網頁重啟首頁實連正常。本次無新增模型 LIVE，不能當成雙來源同版品質驗收。D01/D02/D06–09、R05/R07–11。
 - 尚待：一般產品解析、新 CVE 正式驗證規則、網頁人工覆核閉環、同版雙來源及多案例品質、人用檔案選擇器／下載验收；詳見 docs/reviews/2026-09-26-產品目標與Harvey變更審核.md。未把人員核准或所有 CVE 自動判定標為完成。只推開發分支，Harvey 決定是否合併。
+
+
+## 2026-10-12 Turnkey 與新 CVE 調查規則
+
+- 再次 fetch：Harvey 的 main 仍為 b95f96d，遠端原開發分支仍為 1803a70；本輪續用 codex/horace-development，不改 main 或 merge。
+- Turnkey 收件新增家族聲明、MFI metadata/span、target／host 清單區分、有效配置／recipe／link map 角色、材料狀態與分範圍最小補件。大型 txt map 可收件；hash 衝突優先處理。解析器新寫，公司 handoff 樣本只用於本機離線測試。
+- 新 CVE 仍走公告、條件計畫、原文 READ、REVIEW、最小補件／收尾。新增可追溯結果摘要，逾時及 provider 清理失敗不保留成功摘要；既有 API／CLI、工程判定與不可變補件不變。
+- 調查規則庫：草稿下載 → 維護者覆核／測試依據 → 不可覆寫版本 → 明確啟用／回復。每輪重驗公告原文；接續案件保持原條件，重新核對材料。只重用查法，不沿用前次產品結論或自動發布。
+- v2 handoff 23 個離線案例通過；3 輪公開 curl CVE-2024-9681 真實 API 驗收完成，其中一輪由網頁原生多檔上傳及啟動。修補前後副本有不同的具體程式觀察，皆不冒充成品結論；每輪只要求一項材料。下載規則草稿與 CLI 發布流程在 TEST_ONLY 目錄驗證，正式規則庫未啟用測試版本。
+- D01–D09、R01–R12 的相關介面、邊界與實際證據見 docs/releases/2026-10-12-Turnkey收件與CVE規則庫.md；維護方式見 docs/ai/規則庫維護.md。任意 CVE 正式自動判定、公司正式登入部署、通用解包與品質／成本量測仍有邊界，沒有宣告已全面完成。
+
+- 最終固定版本完整回歸 697 passed、23 subtests passed（291.71 秒）；schema 再產生一致。網頁重啟還原結果及 AI JSON 實際下載核對通過。提交分成 Turnkey 收件及 CVE 規則／分析結果兩個里程碑。

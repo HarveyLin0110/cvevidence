@@ -90,6 +90,8 @@ def investigate_after_engineering(package,engineering_result,user_context='',*,e
                 ai['status']='TIMED_OUT'
                 ai['errors'].append({'code':'INVESTIGATION_DEADLINE','stage':'WORKFLOW','call_number':len(ai['calls'])})
                 ai['elapsed_seconds']=round(monotonic()-started,3)
+                from .investigation_outcome import summarize as investigation_summary
+                ai['investigation_outcome']=investigation_summary(ai)
                 ai['record_hash']=digest({key:value for key,value in ai.items() if key!='record_hash'})
                 followup=None
             if event_callback:event_callback({'stage':'AI','status':ai['status'],'cve_id':entry['cve_id']})

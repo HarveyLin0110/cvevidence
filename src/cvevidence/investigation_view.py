@@ -15,6 +15,10 @@ def render_overview(st, ai):
     if plan.get('context_hash') != ai.get('context_hash') or plan.get('cve_id') != ai.get('cve_id'):
         return
     conditions = plan.get('conditions', [])
+    from cvevidence_core.investigation_outcome import summarize
+    outcome=summarize(ai)
+    st.info(outcome['title'])
+    st.caption(outcome['scope'])
     st.caption('目前查到哪裡：以下是 AI 證據觀察，並非產品受影響判定。')
     for column, layer, title in zip(st.columns(3), ('PC1', 'PC2', 'PC3'),
                                     ('元件與版本', '實作與路徑', '部署與運作')):
@@ -32,7 +36,9 @@ def render_overview(st, ai):
 def lines(ai):
     plan=ai.get('condition_plan') or {}
     if plan.get('context_hash')!=ai.get('context_hash') or plan.get('cve_id')!=ai.get('cve_id'): return []
-    output=['本次 CVE 專屬條件與調查進度（AI 提案，非正式判定）']
+    from cvevidence_core.investigation_outcome import summarize
+    outcome=summarize(ai)
+    output=[outcome['title'],outcome['scope'],'本次 CVE 專屬條件與調查進度（AI 提案，非正式判定）']
     for row in plan.get('conditions',[]):
         output += [row['condition_id']+' · '+row['layer']+' · '+LABELS.get(row['state'],row['state']),
             '必要條件：'+row['requirement'], '排除依據：'+row['exclusion'], '查法：'+row['check'],
@@ -72,6 +78,19 @@ def render(st, ai):
     if ai.get('condition_dossier'):
         import json
         st.download_button('下載條件與證據覆核包',json.dumps(ai['condition_dossier'],ensure_ascii=False,indent=2),file_name=ai['cve_id']+'-review.json',mime='application/json')
+    from cvevidence_core.rule_library import draft
+    try:
+        rule=draft(ai)
+    except (ValueError,KeyError,TypeError):
+        rule=None
+    if rule:
+        import json
+        with st.expander('將這個 CVE 的查核方法加入規則庫'):
+            st.caption('只匯出公告與條件草稿，不附本產品原文片段或引用。條件文字仍須檢查是否含敏感資訊。需由規則維護者逐條覆核、保存測試依據後啟用；不會因為 AI 產生草稿就自動發布。')
+            st.download_button('下載 CVE 規則草稿',json.dumps(rule,ensure_ascii=False,indent=2),
+                file_name=ai['cve_id']+'-rule-draft.json',mime='application/json')
+            st.text('維護者使用 scripts/rule_library.py：review 保存覆核版本，activate 指定啟用版本。公告變更時自動退回重新規劃；舊版本可回復。')
+            if ai.get('rule_library'):st.json(ai['rule_library'])
     with st.expander('本次保存的官方公告與修補內容',expanded=False):
         for row in (ai.get('public_sources') or {}).get('sources',[]):
             st.text(row['source_id']+' · '+row['url'])

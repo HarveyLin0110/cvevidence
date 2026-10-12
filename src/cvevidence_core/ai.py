@@ -75,6 +75,7 @@ PC1 核對元件、版本／公告適用範圍與成品身分。PC2 逐項說明
 修補原碼存在不等於成品已修補；若這份已修補副本未編入成品，只能表示該修補證據不適用，必須繼續查實際編入的副本及其他 bundled／static 副本，不能因此排除漏洞或建議停止查核。只有可靠證據涵蓋同一成品的相關元件／路徑缺席，或將有效修補對應至全部相關成品副本，才可能支持排除；仍須說明範圍。沒有提供成品或成品不存在於材料中，不代表產品不存在，也不是排除依據。
 COMPLETE 和 ASK_USER 的 finding 都必須有 PC1、PC2、PC3 三段。每段依序寫：要成立的具體條件、原文觀察、支持／不支持／尚無法確認的理由、引用及仍未知的部分。只給可核對的簡潔判讀，不輸出內部思考過程。
 每段明確區分核心已驗事實、AI 對原文的待覆核解讀、未檢查／缺件；不要把已有 E-ID 重述成新的 AI 查證。無法完成某層時寫「尚未完成」和原因。引用精確 E-ID／X-ID；檔案和行號依 pc_evidence_packet 或工具回傳，不能自行填。
+Turnkey 盤點只提供材料角色與 scope 線索，不是條件證明。分開 application/bringup、host/target、ABI 與 stage。PRESENT_UNBOUND 只索取綁定資料，不重交已有檔案；PARSER_UNAVAILABLE 是工具缺口。PC3 須由此 CVE 公告所述的具體必要條件決定，不能因為有 PC3 欄位就一律要求 runtime 或漏洞重現。結果逐項指出公告前提、已讀來源位置、支持／反證、未知原因與最小下一步。
 GENERAL_TRIAGE 應先讀公告目標及現有產品資料，確認查核對象，再閱讀相關實作。此模式沒有核心已驗工程事實，請使用「已讀原文／AI 待覆核解讀」標示；SBOM、build record 與原碼片段只是原文觀察，不稱「核心已驗事實」。只有 inventory E-ID 不足以支持檔案內容。沒有專用驗證規則仍維持 NEEDS_INVESTIGATION，但可用原文具體說明已有線索、尚不能證實的條件及下一步。
 保留最後一次呼叫輸出完整三段。預算不足時如實列出未完成項；禁止為湊齊三段宣稱已驗證。補件只要求真正缺少的最小材料與取得方式，不要求現場重現漏洞。
 '''
@@ -167,6 +168,8 @@ def investigate(context,verified,assessment,user_context='',*,mode='OFFLINE',env
                                              'stage':'CLEANUP','call_number':len(result['calls'])})
                 result['elapsed_seconds']=round(time.monotonic()-started,3)
                 result['finished_at']=datetime.now(timezone.utc).isoformat()
+                from .investigation_outcome import summarize
+                result['investigation_outcome']=summarize(result)
                 result['record_hash']=digest({k:v for k,v in result.items() if k!='record_hash'})
 
 
@@ -276,6 +279,26 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
         result['binary_metadata']=deepcopy(prepared['binary_metadata'])
         result['build_provenance']=deepcopy(prepared['build_provenance'])
         result['compilation_database']=deepcopy(prepared['compilation_database'])
+    if generic:
+        from .turnkey import inventory as turnkey_inventory
+        if context.manifest['format']=='partial':
+            ti=turnkey_inventory(context)
+            payload['turnkey_inventory']={'inventory_state':ti['inventory_state'],
+                'materials':[{**{k:r[k] for k in ('source_id','path','material_role','presence_state','scope')},
+                    'observations':r['observations'][:8], 'observations_limited':len(r['observations'])>8}
+                    for r in ti['materials'][:40]], 'recommendations':ti['recommendations'][:6],
+                'coverage_limited':len(ti['materials'])>40 or ti['coverage_limited'], 'note':ti['note']}
+        from .rule_library import select as select_rule
+        selected_rule=select_rule(verified.cve_id,(result.get('public_sources') or {}).get('sources',[]))
+        result['rule_library']={k:v for k,v in selected_rule.items() if k!='conditions'}
+        payload['rule_library']=selected_rule
+        if requires_plan and selected_rule['status']=='CURRENT_REVIEWED_RULE':
+            planned=selected_rule['conditions']
+            result['condition_plan']=condition_record(context,verified.cve_id,planned)
+            result['condition_plan']['origin']='REVIEWED_INVESTIGATION_RULE'
+            result['condition_plan']['rule_hash']=selected_rule['rule_hash']
+            payload['condition_plan']=result['condition_plan']
+            payload['rule_instruction']='已有經覆核且公告原文一致的條件計畫，不要再 PLAN。檢查 applicability 後讀取本次材料並 REVIEW；不可沿用其他產品結論。範圍不符時明列 CAPABILITY_GAP，勿硬套。'
     resumed=continuation(context,verified.cve_id,controls.get('previous'))
     retained_reads=[]
     if resumed:
@@ -291,6 +314,13 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             validate(base,public)
             planned=base
             result['condition_plan']=condition_record(context,verified.cve_id,resumed['conditions'])
+            result['condition_plan']['origin']='VERIFIED_CONTINUATION'
+            payload['condition_plan']=result['condition_plan']
+            result['rule_library']={'status':'CONTINUATION_TAKES_PRECEDENCE',
+                'available_rule_status':result.get('rule_library',{}).get('status','NOT_CHECKED'),
+                'reason':'本輪接續已核對的原案件條件，不另套新版規則。'}
+            payload['rule_library']=result['rule_library']
+            payload.pop('rule_instruction',None)
             result['public_sources']=resumed['public_sources'];payload['public_sources']=resumed['public_sources']
             for x in resumed['excerpts']:excerpts[x['excerpt_id']]=x
             retained_ids=set(resumed.get('retained_read_excerpt_ids',[]))
@@ -387,6 +417,8 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
             if public_brief and public_brief.get('record_sha256'):
                 known_hashes.add(public_brief['record_sha256'])
             known_hashes.update(s[k] for s in result.get('public_sources',{}).get('sources',[]) for k in ('raw_sha256','text_sha256') if k in s)
+            if result.get('rule_library',{}).get('status')=='CURRENT_REVIEWED_RULE':
+                known_hashes.add(result['rule_library']['rule_hash'])
             known_hashes.update(x.removeprefix('E-') for x in [r['evidence_id'] for r in verified.records])
             mentions=re.findall(r'(?<![a-fA-F0-9])[a-fA-F0-9]{41,64}(?![a-fA-F0-9])',json.dumps(args,ensure_ascii=False))
             bad_hashes=[x for x in mentions if x.lower() not in known_hashes]
@@ -429,7 +461,8 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     if planned is None:raise ValueError('必須先 PLAN')
                     reviewed_rows=validate_conditions(args['conditions'],result['public_sources']['sources'],previous=planned)
                     if all(r['state']=='NOT_REVIEWED' for r in reviewed_rows):raise ValueError('尚無任何條件調查進展，請先讀取現有材料')
-                    result['condition_plan']=condition_record(context,verified.cve_id,reviewed_rows)
+                    provenance={k:v for k,v in result['condition_plan'].items() if k in ('origin','rule_hash')}
+                    result['condition_plan']={**condition_record(context,verified.cve_id,reviewed_rows),**provenance}
                     reviewed=True;tool_output=result['condition_plan']
                 elif action=='LIST':tool_output=list_sources(context,args['term'],60)
                 elif action=='SEARCH_PUBLIC':
@@ -540,6 +573,8 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
     result['usage_summary']=usage(result['calls'])
     from .condition_review import dossier
     result['condition_dossier']=dossier(context,result) if result.get('condition_plan') else None
+    from .investigation_outcome import summarize
+    result['investigation_outcome']=summarize(result)
     result['finished_at']=datetime.now(timezone.utc).isoformat()
     result['record_hash']=digest(result)
     return result
