@@ -1,4 +1,14 @@
-# CVEvidence 今日從零實作
+# CVEvidence
+
+## 2026-10-13 接續開發入口
+
+目前賽後修改在 **`codex/horace-development`**，見 [PR／MR #32](https://github.com/HarveyLin0110/cvevidence/pull/32)，尚待 Harvey 決定是否合併；只 clone 預設 `main` 不會取得這批修改。
+
+新電腦或新開發者請先讀 [新電腦接續開發](docs/operations/新電腦接續開發.md)：包含選分支、安裝、啟動本機 8506、AI 設定及需要自行取得的材料。接續工作及已知限制見 [三項目標收尾與剩餘缺口](docs/releases/2026-10-13-三項目標收尾與剩餘缺口.md)。不需要原開發筆電、原本機案件資料或舊 CodexHackathon 才能開發。
+
+以下保留比賽當日規劃與交付背景；其中進度、網址、埠號與部署狀態有歷史範圍，目前狀態以上述兩份文件及分支程式為準。
+
+## 比賽當日重製背景
 
 本目錄是 2026-09-12 唯一的開發、Git 與交付根目錄。舊 CodexHackathon／Demo 僅作概念與需求參考，不複製或執行舊程式、建置腳本、資料包及結果。公開 OSS 今日重新取得，保存來源、版本、授權與 hash。
 
