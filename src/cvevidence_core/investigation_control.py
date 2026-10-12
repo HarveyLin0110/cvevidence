@@ -23,6 +23,26 @@ def budget_forecast(calls,threshold,remaining_calls,review_pending):
         'estimate_note':'依供應者用量估算，非保證。估計剩兩次時可先做一次解除關鍵未知的定點／批次閱讀，再 REPORT；只剩一次立即 REPORT。已知真正缺件則保留 REVIEW／ASK_USER。查不完保留 NOT_REVIEWED，不捏造支持。'}
 
 
+def unfinished_report_followup(conditions, calls, threshold, remaining_calls, remaining_seconds, *, already_deferred=False):
+    """Save a partial report, then allow one bounded attempt at unread essentials.
+
+    This is scheduling, not a claim that evidence exists or a condition is true.
+    Use receipts including the submitted report, not the pre-request forecast.
+    """
+    if already_deferred or remaining_seconds<130 or remaining_calls<2:return None
+    if not calls or not usage(calls)['complete']:return None
+    if any(r.get('necessity')=='REQUIRED' and r['state']=='OBSERVED_EXCLUSION' for r in conditions):return None
+    pending=[r for r in conditions if r.get('necessity')=='REQUIRED' and r['state']=='NOT_REVIEWED']
+    if not pending:return None
+    forecast=budget_forecast(calls,threshold,remaining_calls,True)
+    if forecast['estimated_affordable_calls_including_current']<2:return None
+    return {'reason_code':'UNREAD_REQUIRED_CONDITIONS_WITH_BUDGET',
+        'condition_ids':[r['condition_id'] for r in pending],
+        'next_checks':[{'condition_id':r['condition_id'],'check':r['check']} for r in pending],
+        'remaining_seconds':round(remaining_seconds,3),'budget_forecast':forecast,
+        'note':'已保存這次條件與部分報告，但必要條件仍未查閱完成，而且依本次實際用量仍能預留一次閱讀與收尾。本輪只提醒一次：先對現有材料做最有價值的有界 READ／READ_BATCH／SEARCH，再 REVIEW／REPORT。大檔先 SEARCH 定位或縮小範圍，不重讀成功片段。不要只為結案改狀態；真正缺件或能力限制須如實記錄。'}
+
+
 def usage(calls):
     """Sum known counts without turning absent provider fields into zero usage."""
     totals={'input_tokens':0,'output_tokens':0,'total_tokens':0}

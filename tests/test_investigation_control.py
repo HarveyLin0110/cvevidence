@@ -77,3 +77,34 @@ def test_final_affordable_call_requests_combined_report_not_review_only():
     assert advice['recommended_phase']=='REPORT_NOW'
     assert budget_forecast([],200000,1,True)['recommended_phase']=='REPORT_NOW'
     assert budget_forecast(calls,200000,8,False)['recommended_phase']=='FINALIZE_NOW'
+
+
+def test_unfinished_report_uses_post_response_receipts_and_preserves_conditions():
+    from copy import deepcopy
+    from cvevidence_core.investigation_control import unfinished_report_followup
+    rows=conditions();before=deepcopy(rows)
+    calls=[{'usage':{'total_tokens':n}} for n in (27338,27917,36442)]
+    followup=unfinished_report_followup(rows,calls,200000,9,143.4)
+    assert followup['condition_ids']==['C1','C2','C3'] and rows==before
+    assert followup['budget_forecast']['remaining_reported_token_allowance']==108303
+    assert followup['budget_forecast']['estimated_affordable_calls_including_current']==2
+
+
+@pytest.mark.parametrize('limit',['time','calls','tokens','unknown_usage','once','alternative','exclusion','tool_gap','material_gap','already_read'])
+def test_unfinished_report_never_forces_extra_work_or_promotes_states(limit):
+    from copy import deepcopy
+    from cvevidence_core.investigation_control import unfinished_report_followup
+    rows=conditions();calls=[{'usage':{'total_tokens':10000}}]
+    kwargs=dict(threshold=200000,remaining_calls=5,remaining_seconds=200,already_deferred=False)
+    if limit=='time':kwargs['remaining_seconds']=129.99
+    if limit=='calls':kwargs['remaining_calls']=1
+    if limit=='tokens':kwargs['threshold']=45000
+    if limit=='unknown_usage':calls.append({'usage':None})
+    if limit=='once':kwargs['already_deferred']=True
+    if limit=='alternative':
+        for row in rows:row['necessity']='ALTERNATIVE_PATH'
+    if limit=='exclusion':rows[0]['state']='OBSERVED_EXCLUSION'
+    if limit in ('tool_gap','material_gap','already_read'):
+        for row in rows:row['state']={'tool_gap':'CAPABILITY_GAP','material_gap':'USER_MATERIAL_MISSING','already_read':'OBSERVED_SUPPORT'}[limit]
+    before=deepcopy(rows)
+    assert unfinished_report_followup(rows,calls,**kwargs) is None and rows==before

@@ -34,7 +34,7 @@ COMPLETE 的 finding 必須短、可核對並附 citations；沒有證據就說�
 每項補件要求要說明向哪個角色取得、需要哪份材料，以及要核對的內容；不要重複索取已提交且足夠的檔案。
 collection_guide 是核心提供的收件格式指引，並非已驗觀測或使用者要求。依其中材料用途提出問題；CMake 的運作驗證需配對原始 gzip 樣本，不能只索取日誌或配置。先用簡短文字列最小材料與取得方式，格式細節由工具另附。故障日誌可作症狀調查的可選資料，不能當作正常運作驗證的必要材料。
 required_files 只列解除目前缺口所必要的最小既有工程材料。可選的新增動態測試放在 finding 並註明可選、由工程師在受控環境評估；不能把重現漏洞或產生特殊攻擊輸入當作工程適用性判定的必要補件。
-總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 COMPLETE／ASK_USER。優先以 2–4 次完成一項最有價值的追加調查。
+總呼叫與時間預算由下方 runtime_budget 指定，包含引用修正和最後 REPORT／COMPLETE／ASK_USER。一般輕量追加調查可用 2–4 次；PC 證據查核不套用此次數目標，應依現有材料讀到關鍵實作、成品關聯及適用運作條件，並保留一次收尾。
 預留一次呼叫收尾；剩兩次時至多做一個必要查核，剩一次時依已有證據 COMPLETE 或提出具體 ASK_USER。不得為了完成而捏造答案，資料不足要明說限制。
 READ 的 start_line/end_line 最多 200 行，end_line - start_line 必須小於 200（例如 500–699），READ 另限 24000 UTF-8 bytes，超限先縮小範圍；單行仍超限屬 CAPABILITY_GAP，不索取同一份檔案。SEARCH term 使用字面關鍵字；omitted_excerpts 是已命中但因片段容量未回傳的位置，可縮小 READ，不能當未命中。COMPARE 的 truncated=true 表示差異未讀完。不要捏造 source_id。
 公告選段不足時用 SEARCH_PUBLIC（source_ids 為 P-ID 或 [] 搜尋本輪全部保存公告、term 字面搜尋），再 READ_PUBLIC（恰好一個 P-ID、start_line/end_line 為保存文字行號，最多 200 行／8000 bytes）讀取修補或條件上下文。這兩個工具不連網、不讀產品檔、不產生 X-ID；公告 P-ID 只能用於條件的 public_source_id，不放產品 citations。尚未取得或保存本身截短的上游內容仍是工具缺口，不能宣稱已讀。
@@ -283,7 +283,7 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
         result['public_sources'] = public_bundle
     generic = assessment.get('assessment_kind') == 'GENERAL_TRIAGE'
     requires_plan = generic and public_brief is not None and public_brief.get('status') == 'PUBLISHED'
-    planned = None; reviewed = False
+    planned = None; reviewed = False; report_deferred = False
     if generic:
         from .investigation_intake import prepare
         prepared=prepare(context,(result.get('public_sources') or {}).get('sources',[]))
@@ -518,7 +518,15 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                     if action=='REPORT':
                         tool_output={'condition_plan':deepcopy(result['condition_plan']),
                                      'summary':args['finding'],'citation_check':citation_check}
-                        result['status']='COMPLETED'
+                        from .investigation_control import unfinished_report_followup
+                        followup=(unfinished_report_followup(reviewed_rows,result['calls'],
+                            budget['token_stop_threshold'],max_calls-number-1,
+                            timeout_seconds-(time.monotonic()-start),already_deferred=report_deferred)
+                            if analysis_depth=='pc' else None)
+                        if followup:
+                            report_deferred=True
+                            tool_output['finalization_deferred']=followup
+                        else:result['status']='COMPLETED'
                 elif action=='LIST':tool_output=list_sources(context,args['term'],60)
                 elif action=='SEARCH_PUBLIC':
                     from .public_reader import search as search_public
@@ -598,6 +606,11 @@ def _investigate(context,verified,assessment,user_context='',*,mode,env_file,max
                 feedback={'accepted':True,'plan_hash':tool_output['plan_hash'],
                     'condition_states':{r['condition_id']:r['state'] for r in tool_output['conditions']},
                     'note':'條件定義已保存；public_quote_id 選項已核對並還原原文。後續 REVIEW 保留原定義與同一選項／公告引文。接受格式與引用不表示語意已驗證。'}
+                task['model_feedback']=deepcopy(feedback)
+            elif action=='REPORT' and task['status']=='COMPLETED' and tool_output.get('finalization_deferred'):
+                feedback={'accepted':True,'finalized':False,'plan_hash':result['condition_plan']['plan_hash'],
+                    'condition_states':{r['condition_id']:r['state'] for r in result['condition_plan']['conditions']},
+                    **deepcopy(tool_output['finalization_deferred'])}
                 task['model_feedback']=deepcopy(feedback)
             if provider is None:
                 items.extend(output)
